@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#071525">
+<title>SERCO AI · Etapa 4 — Búsqueda y recuperación</title>
+<link rel="icon" type="image/jpeg" href="../favi.jpg">
+<style>
+:root{--bg:#061321;--panel:#0c2236;--panel2:#102b43;--cyan:#39d9ee;--blue:#649aff;--white:#eef7fc;--muted:#a8bdcc;--line:#25445b;--green:#65e0b4;--amber:#ffc978;--red:#ff8d9b}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(ellipse at 75% 0%,#123653 0,transparent 34%),var(--bg);color:var(--white);font-family:Inter,"Segoe UI",Arial,sans-serif}
+header{height:70px;position:fixed;inset:0 0 auto;z-index:30;display:flex;align-items:center;justify-content:space-between;padding:0 4vw;background:#061321e8;backdrop-filter:blur(16px);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:13px;font-size:13px;font-weight:800;letter-spacing:.16em}.brand img{width:44px;height:44px;object-fit:contain}.brand span{color:var(--cyan)}header small{color:var(--muted);letter-spacing:.12em;text-transform:uppercase;font-size:10px}
+.progress{position:fixed;z-index:40;top:69px;left:0;height:3px;background:linear-gradient(90deg,var(--cyan),var(--blue));width:0}
+.layout{display:grid;grid-template-columns:250px minmax(0,1fr);padding-top:70px;max-width:1700px;margin:auto}
+aside{height:calc(100vh - 70px);position:sticky;top:70px;padding:24px 17px;border-right:1px solid var(--line);overflow:auto}
+.navtitle{font-size:10px;color:#7293a9;letter-spacing:.2em;margin:5px 10px 13px;text-transform:uppercase}
+#filter{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:#091a2a;color:white;outline:none;margin-bottom:13px}
+.nav{display:grid;gap:4px}.nav button{background:none;border:1px solid transparent;color:#9ab0bf;text-align:left;padding:10px;border-radius:9px;cursor:pointer;font-size:11px;line-height:1.4}.nav button b{color:var(--cyan);margin-right:8px}.nav button.active,.nav button:hover{background:#39d9ee12;border-color:#39d9ee44;color:white}
+.note{margin:22px 6px;padding:13px;border:1px solid var(--line);border-radius:12px;color:var(--muted);font-size:10px;line-height:1.65}
+main{min-width:0}.slide{min-height:calc(100vh - 70px);padding:clamp(50px,7vw,92px) clamp(22px,6vw,88px);display:flex;align-items:center;border-bottom:1px solid #25445b66;scroll-margin-top:70px}.inner{max-width:1120px;width:100%;margin:auto}
+.kicker{font-size:10px;color:var(--cyan);font-weight:800;letter-spacing:.2em;text-transform:uppercase;margin-bottom:18px}
+h1{font-size:clamp(43px,7vw,86px);line-height:.98;letter-spacing:-.06em;margin:0 0 24px}h1 em{color:var(--cyan);font-style:normal}h2{font-size:clamp(29px,4vw,51px);letter-spacing:-.045em;line-height:1.06;margin:0 0 17px}h3{font-size:16px;margin:0 0 10px}
+.lead{font-size:clamp(16px,2vw,20px);line-height:1.65;color:#bfd0dc;max-width:850px}.muted{color:var(--muted);line-height:1.7}.small{font-size:11px;line-height:1.65}.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:13px;margin-top:27px}
+.card{grid-column:span 4;padding:21px;border:1px solid var(--line);border-radius:17px;background:linear-gradient(145deg,#102c45ef,#0a1d30);box-shadow:0 18px 45px #0003;transition:.22s}.card:hover{transform:translateY(-3px);border-color:#39d9ee88}.card.half{grid-column:span 6}.card.full{grid-column:span 12}.card p{font-size:12px;color:var(--muted);line-height:1.75;margin:0}
+.symbol{width:39px;height:39px;display:grid;place-items:center;border:1px solid #39d9ee44;background:#39d9ee12;color:var(--cyan);border-radius:11px;font-size:17px;margin-bottom:15px}
+.repo{display:flex;align-items:center;gap:14px;padding:15px;background:#0d2236;border:1px solid var(--line);border-radius:14px;margin:10px 0}.num{width:38px;height:38px;flex:0 0 38px;display:grid;place-items:center;background:#649aff18;color:#9cbaff;border-radius:11px;font-weight:800}
+.repo strong{display:block;font-size:13px;overflow-wrap:anywhere}.repo small{color:var(--muted);font-size:10px}
+.pills{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}.pill{font-size:10px;letter-spacing:.04em;border:1px solid #39d9ee40;color:#aeeef5;padding:7px 10px;border-radius:30px;background:#39d9ee0c}
+.diagram{padding:19px;border:1px solid var(--line);border-radius:18px;background:#081b2b;margin-top:23px}.flow{display:flex;gap:8px;align-items:stretch;justify-content:center;flex-wrap:wrap}.node{flex:1 1 130px;min-height:83px;display:flex;flex-direction:column;justify-content:center;text-align:center;padding:12px;border:1px solid #39d9ee44;border-radius:12px;background:#102b43}.node strong{font-size:11px}.node small{font-size:9px;color:var(--muted);line-height:1.5;margin-top:5px}.arrow{align-self:center;color:var(--cyan);font-size:18px}
+.callout{border-left:3px solid var(--cyan);padding:15px 18px;background:#39d9ee0c;border-radius:0 11px 11px 0;margin-top:20px;font-size:12px;line-height:1.75;color:#d0e1e9}.callout.warn{border-color:var(--amber);background:#ffc9780d}.callout.bad{border-color:var(--red);background:#ff8d9b0c}
+.status{display:inline-flex;gap:8px;align-items:center;color:var(--green);border:1px solid #65e0b455;background:#65e0b411;padding:8px 12px;border-radius:30px;font-size:9px;letter-spacing:.12em;text-transform:uppercase}.status:before{content:"";width:6px;height:6px;border-radius:50%;background:var(--green)}
+table{width:100%;border-collapse:collapse;margin-top:15px;font-size:11px}th,td{text-align:left;padding:12px 11px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.55}th{color:var(--cyan);font-size:9px;letter-spacing:.1em;text-transform:uppercase}td{color:#c3d2dc}tr:hover td{background:#39d9ee08}
+.code{background:#06111d;border:1px solid #23435b;border-radius:12px;padding:15px 17px;color:#b9eaf1;font:11px/1.7 ui-monospace,Consolas,monospace;overflow:auto;white-space:pre-wrap}
+.steps{display:grid;gap:13px;margin-top:22px}.step{display:grid;grid-template-columns:36px 1fr;gap:13px}.step i{width:32px;height:32px;border:1px solid #39d9ee66;border-radius:50%;display:grid;place-items:center;color:var(--cyan);font-style:normal;font-size:10px}.step strong{font-size:12px}.step p{margin:5px 0 0;color:var(--muted);font-size:11px;line-height:1.65}
+.metric{font-size:30px;font-weight:800;letter-spacing:-.05em;color:var(--cyan);margin:3px 0}.label{font-size:9px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase}
+footer{padding:27px 6vw;color:#7894a7;font-size:10px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.controls{position:fixed;right:18px;bottom:18px;z-index:35;display:flex;gap:7px}.controls button{width:42px;height:42px;border:1px solid #39d9ee55;border-radius:12px;background:#0b2338eF;color:white;font-size:17px;cursor:pointer;box-shadow:0 8px 25px #0005}.controls button:hover{background:#16415e}
+.source a{color:var(--cyan);overflow-wrap:anywhere}.source li{margin:10px 0;color:#bfd0dc;font-size:12px;line-height:1.6}
+@media(max-width:900px){.layout{grid-template-columns:1fr}aside{height:auto;position:relative;top:auto;border-right:0;border-bottom:1px solid var(--line);padding:13px 16px}.nav{grid-template-columns:repeat(2,minmax(0,1fr));max-height:190px;overflow:auto}.note{display:none}.slide{min-height:auto;padding:65px 22px}.card{grid-column:span 6}.card.full{grid-column:span 12}}
+@media(max-width:560px){header{padding:0 14px}.brand{font-size:10px;letter-spacing:.1em}.brand img{width:35px;height:35px}header small{font-size:8px}.nav{grid-template-columns:1fr 1fr}.card,.card.half{grid-column:span 12}.repo{align-items:flex-start}.controls{right:10px;bottom:10px}.controls button{width:38px;height:38px}.slide{padding:55px 18px}}
+@media print{header,aside,.controls,.progress{display:none!important}.layout{display:block;padding:0}.slide{min-height:0;page-break-after:always;padding:30px;color:#101820;background:white}.slide *{color:#101820!important}.card,.diagram,.node,.repo{background:#f3f7fa!important;border-color:#aab8c4!important;box-shadow:none}.muted,.card p,.node small,.repo small{color:#43515d!important}}
+</style>
+</head>
+<body>
+<header>
+ <div class="brand"><img src="../logo.png" alt="Logotipo SERCO" onerror="this.style.display='none';this.nextElementSibling.style.display='inline'"><span style="display:none">SERCO</span><span>SERCO AI <b style="color:#eef7fc">/ INFORMACIÓN</b></span></div>
+ <small>Informe técnico · Etapa 04</small>
+</header>
+<div class="progress" id="progress"></div>
+<div class="layout">
+<aside>
+ <div class="navtitle">Contenido del informe</div>
+ <input id="filter" placeholder="Filtrar secciones..." aria-label="Filtrar secciones">
+ <nav class="nav" id="nav"></nav>
+ <div class="note">Documento de investigación y pruebas preliminares. No se ejecutaron migraciones ni se alteró la base de datos.</div>
+</aside>
+<main id="content">
+<section class="slide" data-title="Portada">
+ <div class="inner">
+  <div class="kicker">SERCO AI · DESARROLLO POR ETAPAS · 08 NOV 2026</div>
+  <h1>Encontrar el conocimiento.<br><em>Con precisión.</em></h1>
+  <p class="lead">Etapa 4 — Búsqueda y recuperación de conocimiento. Diagnóstico del estado real, pruebas de PostgreSQL, normalización del español, sinónimos, ranking, tolerancia a errores y decisión sobre búsqueda semántica.</p>
+  <div class="pills"><span class="pill">PostgreSQL FTS</span><span class="pill">Español</span><span class="pill">Ranking</span><span class="pill">RAG preparado</span></div>
+  <div style="margin-top:30px"><span class="status">Investigación y pruebas preliminares completadas</span></div>
+  <p class="muted small" style="margin-top:22px">SERCO AI · Sección Informativa · Informe técnico completo</p>
+ </div>
+</section>
+<section class="slide" data-title="Objetivo y alcance">
+ <div class="inner">
+  <div class="kicker">01 / PROPÓSITO</div><h2>La búsqueda no debe adivinar.</h2>
+  <p class="lead">Debe encontrar los fragmentos que realmente sustentan una respuesta, incluso cuando el visitante use otras palabras, y conservar el vínculo con la publicación y versión aprobadas.</p>
+  <div class="grid">
+   <div class="card"><div class="symbol">⌕</div><h3>Recuperar</h3><p>Encontrar artículos y fragmentos por términos, expresiones y conceptos en español.</p></div>
+   <div class="card"><div class="symbol">≋</div><h3>Normalizar</h3><p>Tratar variantes morfológicas, acentos, alias y errores tipográficos de manera controlada.</p></div>
+   <div class="card"><div class="symbol">↕</div><h3>Ordenar</h3><p>Priorizar título, concepto y encabezado frente a coincidencias secundarias en el cuerpo.</p></div>
+   <div class="card half"><div class="symbol">◎</div><h3>Trazabilidad</h3><p>Cada fragmento recuperado debe señalar publicación, versión, encabezado y fuente editorial.</p></div>
+   <div class="card half"><div class="symbol">✓</div><h3>Control de cobertura</h3><p>Una coincidencia no demuestra que exista información suficiente para contestar con seguridad.</p></div>
+  </div>
+ </div>
+</section>
+<section class="slide" data-title="Estado encontrado">
+ <div class="inner">
+  <div class="kicker">02 / AUDITORÍA DE ESTADO</div><h2>La biblioteca real todavía no está conectada.</h2>
+  <p class="muted">El prototipo público busca en un arreglo local con tres fichas de demostración. El panel contiene campos de clasificación, pero no existe aún un motor de búsqueda conectado a publicaciones editoriales.</p>
+  <div class="grid">
+   <div class="card half"><div class="label">Buscador actual</div><div class="metric">3</div><p>Fichas locales: vano, lindero y cimentación para muros. Coincidencia directa de cadenas; sin ranking ni recuperación de fragmentos.</p></div>
+   <div class="card half"><div class="label">Tablas de conocimiento</div><div class="metric">0</div><p>No existen aún articles, article_versions, content_chunks, concepts ni concept_aliases en el esquema público.</p></div>
+   <div class="card full"><h3>Lo que sí existe</h3><p>Tablas de galería y configuración corporativa. Se mantienen separadas; no se reutilizarán como biblioteca editorial SERCO AI.</p></div>
+  </div>
+  <div class="callout warn">Límite de la auditoría: no hay corpus editorial real para calcular precisión, recall, latencia o calidad del ranking. Las pruebas de esta etapa usan datos temporales en consultas SQL, no contenido persistido.</div>
+ </div>
+</section>
+<section class="slide" data-title="Capacidad en español">
+ <div class="inner">
+  <div class="kicker">03 / POSTGRESQL FULL TEXT SEARCH</div><h2>El análisis morfológico español funciona.</h2>
+  <p class="lead">La base ofrece las configuraciones de búsqueda <b>spanish</b>, <b>simple</b> e <b>english</b>. En la prueba, “cimentación” y “cimentaciones” convergieron en una raíz común.</p>
+  <div class="diagram"><div class="flow">
+   <div class="node"><strong>Texto</strong><small>Las cimentaciones transmiten cargas</small></div><div class="arrow">→</div>
+   <div class="node"><strong>to_tsvector</strong><small>Tokens normalizados</small></div><div class="arrow">→</div>
+   <div class="node"><strong>Consulta</strong><small>plainto_tsquery / websearch_to_tsquery</small></div><div class="arrow">→</div>
+   <div class="node"><strong>Coincidencia</strong><small>Operador @@</small></div>
+  </div></div>
+  <div class="grid">
+   <div class="card half"><h3>Resultado positivo</h3><p>La búsqueda “cimentación muro terreno” encontró el texto de muestra que contenía “cimentaciones”, “muro” y “terreno”.</p></div>
+   <div class="card half"><h3>Función de consulta</h3><p><code>websearch_to_tsquery('spanish', consulta)</code> admite una sintaxis más cercana a la búsqueda cotidiana.</p></div>
+  </div>
+  <div class="code">to_tsvector('spanish', texto) @@ websearch_to_tsquery('spanish', consulta)</div>
+ </div>
+</section>
+<section class="slide" data-title="Hallazgo de acentos">
+ <div class="inner">
+  <div class="kicker">04 / HALLAZGO CRÍTICO</div><h2>“Cimentación” no es igual a “cimentacion” para el índice actual.</h2>
+  <p class="lead">La prueba cruzada falló: el documento acentuado produjo el lexema <b>ciment</b>, mientras que la consulta sin acento produjo <b>cimentacion</b>.</p>
+  <div class="grid">
+   <div class="card half"><div class="label">Documento</div><div class="metric" style="font-size:23px">cimentación</div><p>Vector español: <code>'ciment'</code></p></div>
+   <div class="card half"><div class="label">Consulta</div><div class="metric" style="font-size:23px">cimentacion</div><p>Consulta española: <code>'cimentacion'</code></p></div>
+  </div>
+  <div class="callout bad">Resultado observado: sin coincidencia entre la forma con acento y la forma sin acento. Es una brecha reproducible, no una hipótesis.</div>
+  <div class="callout">Corrección recomendada: usar el diccionario <b>unaccent</b> antes del stemmer español, tanto al preparar el índice como al transformar la consulta. No normalizar solamente un lado.</div>
+ </div>
+</section>
+<section class="slide" data-title="Sinónimos y alias">
+ <div class="inner">
+  <div class="kicker">05 / VOCABULARIO CONTROLADO</div><h2>Los sinónimos deben tener contexto editorial.</h2>
+  <p class="lead">La búsqueda de “cimiento” no encontró automáticamente “cimentación”. El análisis morfológico no debe inventar equivalencias semánticas.</p>
+  <div class="diagram"><div class="flow">
+   <div class="node"><strong>Consulta</strong><small>“cimiento”</small></div><div class="arrow">→</div>
+   <div class="node"><strong>Alias aprobado</strong><small>concept_aliases</small></div><div class="arrow">→</div>
+   <div class="node"><strong>Concepto canónico</strong><small>Cimentación</small></div><div class="arrow">→</div>
+   <div class="node"><strong>Fragmentos</strong><small>Publicados y relacionados</small></div>
+  </div></div>
+  <div class="grid">
+   <div class="card half"><h3>Lo que sí debe hacer</h3><p>Expandir la consulta con alias revisados, mantener el término original y dar prioridad al concepto canónico.</p></div>
+   <div class="card half"><h3>Lo que no debe hacer</h3><p>Tratar automáticamente “relacionado con”, “componente de” o conceptos cercanos como sinónimos.</p></div>
+  </div>
+  <div class="callout">La etapa 3 ya contempla <b>concepts</b> y <b>concept_aliases</b>. La búsqueda debe consumir ese vocabulario controlado y no mantener listas aisladas en JavaScript.</div>
+ </div>
+</section>
+<section class="slide" data-title="Errores tipográficos">
+ <div class="inner">
+  <div class="kicker">06 / TOLERANCIA A ERRORES</div><h2>pg_trgm como segunda oportunidad.</h2>
+  <p class="lead">La extensión pg_trgm compara grupos de tres caracteres y puede ayudar con errores tipográficos y coincidencias parciales.</p>
+  <div class="grid">
+   <div class="card half"><div class="symbol">01</div><h3>Primero FTS</h3><p>Buscar por lexemas y expresiones con el diccionario español.</p></div>
+   <div class="card half"><div class="symbol">02</div><h3>Después trigramas</h3><p>Si hay pocos resultados, sugerir términos cercanos con un umbral controlado.</p></div>
+  </div>
+  <div class="callout warn">pg_trgm está disponible en el catálogo de extensiones de Supabase, pero no estaba instalada. No se ejecutó una prueba funcional de similitud ni se creó un índice trigram.</div>
+  <p class="muted small">La similitud debe sugerir una corrección o ampliar candidatos; no debe reemplazar silenciosamente la pregunta original.</p>
+ </div>
+</section>
+<section class="slide" data-title="Ranking de resultados">
+ <div class="inner">
+  <div class="kicker">07 / RELEVANCIA</div><h2>El título debe pesar más que una mención casual.</h2>
+  <p class="lead">PostgreSQL permite ponderar campos mediante setweight y ordenar con ts_rank_cd. Se verificó el mecanismo con una CTE de datos ficticios.</p>
+  <div class="grid">
+   <div class="card"><div class="label">Prioridad 1</div><h3>Título y frase</h3><p>Coincidencia directa y exacta.</p></div>
+   <div class="card"><div class="label">Prioridad 2</div><h3>Concepto y encabezado</h3><p>Alias aprobados y sección que contiene el tema.</p></div>
+   <div class="card"><div class="label">Prioridad 3</div><h3>Resumen y cuerpo</h3><p>Contexto complementario del fragmento.</p></div>
+   <div class="card full"><h3>Ranking auxiliar</h3><p>Las coincidencias trigramas deben recibir penalización frente a coincidencias directas. Los pesos numéricos finales se calibrarán con consultas reales, no se fijan por intuición.</p></div>
+  </div>
+  <div class="code">ts_rank_cd(
+  setweight(to_tsvector('spanish', titulo), 'A') ||
+  setweight(to_tsvector('spanish', cuerpo), 'B'),
+  consulta
+)</div>
+ </div>
+</section>
+<section class="slide" data-title="Decisión pgvector">
+ <div class="inner">
+  <div class="kicker">08 / BÚSQUEDA SEMÁNTICA</div><h2>pgvector todavía no se justifica.</h2>
+  <p class="lead">La búsqueda semántica puede encontrar contenido relacionado por significado, pero requiere artículos reales, fragmentos, embeddings consistentes y mediciones comparables.</p>
+  <div class="grid">
+   <div class="card half"><div class="label">Estado observado</div><div class="metric">No instalado</div><p>La extensión vector no apareció instalada. No se crearon columnas vectoriales ni embeddings.</p></div>
+   <div class="card half"><div class="label">Decisión</div><div class="metric">Posponer</div><p>Primero evaluar FTS español, alias y trigramas sobre contenido SERCO real.</p></div>
+  </div>
+  <div class="callout">Si después quedan consultas conceptuales que no recupera el buscador léxico, se comparará búsqueda semántica y fusión híbrida mediante Reciprocal Rank Fusion (RRF).</div>
+ </div>
+</section>
+<section class="slide" data-title="Flujo propuesto">
+ <div class="inner">
+  <div class="kicker">09 / DISEÑO DE RECUPERACIÓN</div><h2>Un flujo con trazabilidad de principio a fin.</h2>
+  <div class="diagram"><div class="flow">
+   <div class="node"><strong>Pregunta original</strong><small>Conservar para auditoría</small></div><div class="arrow">→</div>
+   <div class="node"><strong>Normalización</strong><small>Espacios, acentos y forma</small></div><div class="arrow">→</div>
+   <div class="node"><strong>Conceptos / alias</strong><small>Vocabulario aprobado</small></div><div class="arrow">→</div>
+   <div class="node"><strong>FTS + ranking</strong><small>Fragmentos publicados</small></div>
+  </div><div style="height:13px"></div><div class="flow">
+   <div class="node"><strong>Fallback trigramas</strong><small>Solo si hace falta</small></div><div class="arrow">→</div>
+   <div class="node"><strong>Deduplicación</strong><small>Artículo y versión</small></div><div class="arrow">→</div>
+   <div class="node"><strong>Evaluación</strong><small>Suficiente / parcial / insuficiente</small></div><div class="arrow">→</div>
+   <div class="node"><strong>Fragmentos citables</strong><small>Origen y encabezado</small></div>
+  </div></div>
+  <div class="callout">La búsqueda entrega candidatos y evidencia. El motor de la etapa 5 evaluará si esa evidencia realmente responde la pregunta. Una puntuación alta no significa automáticamente que la respuesta sea suficiente.</div>
+ </div>
+</section>
+<section class="slide" data-title="Resultados de pruebas">
+ <div class="inner">
+  <div class="kicker">10 / MATRIZ DE PRUEBAS</div><h2>Qué pasó en las pruebas preliminares.</h2>
+  <p class="muted small">Las pruebas usaron CTE y datos ficticios temporales; no se insertaron filas ni se modificó el esquema.</p>
+  <table>
+   <thead><tr><th>Prueba</th><th>Resultado</th><th>Lectura</th></tr></thead>
+   <tbody>
+    <tr><td>Singular / plural</td><td style="color:var(--green)">Coincidió</td><td>El stemming español funcionó.</td></tr>
+    <tr><td>“cimentación muro terreno”</td><td style="color:var(--green)">Coincidió</td><td>FTS recuperó los términos principales.</td></tr>
+    <tr><td>Con acento / sin acento</td><td style="color:var(--red)">No coincidió</td><td>Falta normalización unaccent.</td></tr>
+    <tr><td>“cimiento” / “cimentación”</td><td style="color:var(--amber)">No coincidió</td><td>Falta alias editorial.</td></tr>
+    <tr><td>“zapata aislada”</td><td style="color:var(--green)">Coincidió</td><td>Coincidencia literal útil.</td></tr>
+    <tr><td>Ranking ponderado</td><td style="color:var(--green)">Ejecutó</td><td>Pesos todavía sin calibrar.</td></tr>
+    <tr><td>pg_trgm</td><td style="color:var(--amber)">No probado</td><td>Extensión no instalada.</td></tr>
+    <tr><td>pgvector</td><td style="color:var(--amber)">No probado</td><td>Sin extensión ni corpus.</td></tr>
+   </tbody>
+  </table>
+  <div class="callout warn">Estos resultados prueban funciones de PostgreSQL, no la precisión del futuro buscador con documentos oficiales de SERCO.</div>
+ </div>
+</section>
+<section class="slide" data-title="Evaluación con corpus real">
+ <div class="inner">
+  <div class="kicker">11 / CRITERIOS DE ACEPTACIÓN</div><h2>La siguiente prueba debe usar preguntas reales.</h2>
+  <div class="grid">
+   <div class="card"><h3>Precision@5</h3><p>Cuántos de los cinco primeros resultados son relevantes.</p></div>
+   <div class="card"><h3>Recall@5</h3><p>Cuántos de los resultados esperados aparecen entre los cinco primeros.</p></div>
+   <div class="card"><h3>MRR</h3><p>Posición del primer resultado relevante.</p></div>
+   <div class="card half"><h3>Cobertura</h3><p>Porcentaje de consultas suficientes, parciales e insuficientes.</p></div>
+   <div class="card half"><h3>Rendimiento</h3><p>Latencia p50 y p95, con volumen de datos definido.</p></div>
+  </div>
+  <p class="muted small">El conjunto de evaluación debe incluir coincidencia exacta, singular/plural, acentos, errores tipográficos, alias, preguntas naturales, términos técnicos, múltiples conceptos, contradicciones y consultas sin contenido.</p>
+  <div class="callout">Los umbrales de aceptación se acuerdan antes de ejecutar las pruebas; este informe no inventa metas ni resultados.</div>
+ </div>
+</section>
+<section class="slide" data-title="Cambios no ejecutados">
+ <div class="inner">
+  <div class="kicker">12 / CONTROL DE CAMBIOS</div><h2>Qué falta implementar.</h2>
+  <div class="steps">
+   <div class="step"><i>01</i><div><strong>Modelo de etapa 3</strong><p>Crear tablas de publicaciones, versiones, conceptos, alias y fragmentos bajo migraciones revisadas.</p></div></div>
+   <div class="step"><i>02</i><div><strong>Normalización española</strong><p>Configurar unaccent antes del stemming español, para índice y consulta.</p></div></div>
+   <div class="step"><i>03</i><div><strong>Índice FTS</strong><p>Vector por fragmento e índice GIN, una vez que exista content_chunks.</p></div></div>
+   <div class="step"><i>04</i><div><strong>Alias y trigramas</strong><p>Vocabulario editorial y pg_trgm como fallback, después de aprobar la activación.</p></div></div>
+   <div class="step"><i>05</i><div><strong>RPC privada y permisos</strong><p>Buscar solo versiones publicadas, con RLS y backend autorizado.</p></div></div>
+   <div class="step"><i>06</i><div><strong>Evaluación real</strong><p>Medir precisión, recall, ranking y latencia antes de fijar umbrales.</p></div></div>
+  </div>
+ </div>
+</section>
+<section class="slide" data-title="Seguridad y límites">
+ <div class="inner">
+  <div class="kicker">13 / SEGURIDAD</div><h2>Recuperar solo lo que SERCO autorizó publicar.</h2>
+  <div class="grid">
+   <div class="card half"><h3>Acceso público</h3><p>Solo publicaciones aprobadas y publicadas. Ningún borrador, investigación interna o metadato privado.</p></div>
+   <div class="card half"><h3>Backend controlado</h3><p>La búsqueda privilegiada permanece en servidor; límites de longitud, frecuencia y resultados.</p></div>
+   <div class="card half"><h3>Fuente trazable</h3><p>Cada fragmento conserva artículo, versión, encabezado y referencia editorial.</p></div>
+   <div class="card half"><h3>Contenido no confiable</h3><p>El texto recuperado es evidencia, no una instrucción que pueda cambiar reglas o permisos.</p></div>
+  </div>
+ </div>
+</section>
+<section class="slide" data-title="Dictamen">
+ <div class="inner">
+  <div class="kicker">14 / CONCLUSIÓN TÉCNICA</div><h2>Base léxica primero.<br><em>Semántica cuando los datos la justifiquen.</em></h2>
+  <p class="lead">El camino recomendado es PostgreSQL Full Text Search en español, normalización unaccent, conceptos y alias editoriales, ranking ponderado y pg_trgm como apoyo. pgvector se pospone hasta contar con evidencia de que FTS no cubre consultas conceptuales relevantes.</p>
+  <div class="grid">
+   <div class="card"><div class="label">Diagnóstico</div><h3>Completado</h3><p>Estado del prototipo, esquema y capacidades de la base revisados.</p></div>
+   <div class="card"><div class="label">Pruebas</div><h3>Preliminares</h3><p>Funciones nativas comprobadas con datos temporales; brechas registradas.</p></div>
+   <div class="card"><div class="label">Producción</div><h3>Pendiente</h3><p>Falta implementar el esquema y probar con publicaciones reales.</p></div>
+  </div>
+  <div class="callout warn">Dictamen: etapa 4 completada en diagnóstico, diseño y pruebas preliminares; no certificada como buscador productivo.</div>
+ </div>
+</section>
+<section class="slide" data-title="Fuentes y referencias">
+ <div class="inner source">
+  <div class="kicker">15 / DOCUMENTACIÓN TÉCNICA</div><h2>Fuentes consultadas.</h2>
+  <ul>
+   <li><a href="https://supabase.com/docs/guides/database/full-text-search" target="_blank" rel="noopener">Supabase — Full Text Search</a></li>
+   <li><a href="https://supabase.com/docs/guides/ai/hybrid-search" target="_blank" rel="noopener">Supabase — Hybrid Search y Reciprocal Rank Fusion</a></li>
+   <li><a href="https://www.postgresql.org/docs/current/unaccent.html" target="_blank" rel="noopener">PostgreSQL — unaccent</a></li>
+   <li><a href="https://www.postgresql.org/docs/current/pgtrgm.html" target="_blank" rel="noopener">PostgreSQL — pg_trgm</a></li>
+   <li><a href="https://www.postgresql.org/docs/current/textsearch-dictionaries.html" target="_blank" rel="noopener">PostgreSQL — Text Search Dictionaries</a></li>
+   <li><a href="https://supabase.com/docs/guides/database/extensions/pgvector" target="_blank" rel="noopener">Supabase — pgvector</a></li>
+  </ul>
+  <div class="callout">SERCO AI · Sección Informativa · Etapa 4 · Documento de trabajo técnico para revisión y aprobación.</div>
+ </div>
+</section>
+</main>
+</div>
+<div class="controls"><button id="prev" aria-label="Sección anterior">‹</button><button id="next" aria-label="Siguiente sección">›</button><button id="top" aria-label="Ir al inicio">↑</button></div>
+<footer><span>SERCO AI · INFORMACIÓN TÉCNICA</span><span>ETAPA 04 · BÚSQUEDA Y RECUPERACIÓN</span></footer>
+<script>
+(function(){
+ const slides=Array.from(document.querySelectorAll('.slide'));
+ const nav=document.getElementById('nav');
+ const filter=document.getElementById('filter');
+ const progress=document.getElementById('progress');
+ let current=0;
+ slides.forEach(function(slide,i){
+  const b=document.createElement('button');
+  b.innerHTML='<b>'+String(i+1).padStart(2,'0')+'</b>'+slide.dataset.title;
+  b.addEventListener('click',function(){slide.scrollIntoView({behavior:'smooth'});});
+  nav.appendChild(b);
+ });
+ const buttons=Array.from(nav.querySelectorAll('button'));
+ function update(){
+  const y=window.scrollY+window.innerHeight*.38;
+  let index=0;
+  slides.forEach(function(s,i){if(s.offsetTop<=y)index=i;});
+  current=index;
+  buttons.forEach(function(b,i){b.classList.toggle('active',i===current);});
+  const max=document.documentElement.scrollHeight-window.innerHeight;
+  progress.style.width=(max>0?(window.scrollY/max)*100:0)+'%';
+ }
+ window.addEventListener('scroll',update,{passive:true});
+ window.addEventListener('resize',update);
+ document.getElementById('prev').addEventListener('click',function(){slides[Math.max(0,current-1)].scrollIntoView({behavior:'smooth'});});
+ document.getElementById('next').addEventListener('click',function(){slides[Math.min(slides.length-1,current+1)].scrollIntoView({behavior:'smooth'});});
+ document.getElementById('top').addEventListener('click',function(){window.scrollTo({top:0,behavior:'smooth'});});
+ filter.addEventListener('input',function(){
+  const q=filter.value.toLocaleLowerCase('es');
+  buttons.forEach(function(b,i){b.style.display=slides[i].dataset.title.toLocaleLowerCase('es').includes(q)?'block':'none';});
+ });
+ document.addEventListener('keydown',function(e){
+  if(e.target===filter)return;
+  if(e.key==='ArrowRight')slides[Math.min(slides.length-1,current+1)].scrollIntoView({behavior:'smooth'});
+  if(e.key==='ArrowLeft')slides[Math.max(0,current-1)].scrollIntoView({behavior:'smooth'});
+  if(e.key==='Home')window.scrollTo({top:0,behavior:'smooth'});
+ });
+ update();
+})();
+</script>
+</body>
+</html>
