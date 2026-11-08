@@ -183,3 +183,22 @@ El endpoint deberá devolver mensajes públicos genéricos y conservar detalles 
 - Endpoint HTTP y controles de frecuencia en Vercel.
 
 Hasta conectar y probar esas dependencias, el núcleo de orquestación no debe exponerse como servicio público ni presentarse como motor operativo.
+
+
+## 9. Estado de la ruta HTTP en esta fase
+
+Se agregó el archivo `api/ask.js` como frontera HTTP de Vercel. La ruta acepta únicamente POST, limita el tamaño declarado del cuerpo, valida JSON y responde con errores públicos controlados.
+
+La ruta está intencionalmente en estado no disponible: el orquestador se instancia sin adaptadores y devuelve HTTP 503. Esto evita publicar una falsa capacidad de respuesta mientras no exista recuperación real ni proveedor de generación configurado.
+
+## 10. Pruebas automatizadas
+
+Las pruebas usan el módulo integrado `node:test`, sin instalar dependencias:
+
+```bash
+node --test tests/*.test.js
+```
+
+Se cubren validación de pregunta, límites, cobertura suficiente/parcial/insuficiente, ausencia de evidencia, aclaraciones, rechazo de citas ajenas, adaptadores faltantes y comportamiento HTTP.
+
+**Estado de ejecución:** las pruebas están escritas en el repositorio, pero todavía no se ha ejecutado un entorno Node contra estos archivos. No se declara aprobación de pruebas hasta ejecutar el comando y revisar su salida.
