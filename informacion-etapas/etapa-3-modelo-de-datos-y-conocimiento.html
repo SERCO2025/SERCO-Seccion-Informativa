@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#071525">
 <title>SERCO AI · Etapa 3 — Modelo de datos y conocimiento</title>
-<link rel="icon" type="image/jpeg" href="../favi.jpg">
+<link rel="icon" type="image/jpeg" href="favi.jpg">
 <style>
 :root{--bg:#061321;--panel:#0d2236;--panel2:#102b43;--cyan:#39d9ee;--blue:#649aff;--white:#eef7fc;--muted:#a8bdcc;--line:#25445b;--green:#65e0b4;--gold:#ffc96e}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(ellipse at 90% 0%,#123653 0,transparent 35%),var(--bg);color:var(--white);font-family:Inter,Segoe UI,Arial,sans-serif}
 header{height:70px;position:fixed;inset:0 0 auto;z-index:20;display:flex;align-items:center;justify-content:space-between;padding:0 4vw;background:#061321df;backdrop-filter:blur(16px);border-bottom:1px solid var(--line)}
-.brand{display:flex;align-items:center;gap:13px;font-size:13px;font-weight:800;letter-spacing:.17em}.brand img{width:42px;height:42px;object-fit:contain}.brand span{color:var(--cyan)}header small{color:var(--muted);letter-spacing:.13em;text-transform:uppercase}
+.brand{display:flex;align-items:center;gap:13px;font-size:13px;font-weight:800;letter-spacing:.17em}.brand img{width:42px;height:42px;object-fit:contain}.brand span{color:var(--cyan)}.brand .logo{width:125px;height:auto;max-height:none;object-fit:contain;flex:0 0 auto}.brand .favi-frame{width:38px;height:38px;flex:0 0 38px;display:grid;place-items:center;overflow:hidden;border:1px solid var(--cyan);border-radius:10px;background:#fff}.brand .favi-image{width:90%;height:90%;object-fit:contain;border-radius:7px}header small{color:var(--muted);letter-spacing:.13em;text-transform:uppercase}
 .progress{position:fixed;z-index:30;top:69px;left:0;height:3px;background:linear-gradient(90deg,var(--cyan),var(--blue));width:0}
 .layout{display:grid;grid-template-columns:245px 1fr;padding-top:70px;max-width:1600px;margin:auto}aside{height:calc(100vh - 70px);position:sticky;top:70px;padding:28px 16px;border-right:1px solid var(--line);overflow:auto}
 .navtitle{font-size:10px;color:#7293a9;letter-spacing:.2em;margin:0 10px 14px;text-transform:uppercase}.nav{display:grid;gap:4px}.nav button{background:none;border:1px solid transparent;color:#9ab0bf;text-align:left;padding:10px;border-radius:10px;cursor:pointer;font-size:11px}.nav button b{color:var(--cyan);margin-right:8px}.nav button.active,.nav button:hover{background:#39d9ee12;border-color:#39d9ee44;color:white}
@@ -33,7 +33,7 @@ footer{padding:28px 6vw;color:#7894a7;font-size:10px;display:flex;justify-conten
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
 </style></head>
 <body>
-<header><div class="brand"><img src="../logo.png" alt="SERCO" onerror="this.hidden=true">SERCO <span>AI</span></div><small>Modelo de datos · Etapa 03</small></header><div class="progress" id="progress"></div>
+<header><div class="brand"><img class="logo" src="logo.png" alt="Logotipo SERCO" onerror="this.hidden=true"><span class="favi-frame"><img class="favi-image" src="favi.jpg" alt="Favicon SERCO"></span>SERCO <span>AI</span></div><small>Modelo de datos · Etapa 03</small></header><div class="progress" id="progress"></div>
 <div class="layout"><aside><p class="navtitle">Índice de contenido</p><nav class="nav">
 <button class="active" data-go="inicio"><b>00</b>Presentación</button><button data-go="principios"><b>01</b>Principios de diseño</button><button data-go="publicaciones"><b>02</b>Publicaciones y versiones</button><button data-go="taxonomia"><b>03</b>Taxonomía y conceptos</button><button data-go="multimedia"><b>04</b>Biblioteca multimedia</button><button data-go="fuentes"><b>05</b>Fuentes y referencias</button><button data-go="consultas"><b>06</b>Consultas y brechas</button><button data-go="usuarios"><b>07</b>Usuarios y revisión</button><button data-go="busqueda"><b>08</b>Fragmentos y búsqueda</button><button data-go="seguridad"><b>09</b>Integridad y seguridad</button><button data-go="migraciones"><b>10</b>Orden de migraciones</button><button data-go="cierre"><b>11</b>Resultado</button></nav><div class="note">Diseño de datos aprobado por el usuario. Las migraciones SQL aún no se han ejecutado.</div></aside>
 <main>
