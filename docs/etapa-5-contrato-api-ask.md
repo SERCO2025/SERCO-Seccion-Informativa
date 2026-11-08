@@ -2,33 +2,33 @@
 ## Contrato técnico inicial de POST /api/ask
 
 **Estado:** diseño aprobado; contrato inicial implementado en el núcleo de orquestación.  
-**Rama de trabajo:** \`desarrollo\`  
+**Rama de trabajo:** `desarrollo`  
 **Alcance:** consulta oficial basada exclusivamente en publicaciones vigentes de SERCO.
 
 Este contrato define el intercambio esperado entre la interfaz pública y el motor de consulta. No declara disponible un servicio productivo: el endpoint HTTP, la recuperación real desde Supabase y los adaptadores de evaluación, seguridad y generación deben conectarse y probarse antes de habilitarlo.
 
 ## 1. Solicitud
 
-\`\`\`http
+```http
 POST /api/ask
 Content-Type: application/json
-\`\`\`
+```
 
 Ejemplo:
 
-\`\`\`json
+```json
 {
   "question": "¿Qué tipos de cimentación se describen en la biblioteca de SERCO?",
   "locale": "es-MX"
 }
-\`\`\`
+```
 
 Campos:
 
 | Campo | Tipo | Requisito | Regla |
 |---|---|---|---|
 | question | string | Obligatorio | Entre 3 y 2000 caracteres después de recortar espacios |
-| locale | string | Opcional | Por defecto \`es-MX\`; reservado para localización de la respuesta |
+| locale | string | Opcional | Por defecto `es-MX`; reservado para localización de la respuesta |
 
 No se aceptan identificadores de publicación, roles ni estados editoriales proporcionados por el visitante para ampliar permisos o alterar el conjunto de documentos consultables.
 
@@ -38,7 +38,7 @@ La respuesta separa el estado de entrega del estado de cobertura.
 
 ### Respuesta sustentada
 
-\`\`\`json
+```json
 {
   "status": "answered",
   "coverage": "sufficient",
@@ -56,11 +56,11 @@ La respuesta separa el estado de entrega del estado de cobertura.
   ],
   "missingInformation": []
 }
-\`\`\`
+```
 
 ### Cobertura parcial
 
-\`\`\`json
+```json
 {
   "status": "partial",
   "coverage": "partial",
@@ -68,13 +68,13 @@ La respuesta separa el estado de entrega del estado de cobertura.
   "citations": [],
   "missingInformation": ["Dato que no está documentado."]
 }
-\`\`\`
+```
 
 En una respuesta parcial real, las afirmaciones sustentadas deberán incluir una o más citas válidas. El ejemplo anterior muestra la estructura; no representa una respuesta publicable sin citas.
 
 ### Información insuficiente
 
-\`\`\`json
+```json
 {
   "status": "insufficient",
   "coverage": "insufficient",
@@ -82,11 +82,11 @@ En una respuesta parcial real, las afirmaciones sustentadas deberán incluir una
   "citations": [],
   "missingInformation": ["No se encontraron publicaciones vigentes suficientes."]
 }
-\`\`\`
+```
 
 ### Aclaración necesaria
 
-\`\`\`json
+```json
 {
   "status": "needs_clarification",
   "coverage": "partial",
@@ -94,32 +94,32 @@ En una respuesta parcial real, las afirmaciones sustentadas deberán incluir una
   "clarificationQuestions": ["¿En qué ubicación se realizará el proyecto?"],
   "citations": []
 }
-\`\`\`
+```
 
 ### Bloqueo de seguridad
 
-\`\`\`json
+```json
 {
   "status": "blocked",
   "coverage": "partial",
   "answer": "No es posible proporcionar esa orientación con las condiciones disponibles.",
   "citations": []
 }
-\`\`\`
+```
 
 ## 3. Estados permitidos
 
-- \`answered\`: respuesta generada y respaldada; cobertura suficiente.
-- \`partial\`: respuesta restringida a la evidencia disponible; se identifican faltantes.
-- \`insufficient\`: no se genera respuesta sustantiva por falta de evidencia.
-- \`needs_clarification\`: hacen falta datos del contexto de la pregunta.
-- \`blocked\`: una regla de seguridad impide continuar.
+- `answered`: respuesta generada y respaldada; cobertura suficiente.
+- `partial`: respuesta restringida a la evidencia disponible; se identifican faltantes.
+- `insufficient`: no se genera respuesta sustantiva por falta de evidencia.
+- `needs_clarification`: hacen falta datos del contexto de la pregunta.
+- `blocked`: una regla de seguridad impide continuar.
 
 Cobertura:
 
-- \`sufficient\`
-- \`partial\`
-- \`insufficient\`
+- `sufficient`
+- `partial`
+- `insufficient`
 
 El estado de entrega no sustituye al de cobertura.
 
