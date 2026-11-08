@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#071525">
 <title>SERCO AI · Etapa 4 — Búsqueda y recuperación</title>
-<link rel="icon" type="image/jpeg" href="../favi.jpg">
+<link rel="icon" type="image/jpeg" href="favi.jpg">
 <style>
 :root{--bg:#061321;--panel:#0c2236;--panel2:#102b43;--cyan:#39d9ee;--blue:#649aff;--white:#eef7fc;--muted:#a8bdcc;--line:#25445b;--green:#65e0b4;--amber:#ffc978;--red:#ff8d9b}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(ellipse at 75% 0%,#123653 0,transparent 34%),var(--bg);color:var(--white);font-family:Inter,"Segoe UI",Arial,sans-serif}
 header{height:70px;position:fixed;inset:0 0 auto;z-index:30;display:flex;align-items:center;justify-content:space-between;padding:0 4vw;background:#061321e8;backdrop-filter:blur(16px);border-bottom:1px solid var(--line)}
-.brand{display:flex;align-items:center;gap:13px;font-size:13px;font-weight:800;letter-spacing:.16em}.brand img{width:44px;height:44px;object-fit:contain}.brand span{color:var(--cyan)}header small{color:var(--muted);letter-spacing:.12em;text-transform:uppercase;font-size:10px}
+.brand{display:flex;align-items:center;gap:13px;font-size:13px;font-weight:800;letter-spacing:.16em}.brand img{width:44px;height:44px;object-fit:contain}.brand span{color:var(--cyan)}.brand .logo{width:125px;height:auto;max-height:none;object-fit:contain;flex:0 0 auto}.brand .favi-frame{width:38px;height:38px;flex:0 0 38px;display:grid;place-items:center;overflow:hidden;border:1px solid var(--cyan);border-radius:10px;background:#fff}.brand .favi-image{width:90%;height:90%;object-fit:contain;border-radius:7px}header small{color:var(--muted);letter-spacing:.12em;text-transform:uppercase;font-size:10px}
 .progress{position:fixed;z-index:40;top:69px;left:0;height:3px;background:linear-gradient(90deg,var(--cyan),var(--blue));width:0}
 .layout{display:grid;grid-template-columns:250px minmax(0,1fr);padding-top:70px;max-width:1700px;margin:auto}
 aside{height:calc(100vh - 70px);position:sticky;top:70px;padding:24px 17px;border-right:1px solid var(--line);overflow:auto}
@@ -44,7 +44,7 @@ footer{padding:27px 6vw;color:#7894a7;font-size:10px;display:flex;justify-conten
 </head>
 <body>
 <header>
- <div class="brand"><img src="../logo.png" alt="Logotipo SERCO" onerror="this.style.display='none';this.nextElementSibling.style.display='inline'"><span style="display:none">SERCO</span><span>SERCO AI <b style="color:#eef7fc">/ INFORMACIÓN</b></span></div>
+ <div class="brand"><img class="logo" src="logo.png" alt="Logotipo SERCO" onerror="this.hidden=true"><span class="favi-frame"><img class="favi-image" src="favi.jpg" alt="Favicon SERCO"></span><span style="display:none">SERCO</span><span>SERCO AI <b style="color:#eef7fc">/ INFORMACIÓN</b></span></div>
  <small>Informe técnico · Etapa 04</small>
 </header>
 <div class="progress" id="progress"></div>
