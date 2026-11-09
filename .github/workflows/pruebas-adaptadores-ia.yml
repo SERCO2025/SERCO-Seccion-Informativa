@@ -6,7 +6,9 @@ on:
       - desarrollo
     paths:
       - "src/services/ai/**"
-      - "tests/ai-provider-contract.test.js"
+      - "src/services/research/**"
+      - "api/**"
+      - "tests/**"
       - ".github/workflows/pruebas-adaptadores-ia.yml"
   workflow_dispatch:
 
@@ -23,5 +25,5 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Ejecutar pruebas de contrato
-        run: node --test tests/ai-provider-contract.test.js
+      - name: Ejecutar suite completa
+        run: node --test tests/*.test.js
