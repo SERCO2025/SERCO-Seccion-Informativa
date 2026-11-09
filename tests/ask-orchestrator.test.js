@@ -165,6 +165,32 @@ test("solicita aclaraciones cuando el control de seguridad lo indica", async () 
   assert.equal(result.clarificationQuestions.length, 1);
 });
 
+test("entrega la información faltante al generador cuando la cobertura es parcial", async () => {
+  let receivedMissingInformation;
+  const orchestrator = createAskOrchestrator(adapters({
+    coverageEvaluator: {
+      async evaluate() {
+        return {
+          status: "partial",
+          missingInformation: ["No se documenta la capacidad portante del terreno."]
+        };
+      }
+    },
+    answerGenerator: {
+      async generate(input) {
+        receivedMissingInformation = input.missingInformation;
+        return {
+          text: "La publicación describe tipos de cimentación.",
+          citationIds: ["chunk-001"]
+        };
+      }
+    }
+  }));
+
+  await orchestrator.ask({ question: "¿Qué tipos de cimentación existen?" });
+  assert.deepEqual(receivedMissingInformation, ["No se documenta la capacidad portante del terreno."]);
+});
+
 test("rechaza citas que no pertenecen a la evidencia recuperada", async () => {
   const orchestrator = createAskOrchestrator(adapters({
     answerGenerator: {
