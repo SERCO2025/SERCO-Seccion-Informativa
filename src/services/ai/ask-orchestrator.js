@@ -246,10 +246,15 @@ function createAskOrchestrator(adapters) {
 
       requireMethod(configured.answerGenerator, "generate", "answerGenerator");
 
+      const missingInformation = Array.isArray(coverageResult.missingInformation)
+        ? coverageResult.missingInformation
+        : [];
+
       const generated = await configured.answerGenerator.generate({
         question,
         evidence: publicEvidence(evidence),
         coverage: coverageResult.status,
+        missingInformation,
         instructions: {
           useOnlyProvidedEvidence: true,
           doNotInventFacts: true,
@@ -269,9 +274,7 @@ function createAskOrchestrator(adapters) {
         coverage: coverageResult.status,
         answer: generated.text.trim(),
         citations,
-        missingInformation: Array.isArray(coverageResult.missingInformation)
-          ? coverageResult.missingInformation
-          : []
+        missingInformation
       };
     }
   };
