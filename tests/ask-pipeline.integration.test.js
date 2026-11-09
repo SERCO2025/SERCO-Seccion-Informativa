@@ -94,7 +94,7 @@ test("una cobertura parcial llega al generador con los datos faltantes", async (
   await handler({
     method: "POST",
     headers: {},
-    body: { question: "¿Qué cimentación usar en terreno arcilloso?" }
+    body: { question: "¿Qué tipos de cimentación existen en terreno arcilloso?" }
   }, res);
 
   assert.equal(res.statusCode, 200);
