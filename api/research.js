@@ -1,10 +1,12 @@
 "use strict";
 
 const { timingSafeEqual } = require("node:crypto");
+const { createTavilySearchProvider } = require("../src/services/research/tavily-search-provider");
 const { createGeminiResearchProvider } = require("../src/services/research/gemini-research-provider");
 const { createResearchHttpHandler } = require("../src/services/research/research-http-handler");
 
-const provider = createGeminiResearchProvider();
+const tavilySearchProvider = createTavilySearchProvider();
+const provider = createGeminiResearchProvider({ searchProvider: tavilySearchProvider });
 const researchHandler = createResearchHttpHandler(provider);
 
 function secureEqual(left, right) {

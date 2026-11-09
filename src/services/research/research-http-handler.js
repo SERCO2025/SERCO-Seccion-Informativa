@@ -5,6 +5,10 @@ const {
   ResearchConfigurationError,
   ResearchProviderError
 } = require("./gemini-research-provider");
+const {
+  TavilyConfigurationError,
+  TavilySearchError
+} = require("./tavily-search-provider");
 
 const MAX_BODY_BYTES = 8192;
 
@@ -63,7 +67,7 @@ function createResearchHttpHandler(provider) {
       const result = await provider.research({ query });
       return send(res, 200, result);
     } catch (error) {
-      if (error instanceof ResearchConfigurationError) {
+      if (error instanceof ResearchConfigurationError || error instanceof TavilyConfigurationError) {
         return send(res, 503, {
           error: {
             code: error.code,
@@ -71,7 +75,7 @@ function createResearchHttpHandler(provider) {
           }
         });
       }
-      if (error instanceof ResearchProviderError) {
+      if (error instanceof ResearchProviderError || error instanceof TavilySearchError) {
         const status = error.code === "RESEARCH_RATE_LIMITED" ? 429 : 502;
         return send(res, status, {
           error: {
