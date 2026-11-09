@@ -22,6 +22,16 @@ test("solicita contexto para dimensionamiento estructural", async () => {
   assert.equal(result.decision, "clarify");
 });
 
+test("detecta recomendaciones formuladas en segunda persona", async () => {
+  const result = await guard.evaluate({ question: "¿Qué tipo de zapata me recomiendas para mi obra?" });
+  assert.equal(result.decision, "clarify");
+});
+
+test("detecta solicitudes de dimensionamiento en infinitivo", async () => {
+  const result = await guard.evaluate({ question: "¿Cómo dimensionar una columna de concreto?" });
+  assert.equal(result.decision, "clarify");
+});
+
 test("no bloquea una definición aunque mencione un elemento estructural", async () => {
   const result = await guard.evaluate({ question: "¿Cómo se define una columna de concreto?" });
   assert.equal(result.decision, "allow");
