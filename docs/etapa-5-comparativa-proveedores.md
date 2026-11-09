@@ -87,3 +87,27 @@ El script realiza dos solicitudes por cada proveedor configurado. Utiliza única
 - Cloudflare precios: https://developers.cloudflare.com/workers-ai/platform/pricing/
 - Cloudflare API compatible: https://developers.cloudflare.com/workers-ai/configuration/open-ai-compatibility/
 - Cloudflare modelos: https://developers.cloudflare.com/workers-ai/models/
+
+
+## Selector secuencial y respaldo automático
+
+El motor RAG utiliza un único generador secuencial con este orden fijo:
+
+1. Gemini (principal).
+2. Groq (respaldo 1).
+3. Cloudflare Workers AI (respaldo 2).
+
+El selector no ejecuta solicitudes en paralelo. Solo intenta el siguiente proveedor cuando el actual falla, no tiene credenciales, alcanza un límite, exige facturación, no está disponible o devuelve una salida inválida/no verificable.
+
+Antes de aceptar una salida, el selector exige texto y al menos una cita cuyo identificador exista en la evidencia recuperada para esa misma pregunta. Una cita ajena o duplicada invalida el resultado y activa el siguiente proveedor.
+
+Una entrada inválida no provoca failover: se detiene porque el problema está en la solicitud, no en el proveedor. Si los tres proveedores fallan, se devuelve el error controlado \`AI_PROVIDERS_EXHAUSTED\`; no se inventa una respuesta ni se intenta habilitar facturación.
+
+El resultado interno registra el proveedor que respondió, el modelo y el número de respaldos utilizados. Los mensajes de error internos y posibles datos de credenciales no se incluyen en ese registro.
+
+Implementación:
+- \`src/services/ai/sequential-answer-generator.js\`
+- \`api/ask.js\` conecta el selector con el orquestador RAG.
+- \`tests/sequential-answer-generator.test.js\`
+
+La ruta \`/api/ask\` continúa sin estar disponible para visitantes: todavía faltan el recuperador real, evaluador de cobertura y control de seguridad conectados. El selector ya está conectado al orquestador, pero no se ha activado el servicio público.
