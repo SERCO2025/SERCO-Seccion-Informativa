@@ -15,12 +15,12 @@ La búsqueda usa PostgreSQL Full Text Search en español, normalización de acen
 ## Seguridad
 
 - RLS habilitado en las tres tablas.
-- Las políticas públicas solo permiten filas de publicaciones publicadas y su versión vigente.
-- La lectura de las tablas se concede al rol de backend service_role; no se conceden escrituras ni lectura directa a anon o authenticated.
+- Las políticas de lectura describen la condición editorial de publicación vigente.
+- Se revocaron explícitamente los privilegios heredados de PUBLIC, anon y authenticated sobre las tres tablas; solo service_role tiene SELECT.
 - La función RPC search_published_chunks es SECURITY INVOKER y su ejecución se concede solo a service_role.
+- La función trigger de indexación también tiene EXECUTE revocado para PUBLIC, anon y authenticated.
 - El recuperador usa SUPABASE_URL y SUPABASE_SECRET_KEY exclusivamente en servidor.
 - La consulta RPC filtra siempre por status = published y published_version_id = version.id; nunca devuelve borradores ni versiones antiguas.
-- El endpoint no ejecuta una búsqueda hasta que también estén conectados el evaluador de cobertura y el control de seguridad.
 
 ## Contrato del adaptador
 
@@ -39,8 +39,15 @@ api/ask.js inyecta el recuperador Supabase y el generador secuencial Gemini → 
 - SUPABASE_URL
 - SUPABASE_SECRET_KEY (clave secreta de backend; nunca usar en frontend)
 
+## Migraciones aplicadas
+
+1. 20261109000100_create_knowledge_retrieval_core.sql
+2. 20261109000200_index_knowledge_foreign_keys.sql
+3. 20261109000300_restrict_knowledge_tables_to_backend.sql
+
 ## Verificación
 
-- Pruebas unitarias del adaptador.
+- Pruebas unitarias del adaptador con fetch simulado.
 - Consulta SQL transaccional con datos ficticios para verificar acentos, ranking y selección exclusiva de la versión publicada; los datos de prueba se revierten.
-- Supabase Security y Performance Advisors después del cambio.
+- Privilegios comprobados: anon/authenticated no pueden leer las tablas ni ejecutar la RPC; service_role puede leer y ejecutar.
+- Supabase Security y Performance Advisors revisados después del cambio.
