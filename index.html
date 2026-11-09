@@ -1,1 +1,184 @@
-<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SERCO · Sección Informativa</title><style>*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Arial,Helvetica,sans-serif}body{background:#071019;color:#f4f7fa;display:flex;justify-content:center;padding:70px 20px}.knowledge{width:min(980px,100%);text-align:center}h1{font-size:clamp(28px,5vw,48px);margin:0 0 8px}.subtitle{margin:0 auto 28px;max-width:700px;color:#b9c4ce;line-height:1.55}.search{display:flex;gap:10px;max-width:780px;margin:auto}.search input{flex:1;background:transparent;border:1px solid rgba(255,255,255,.72);border-radius:4px;color:white;padding:16px 18px;font-size:17px;outline:none}.search button{border:1px solid rgba(255,255,255,.8);background:#fff;color:#111;border-radius:4px;padding:0 22px;font-weight:700;cursor:pointer}.results{max-width:780px;margin:18px auto 0;text-align:left;display:none}.results.active{display:block}.result{border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.045);padding:16px;margin-bottom:9px;border-radius:5px;cursor:pointer}.result:hover{background:rgba(255,255,255,.09)}.result small{color:#9eabb7}.article{max-width:780px;margin:18px auto 0;text-align:left;display:none;border:1px solid rgba(255,255,255,.15);padding:28px;border-radius:6px;background:rgba(0,0,0,.18)}.article.active{display:block}.article h2{margin-top:0}.back{background:none;color:#cfd8df;border:0;cursor:pointer;padding:0;margin-bottom:18px}@media(max-width:620px){.search{flex-direction:column}.search button{height:48px}}</style></head><body><main class="knowledge"><h1>Conocimiento SERCO</h1><p class="subtitle">¿Tienes alguna duda sobre construcción, urbanización o pavimentación? Escríbela aquí y consulta nuestra información.</p><form class="search" id="searchForm"><input id="query" autocomplete="off" placeholder="Escribe tu búsqueda..." aria-label="Buscar información"><button type="submit">Buscar 🔍</button></form><section class="results" id="results" aria-live="polite"></section><article class="article" id="article"></article></main><script>const data=[{id:1,title:"¿Qué es un vano?",tags:["vano","muro","arquitectura"],summary:"Definición y relación con otros elementos constructivos.",body:"El vano es una abertura o espacio practicado en un muro u otro elemento constructivo. Esta ficha es contenido de demostración del prototipo."},{id:2,title:"¿Qué es un lindero?",tags:["lindero","predio","deslinde"],summary:"Concepto relacionado con los límites de un predio.",body:"Un lindero es la línea o límite que separa un predio de otro o de un espacio distinto."},{id:3,title:"Cimentación para muros",tags:["cimentación","cimiento","muro"],summary:"Ejemplo de cómo un contenido puede relacionarse con otros temas.",body:"Esta ficha demuestra la navegación entre temas. En la versión real podrá incorporar fotografías, diagramas, tablas y videos."}];const form=document.querySelector('#searchForm'),q=document.querySelector('#query'),results=document.querySelector('#results'),article=document.querySelector('#article');function search(){const term=q.value.trim().toLowerCase();article.classList.remove('active');if(!term){results.classList.remove('active');results.innerHTML='';return}const found=data.filter(x=>(x.title+' '+x.tags.join(' ')+' '+x.summary).toLowerCase().includes(term));results.innerHTML=found.length?found.map(x=>`<div class="result" data-id="${x.id}"><strong>${x.title}</strong><br><small>${x.summary}</small></div>`).join(''):`<div class="result">No encontramos resultados todavía.</div>`;results.classList.add('active')}form.addEventListener('submit',e=>{e.preventDefault();search()});results.addEventListener('click',e=>{const el=e.target.closest('.result[data-id]');if(!el)return;const x=data.find(a=>a.id==el.dataset.id);results.classList.remove('active');article.innerHTML=`<button class="back" onclick="backToResults()">← Volver a resultados</button><h2>${x.title}</h2><p>${x.body}</p><p><strong>Conceptos relacionados:</strong> ${x.tags.join(' · ')}</p>`;article.classList.add('active')});function backToResults(){article.classList.remove('active');search()}</script></body></html>
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SERCO · Sección Informativa</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Arial,Helvetica,sans-serif}
+body{background:#071019;color:#f4f7fa;display:flex;justify-content:center;padding:64px 20px}
+.knowledge{width:min(980px,100%)}h1{text-align:center;font-size:clamp(28px,5vw,46px);margin:0 0 8px}
+.subtitle{text-align:center;margin:0 auto 28px;max-width:720px;color:#b9c4ce;line-height:1.55}
+.search{display:flex;gap:10px;max-width:820px;margin:auto}
+.search textarea{flex:1;min-height:58px;max-height:180px;resize:vertical;background:transparent;border:1px solid rgba(255,255,255,.72);border-radius:4px;color:white;padding:16px 18px;font-size:17px;outline:none}
+button{border:1px solid rgba(255,255,255,.8);background:#fff;color:#111;border-radius:4px;padding:0 22px;font-weight:700;cursor:pointer;min-height:52px}
+button:disabled{opacity:.55;cursor:wait}
+.panel{max-width:820px;margin:18px auto 0;text-align:left}
+.notice,.answer,.consent,.research{border:1px solid rgba(255,255,255,.17);background:rgba(255,255,255,.045);padding:18px;margin-top:12px;border-radius:5px}
+.notice{color:#c7d2dc}.answer h2,.research h2{font-size:19px;margin:0 0 12px}.answer p,.research p{line-height:1.65;white-space:pre-wrap;margin:0 0 12px}
+.meta{color:#aebbc7;font-size:13px;margin-bottom:10px}.consent{border-color:rgba(255,255,255,.42)}
+.consent p{line-height:1.55;margin:0 0 14px}.actions{display:flex;gap:10px;flex-wrap:wrap}
+.secondary{background:transparent;color:#f4f7fa}
+.sources{padding-left:22px;line-height:1.65}.sources a{color:#9bd0ff;overflow-wrap:anywhere}
+.status{color:#c4ced8;font-size:13px;margin-top:12px;min-height:18px}
+.hidden{display:none!important}
+@media(max-width:620px){body{padding:42px 14px}.search{flex-direction:column}.search button{height:48px}.actions button{flex:1}}
+</style>
+</head>
+<body>
+<main class="knowledge">
+  <h1>Conocimiento SERCO</h1>
+  <p class="subtitle">Consulta información sobre construcción, urbanización y pavimentación. Primero revisaremos la biblioteca oficial de SERCO.</p>
+  <form class="search" id="searchForm">
+    <textarea id="query" maxlength="2000" autocomplete="off" placeholder="Escribe tu pregunta..." aria-label="Escribe tu pregunta" required></textarea>
+    <button id="askButton" type="submit">Consultar</button>
+  </form>
+  <section class="panel" id="panel" aria-live="polite">
+    <div class="notice" id="welcome">Las respuestas oficiales se basan únicamente en publicaciones vigentes de SERCO. Si la información no es suficiente, podrás autorizar una investigación externa.</div>
+    <section class="answer hidden" id="officialAnswer">
+      <div class="meta" id="officialMeta"></div>
+      <h2 id="officialTitle">Información de la biblioteca SERCO</h2>
+      <p id="officialText"></p>
+      <ul class="sources hidden" id="officialSources"></ul>
+    </section>
+    <section class="consent hidden" id="consentPanel">
+      <p id="consentText">La biblioteca oficial de SERCO no contiene información suficiente para responder. ¿Deseas que busque información adicional en Internet?</p>
+      <div class="actions">
+        <button id="researchYes" type="button">Sí, buscar en Internet</button>
+        <button id="researchNo" class="secondary" type="button">No, gracias</button>
+      </div>
+    </section>
+    <section class="research hidden" id="researchPanel">
+      <div class="meta">INVESTIGACIÓN EXTERNA · TAVILY + GEMINI · NO ES CONTENIDO OFICIAL SERCO</div>
+      <h2>Resultado de la investigación</h2>
+      <p id="researchReport"></p>
+      <h2>Fuentes consultadas</h2>
+      <ol class="sources" id="researchSources"></ol>
+    </section>
+    <div class="status" id="status"></div>
+  </section>
+</main>
+<script>
+(function(){
+  "use strict";
+  const form=document.getElementById("searchForm");
+  const queryInput=document.getElementById("query");
+  const askButton=document.getElementById("askButton");
+  const officialAnswer=document.getElementById("officialAnswer");
+  const officialMeta=document.getElementById("officialMeta");
+  const officialText=document.getElementById("officialText");
+  const officialSources=document.getElementById("officialSources");
+  const consentPanel=document.getElementById("consentPanel");
+  const consentText=document.getElementById("consentText");
+  const researchYes=document.getElementById("researchYes");
+  const researchNo=document.getElementById("researchNo");
+  const researchPanel=document.getElementById("researchPanel");
+  const researchReport=document.getElementById("researchReport");
+  const researchSources=document.getElementById("researchSources");
+  const status=document.getElementById("status");
+  let pendingQuery="";
+  let researchAllowed=false;
+
+  function show(element){element.classList.remove("hidden")}
+  function hide(element){element.classList.add("hidden")}
+  function setBusy(busy,message){
+    askButton.disabled=busy;
+    researchYes.disabled=busy;
+    researchNo.disabled=busy;
+    status.textContent=message||"";
+  }
+  function resetResults(){
+    hide(officialAnswer);hide(consentPanel);hide(researchPanel);
+    officialSources.replaceChildren();researchSources.replaceChildren();
+    researchAllowed=false;pendingQuery="";
+  }
+  function addCitation(citation){
+    const li=document.createElement("li");
+    const title=document.createElement("strong");
+    title.textContent=citation.title||"Publicación SERCO";
+    li.appendChild(title);
+    if(citation.section){li.appendChild(document.createTextNode(" · "+citation.section))}
+    officialSources.appendChild(li);
+  }
+  function addExternalSource(source){
+    const li=document.createElement("li");
+    const link=document.createElement("a");
+    link.href=source.url;
+    link.target="_blank";
+    link.rel="noopener noreferrer";
+    link.textContent=source.title||source.url;
+    li.appendChild(link);
+    if(source.publishedDate){li.appendChild(document.createTextNode(" · "+source.publishedDate))}
+    researchSources.appendChild(li);
+  }
+  function showConsent(message){
+    consentText.textContent=message||"La información de la biblioteca oficial SERCO es insuficiente. ¿Deseas que busque información adicional en Internet?";
+    show(consentPanel);
+  }
+  async function postJson(url,body){
+    const response=await fetch(url,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(body),
+      cache:"no-store"
+    });
+    let payload;
+    try{payload=await response.json()}catch{throw new Error("El servidor devolvió una respuesta no válida.")}
+    if(!response.ok){
+      const error=payload&&payload.error;
+      throw new Error(error&&error.message?error.message:"No fue posible completar la solicitud.");
+    }
+    return payload;
+  }
+
+  form.addEventListener("submit",async function(event){
+    event.preventDefault();
+    const question=queryInput.value.trim();
+    if(question.length<3){status.textContent="Escribe una pregunta de al menos 3 caracteres.";return}
+    resetResults();
+    pendingQuery=question;
+    setBusy(true,"Consultando la biblioteca oficial de SERCO...");
+    try{
+      const result=await postJson("/api/ask",{question,locale:"es-MX"});
+      officialMeta.textContent="BIBLIOTECA OFICIAL SERCO · COBERTURA: "+String(result.coverage||"no determinada").toUpperCase();
+      officialText.textContent=result.answer||"No se recibió una respuesta.";
+      if(Array.isArray(result.citations)&&result.citations.length){
+        result.citations.forEach(addCitation);show(officialSources);
+      }
+      show(officialAnswer);
+      if(result.status==="insufficient"){
+        showConsent("No encontré información suficiente en la biblioteca oficial de SERCO. ¿Deseas que busque información adicional en Internet?");
+      }else if(result.status==="partial"){
+        showConsent("La biblioteca oficial de SERCO solo contiene información parcial. ¿Deseas que busque información complementaria en Internet?");
+      }
+      setBusy(false,"");
+    }catch(error){
+      setBusy(false,error.message||"No fue posible consultar la biblioteca SERCO.");
+    }
+  });
+
+  researchYes.addEventListener("click",async function(){
+    if(!pendingQuery||researchAllowed)return;
+    researchAllowed=true;
+    hide(consentPanel);
+    setBusy(true,"Buscando fuentes en Internet con Tavily y preparando el análisis con Gemini...");
+    try{
+      const result=await postJson("/api/research-public",{query:pendingQuery});
+      researchReport.textContent=result.report||"La investigación no devolvió un informe.";
+      if(Array.isArray(result.sources)){result.sources.forEach(addExternalSource)}
+      show(researchPanel);
+      setBusy(false,"Investigación externa completada. Revisa las fuentes antes de utilizar la información.");
+    }catch(error){
+      researchAllowed=false;
+      show(consentPanel);
+      setBusy(false,error.message||"No fue posible completar la investigación externa.");
+    }
+  });
+  researchNo.addEventListener("click",function(){
+    hide(consentPanel);
+    setBusy(false,"Se conservó únicamente la respuesta basada en la biblioteca oficial SERCO.");
+  });
+})();
+</script>
+</body>
+</html>
