@@ -1,99 +1,74 @@
 # SERCO AI — Etapa 6: Investigación externa
 
 **Rama:** `desarrollo`  
-**Estado:** adaptador Tavily + análisis Gemini implementados; conexión real, interfaz y persistencia pendientes.
+**Estado:** integración de interfaz y endpoints públicos implementada; validación real con Tavily/Gemini y despliegue Preview pendientes.
 
 ## Proveedores y responsabilidades
-
-La investigación externa separa búsqueda y análisis:
 
 - **Tavily Search API:** recupera resultados web y fragmentos.
 - **Gemini Developer API:** analiza exclusivamente los resultados recuperados y redacta el informe.
 - La búsqueda Tavily usa `search_depth: basic`, `max_results: 8`, `include_answer: false` e `include_raw_content: false`.
-- Una búsqueda básica consume 1 crédito. La cuota gratuita publicada por Tavily es de 1,000 créditos mensuales sin tarjeta.
 - No se habilita búsqueda avanzada ni pago por uso desde el código.
+- La investigación externa nunca se publica automáticamente como contenido oficial SERCO.
 
-Variables de entorno del proyecto Vercel independiente:
+Variables de entorno requeridas en el proyecto Vercel independiente:
 
-- `TAVILY_API_KEY` — nueva variable requerida para búsqueda.
-- `GEMINI_API_KEY` — variable existente para análisis.
+- `TAVILY_API_KEY` — búsqueda web.
+- `GEMINI_API_KEY` — análisis.
+- `SUPABASE_URL` y `SUPABASE_SECRET_KEY` — recuperación de conocimiento y control de cuotas.
 - `GEMINI_RESEARCH_MODEL` — opcional; modelo predeterminado `gemini-3.8-flash`.
 
-Documentación:
-- https://docs.tavily.com/documentation/api-reference/endpoint/search
-- https://docs.tavily.com/documentation/api-credits
-- https://ai.google.dev/api/generate-content
+## Flujo de la interfaz
 
-## Flujo
+1. El visitante envía una pregunta desde `index.html`.
+2. La interfaz consulta `POST /api/ask`, que busca exclusivamente publicaciones vigentes de SERCO.
+3. Si la cobertura es suficiente, presenta la respuesta oficial y sus citas.
+4. Si la cobertura es parcial o insuficiente, pregunta expresamente si desea buscar información adicional en Internet.
+5. Solo después de pulsar **Sí, buscar en Internet**, la interfaz llama a `POST /api/research-public`.
+6. El backend ejecuta Tavily y pasa sus resultados a Gemini.
+7. La interfaz distingue el informe externo de la información oficial y presenta los enlaces de las fuentes.
+8. Si el visitante rechaza la búsqueda, se conserva únicamente la respuesta de la biblioteca SERCO.
 
-1. Validar consulta (3–2000 caracteres).
-2. Ejecutar una búsqueda Tavily básica.
-3. Normalizar hasta ocho resultados, validar URLs HTTP(S) y eliminar duplicados.
-4. Pasar títulos, URLs, fechas y fragmentos a Gemini.
-5. Pedir a Gemini análisis en español, contraste, limitaciones y referencias numeradas [1], [2], etc.
-6. Devolver el informe y las fuentes asociadas.
-7. Si Tavily no devuelve fuentes utilizables, no solicitar redacción a Gemini.
-8. La investigación sigue siendo externa y no se publica automáticamente como contenido oficial SERCO.
+Las preguntas que requieran aclaración por el control de seguridad no activan la invitación de investigación hasta que se resuelva esa aclaración.
 
-## Endpoint
+## Endpoints
 
-`POST /api/research`
+- `POST /api/ask` — consulta de la biblioteca oficial SERCO.
+- `POST /api/research-public` — investigación externa pública, invocada únicamente tras consentimiento en la interfaz.
+- `POST /api/research` — endpoint administrativo anterior; conserva `SERCO_RESEARCH_ACCESS_TOKEN` y no se expone en el navegador.
 
-Solicitud:
+## Protección de consumo
 
-```json
-{
-  "query": "¿Qué normas mexicanas aplican a pavimentos de concreto hidráulico?"
-}
-```
+Se agregó `private.public_api_rate_limits` y la función `public.consume_public_api_quota`, ejecutable únicamente por `service_role`. El navegador no puede llamar directamente a esa función ni consultar la tabla.
 
-Respuesta exitosa (estructura):
+Límites actuales por ventana horaria:
 
-```json
-{
-  "status": "completed",
-  "provider": "tavily+gemini",
-  "searchProvider": "tavily",
-  "answerProvider": "gemini",
-  "query": "Consulta investigada",
-  "report": "Informe documental...",
-  "sources": [
-    {
-      "id": 1,
-      "url": "https://example.org/documento",
-      "title": "Título de la fuente",
-      "publishedDate": null
-    }
-  ],
-  "sourceCount": 1,
-  "searchUsage": { "credits": 1 },
-  "searchSuggestionsHtml": null,
-  "groundingSupports": [],
-  "persistence": "not_configured"
-}
-```
+| Servicio | Por origen | Global del proyecto |
+|---|---:|---:|
+| Consulta SERCO | 20 | 120 |
+| Investigación externa | 3 | 30 |
 
-Las referencias [n] que redacta Gemini se basan en la lista de fuentes recuperadas por Tavily. No se afirma una alineación de citas por segmento equivalente a Google Grounding; la UI debe mostrar las referencias y sus URLs junto al informe.
+El backend calcula un HMAC del origen de la solicitud; no almacena la dirección IP en claro. Si el control de cuotas no está disponible, los endpoints públicos fallan de forma cerrada y no llaman a los proveedores.
 
-## Seguridad y control de consumo
+## Seguridad y límites conocidos
 
-- Las claves se leen exclusivamente en el backend y nunca se envían al navegador.
-- Tavily usa endpoint fijo y autenticación Bearer.
-- Se usa búsqueda `basic` (1 crédito), ocho resultados máximos y no se solicitan respuestas IA ni contenido completo.
-- Errores 429, 432 y 433 se tratan como límites de cuota/solicitudes; no hay fallback a un proveedor de pago.
-- No hay activación automática de planes ni pagos desde la aplicación.
-- La ruta conserva el control administrativo temporal `SERCO_RESEARCH_ACCESS_TOKEN`; no debe incrustarse en JavaScript público.
-- No se autopublica contenido externo.
+- Las claves de Tavily, Gemini y Supabase permanecen exclusivamente en el backend.
+- Tavily usa búsqueda básica y hasta ocho resultados.
+- No se envía contenido completo de las páginas a Tavily ni se activa pago por uso desde el código.
+- La respuesta externa se muestra como investigación, no como postura oficial de SERCO.
+- Las fuentes se enlazan por separado; la numeración [n] del informe se basa en la lista de resultados recuperados.
+- La persistencia editorial de sesiones y fuentes todavía no está implementada; el proveedor devuelve `persistence: not_configured`.
+- El control de cuotas reduce abuso y gasto accidental, pero no sustituye una política de retención/limpieza de contadores ni una solución anti-bot especializada.
 
-## Pendientes antes de operación real
+## Pendientes de validación y lanzamiento
 
-1. Crear una clave en https://app.tavily.com y agregarla como `TAVILY_API_KEY` en el proyecto Vercel independiente, tanto en Preview como Production cuando corresponda.
-2. Confirmar que el panel de Tavily permanezca en el plan gratuito y que el pago por uso no esté activado.
-3. Conectar la interfaz pública mediante autenticación, autorización y límites; nunca exponer claves ni el token administrativo.
-4. Mostrar las fuentes numeradas junto al informe y validar que cada referencia [n] tenga una fuente correspondiente.
-5. Implementar persistencia privada para `research_sessions` y `research_sources`; por ahora `persistence: not_configured`.
-6. Implementar límites de frecuencia y consumo del lado servidor.
-7. Ejecutar pruebas reales controladas con claves configuradas en Vercel.
+1. Confirmar que `TAVILY_API_KEY` está guardada en Preview y Development del proyecto Vercel correcto.
+2. Identificar y verificar el proyecto Vercel independiente enlazado al repositorio; el contexto de Vercel consultado actualmente solo muestra el proyecto corporativo `serco`, por lo que no se debe desplegar en ese proyecto.
+3. Confirmar que el commit de `desarrollo` tenga un deployment Preview y probar la interfaz desde ese deployment.
+4. Ejecutar una consulta real controlada que llegue a cobertura insuficiente y aceptar la investigación; comprobar Tavily, Gemini y fuentes.
+5. Implementar persistencia privada de `research_sessions` y `research_sources`.
+6. Implementar limpieza/retención de los contadores de cuotas.
+7. Revisar las referencias [n] del informe contra las fuentes antes de pasar a producción.
 
 ## Pruebas
 
