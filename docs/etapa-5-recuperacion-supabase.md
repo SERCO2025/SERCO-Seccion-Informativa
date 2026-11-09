@@ -32,7 +32,7 @@ El límite se restringe a 8 fragmentos. La función SQL no devuelve documentos s
 
 ## Integración en el servidor
 
-api/ask.js inyecta el recuperador Supabase y el generador secuencial Gemini → Groq → Cloudflare en el orquestador. La ruta permanece en SERVICE_NOT_READY porque todavía no existen los adaptadores de evaluación de cobertura y seguridad. El orquestador verifica esos componentes antes de consultar Supabase, por lo que no se hacen consultas innecesarias ni llamadas a proveedores IA.
+api/ask.js inyecta el recuperador Supabase, el evaluador léxico inicial de cobertura, el control de seguridad constructiva y el generador secuencial Gemini → Groq → Cloudflare Workers AI. El detalle y los límites de los dos nuevos adaptadores están documentados en `etapa-5-cobertura-y-seguridad.md`. La ruta ya no está bloqueada por adaptadores ausentes; los fallos de configuración de Supabase o de proveedores se responden como indisponibilidad temporal (503), sin exponer detalles internos.
 
 ## Variables requeridas en el entorno servidor
 
