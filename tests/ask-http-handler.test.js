@@ -77,6 +77,39 @@ test("envía la pregunta al orquestador y devuelve el resultado", async () => {
   assert.equal(res.payload.status, "insufficient");
 });
 
+test("responde 503 sin filtrar detalles cuando Supabase no está configurado", async () => {
+  const handler = createAskHttpHandler({
+    async ask() {
+      const error = new Error("secret database configuration");
+      error.code = "SUPABASE_RETRIEVER_NOT_CONFIGURED";
+      throw error;
+    }
+  });
+  const res = responseRecorder();
+
+  await handler({ method: "POST", headers: {}, body: { question: "¿Qué es un lindero?" } }, res);
+
+  assert.equal(res.statusCode, 503);
+  assert.equal(res.payload.error.code, "SERVICE_TEMPORARILY_UNAVAILABLE");
+  assert.equal(JSON.stringify(res.payload).includes("secret database configuration"), false);
+});
+
+test("responde 503 cuando los proveedores IA se agotan", async () => {
+  const handler = createAskHttpHandler({
+    async ask() {
+      const error = new Error("provider internals");
+      error.code = "AI_PROVIDERS_EXHAUSTED";
+      throw error;
+    }
+  });
+  const res = responseRecorder();
+
+  await handler({ method: "POST", headers: {}, body: { question: "¿Qué es un lindero?" } }, res);
+
+  assert.equal(res.statusCode, 503);
+  assert.equal(res.payload.error.code, "SERVICE_TEMPORARILY_UNAVAILABLE");
+});
+
 test("responde 503 cuando el motor todavía no tiene adaptadores", async () => {
   const { createAskOrchestrator } = require("../src/services/ai/ask-orchestrator");
   const handler = createAskHttpHandler(createAskOrchestrator({}));
