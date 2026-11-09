@@ -170,3 +170,27 @@ test("rechaza evidencia vacía o identificadores duplicados antes de llamar al p
   }), { code: "AI_PROVIDER_INVALID_INPUT" });
   assert.equal(calls, 0);
 });
+
+test("incluye la información faltante en el prompt para respuestas parciales", async () => {
+  let captured;
+  const provider = createGeminiAnswerProvider({
+    apiKey: "test-key",
+    fetchImpl: async (url, options) => {
+      captured = JSON.parse(options.body);
+      return response({
+        candidates: [{ content: { parts: [{ text: JSON.stringify({
+          text: "Solo se puede confirmar el dato documentado.",
+          citationIds: ["chunk-001"]
+        }) }] } }]
+      });
+    }
+  });
+
+  await provider.generate({
+    ...input,
+    coverage: "partial",
+    missingInformation: ["No se especifica la ubicación del proyecto."]
+  });
+  const prompt = captured.contents[0].parts[0].text;
+  assert.match(prompt, /No se especifica la ubicación del proyecto/);
+});

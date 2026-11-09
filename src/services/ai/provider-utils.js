@@ -63,10 +63,15 @@ function validateGenerationInput(input) {
     };
   });
 
+  const missingInformation = Array.isArray(input.missingInformation)
+    ? input.missingInformation.filter((item) => typeof item === "string" && item.trim()).map((item) => item.trim())
+    : [];
+
   return {
     question,
     evidence,
     coverage: input.coverage,
+    missingInformation,
     instructions: input.instructions || {}
   };
 }
@@ -91,7 +96,7 @@ function buildUserPrompt(input) {
     task: "Contesta la pregunta utilizando únicamente la evidencia proporcionada.",
     question: input.question,
     coverage: input.coverage,
-    missingInformation: Array.isArray(input.missingInformation) ? input.missingInformation : [],
+    missingInformation: input.missingInformation,
     evidence: input.evidence.map((item) => ({
       id: item.id,
       title: item.title,
