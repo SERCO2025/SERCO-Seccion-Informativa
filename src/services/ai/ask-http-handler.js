@@ -100,6 +100,20 @@ function createAskHttpHandler(orchestrator) {
         });
       }
 
+      // Los adaptadores externos pueden fallar por credenciales, cuotas,
+      // facturación deshabilitada o indisponibilidad. No se filtran sus detalles.
+      const code = error && typeof error.code === "string" ? error.code : "";
+      if (code.startsWith("SUPABASE_RETRIEVER_") ||
+          code.startsWith("AI_PROVIDER_") ||
+          code === "AI_PROVIDERS_EXHAUSTED") {
+        return send(res, 503, {
+          error: {
+            code: "SERVICE_TEMPORARILY_UNAVAILABLE",
+            message: "El servicio de consulta no está disponible temporalmente. Inténtalo más tarde."
+          }
+        });
+      }
+
       return send(res, 500, {
         error: {
           code: "INTERNAL_ERROR",
