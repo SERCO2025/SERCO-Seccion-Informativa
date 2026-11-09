@@ -3,7 +3,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { createResearchHttpHandler } = require("../src/services/research/research-http-handler");
-const { createOpenAIResearchProvider } = require("../src/services/research/openai-research-provider");
+const { createGeminiResearchProvider } = require("../src/services/research/gemini-research-provider");
 
 function responseRecorder() {
   return {
@@ -54,7 +54,7 @@ test("envía consulta al proveedor y devuelve el informe", async () => {
   assert.equal(res.headers["Cache-Control"], "no-store");
 });
 
-test("responde 503 si falta configurar la clave de OpenAI", async () => {
+test("responde 503 si falta configurar la clave de Gemini", async () => {
   const provider = createOpenAIResearchProvider({ apiKey: "", fetchImpl: async () => { throw new Error("No debe llamar"); } });
   const handler = createResearchHttpHandler(provider);
   const res = responseRecorder();
