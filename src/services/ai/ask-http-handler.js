@@ -19,6 +19,12 @@ function parseBody(req) {
 
   let body = req.body;
 
+  if (typeof body === "string" && Buffer.byteLength(body, "utf8") > MAX_BODY_BYTES) {
+    const error = new Error("El cuerpo de la solicitud supera el límite permitido.");
+    error.code = "BODY_TOO_LARGE";
+    throw error;
+  }
+
   if (typeof body === "string") {
     try {
       body = JSON.parse(body);
@@ -33,6 +39,23 @@ function parseBody(req) {
     const error = new Error("Se esperaba un objeto JSON.");
     error.code = "INVALID_BODY";
     throw error;
+  }
+
+  if (typeof req.body !== "string") {
+    let serialized;
+    try {
+      serialized = JSON.stringify(body);
+    } catch {
+      const error = new Error("El cuerpo de la solicitud no es válido.");
+      error.code = "INVALID_BODY";
+      throw error;
+    }
+
+    if (Buffer.byteLength(serialized || "", "utf8") > MAX_BODY_BYTES) {
+      const error = new Error("El cuerpo de la solicitud supera el límite permitido.");
+      error.code = "BODY_TOO_LARGE";
+      throw error;
+    }
   }
 
   return body;
