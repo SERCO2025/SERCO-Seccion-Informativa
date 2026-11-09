@@ -1,5 +1,7 @@
 "use strict";
 
+// Evaluación léxica inicial y conservadora. No sustituye la validación editorial
+// ni demuestra por sí sola que un fragmento responda semánticamente la pregunta.
 const STOP_WORDS = new Set([
   "que", "cual", "cuales", "como", "cuando", "donde", "quien", "quienes",
   "para", "por", "con", "sin", "sobre", "entre", "desde", "hasta",
@@ -63,7 +65,7 @@ function createEvidenceCoverageEvaluator() {
       let status = "insufficient";
       if (missingTerms.length === 0 && matchedTerms.length >= 1) {
         status = "sufficient";
-      } else if (ratio >= 0.4) {
+      } else if (ratio >= 0.25) {
         status = "partial";
       }
 
