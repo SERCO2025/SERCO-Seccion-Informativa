@@ -6,7 +6,9 @@ on:
       - desarrollo
     paths:
       - "src/services/ai/**"
+      - "src/services/knowledge/**"
       - "src/services/research/**"
+      - "supabase/migrations/**"
       - "api/**"
       - "tests/**"
       - ".github/workflows/pruebas-adaptadores-ia.yml"
