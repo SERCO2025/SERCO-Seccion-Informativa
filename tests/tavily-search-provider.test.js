@@ -7,8 +7,9 @@ const {
   normalizeTavilyResults
 } = require("../src/services/research/tavily-search-provider");
 
-test("valida consulta y normaliza resultados web deduplicados", () => {
-  assert.throws(() => createTavilySearchProvider({ apiKey: "test" }).search({ query: "x" }), { code: "INVALID_RESEARCH_QUERY" });
+test("valida consulta y normaliza resultados web deduplicados", async () => {
+  const provider = createTavilySearchProvider({ apiKey: "test" });
+  await assert.rejects(provider.search({ query: "x" }), { code: "INVALID_RESEARCH_QUERY" });
   const results = normalizeTavilyResults({
     results: [
       { url: "https://example.org/a", title: "A", content: "Contenido", score: 0.9 },
