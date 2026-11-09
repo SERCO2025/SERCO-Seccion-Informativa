@@ -41,9 +41,9 @@ api/ask.js inyecta el recuperador Supabase y el generador secuencial Gemini → 
 
 ## Migraciones aplicadas
 
-1. 20261109000100_create_knowledge_retrieval_core.sql
-2. 20261109000200_index_knowledge_foreign_keys.sql
-3. 20261109000300_restrict_knowledge_tables_to_backend.sql
+1. 20261109092855_create_knowledge_retrieval_core.sql
+2. 20261109092925_index_knowledge_foreign_keys.sql
+3. 20261109092946_restrict_knowledge_tables_to_backend.sql
 
 ## Verificación
 
