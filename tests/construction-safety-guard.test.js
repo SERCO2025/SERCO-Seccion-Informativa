@@ -22,6 +22,11 @@ test("solicita contexto para dimensionamiento estructural", async () => {
   assert.equal(result.decision, "clarify");
 });
 
+test("solicita contexto cuando se pregunta qué cimentación usar", async () => {
+  const result = await guard.evaluate({ question: "¿Qué cimentación usar en terreno arcilloso?" });
+  assert.equal(result.decision, "clarify");
+});
+
 test("detecta recomendaciones formuladas en segunda persona", async () => {
   const result = await guard.evaluate({ question: "¿Qué tipo de zapata me recomiendas para mi obra?" });
   assert.equal(result.decision, "clarify");
