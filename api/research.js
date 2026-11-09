@@ -1,10 +1,10 @@
 "use strict";
 
 const { timingSafeEqual } = require("node:crypto");
-const { createOpenAIResearchProvider } = require("../src/services/research/openai-research-provider");
+const { createGeminiResearchProvider } = require("../src/services/research/gemini-research-provider");
 const { createResearchHttpHandler } = require("../src/services/research/research-http-handler");
 
-const provider = createOpenAIResearchProvider();
+const provider = createGeminiResearchProvider();
 const researchHandler = createResearchHttpHandler(provider);
 
 function secureEqual(left, right) {
