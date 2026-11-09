@@ -1,34 +1,39 @@
 # SERCO AI — Etapa 6: Investigación externa
 
 **Rama:** `desarrollo`  
-**Estado:** adaptador Gemini + Google Search implementado y pruebas unitarias preparadas; conexión real, interfaz y persistencia pendientes.
+**Estado:** adaptador Tavily + análisis Gemini implementados; conexión real, interfaz y persistencia pendientes.
 
-## Decisión de proveedor
+## Proveedores y responsabilidades
 
-La investigación externa utiliza **Google Gemini Developer API** con la herramienta integrada **Google Search grounding**. Se reutiliza la variable secreta `GEMINI_API_KEY`; no requiere una credencial de otro proveedor.
+La investigación externa separa búsqueda y análisis:
 
-- Variable de credencial: `GEMINI_API_KEY`.
-- Variable opcional del modelo: `GEMINI_RESEARCH_MODEL`.
-- Modelo predeterminado: `gemini-3.8-flash`.
-- Endpoint: `generateContent`.
-- Herramienta: `google_search`.
+- **Tavily Search API:** recupera resultados web y fragmentos.
+- **Gemini Developer API:** analiza exclusivamente los resultados recuperados y redacta el informe.
+- La búsqueda Tavily usa `search_depth: basic`, `max_results: 8`, `include_answer: false` e `include_raw_content: false`.
+- Una búsqueda básica consume 1 crédito. La cuota gratuita publicada por Tavily es de 1,000 créditos mensuales sin tarjeta.
+- No se habilita búsqueda avanzada ni pago por uso desde el código.
 
-Documentación oficial:
-- https://ai.google.dev/gemini-api/docs/generate-content/google-search
+Variables de entorno del proyecto Vercel independiente:
+
+- `TAVILY_API_KEY` — nueva variable requerida para búsqueda.
+- `GEMINI_API_KEY` — variable existente para análisis.
+- `GEMINI_RESEARCH_MODEL` — opcional; modelo predeterminado `gemini-3.8-flash`.
+
+Documentación:
+- https://docs.tavily.com/documentation/api-reference/endpoint/search
+- https://docs.tavily.com/documentation/api-credits
 - https://ai.google.dev/api/generate-content
 
-## Flujo implementado
+## Flujo
 
-1. Recibir una consulta de 3 a 2000 caracteres.
-2. Invocar Gemini `generateContent` con `google_search`.
-3. Instruir al modelo para investigar en la web, priorizar fuentes primarias y técnicas, evaluar vigencia, autoridad, jurisdicción, independencia y consistencia.
-4. Exigir que distinga hechos, interpretaciones, discrepancias y vacíos.
-5. Extraer el informe desde el contenido del candidato.
-6. Extraer fuentes verificables desde `groundingMetadata.groundingChunks`; validar URLs HTTP(S) y deduplicar.
-7. Extraer las relaciones entre segmentos y fuentes desde `groundingSupports`.
-8. Devolver las consultas de búsqueda y el HTML oficial de sugerencias Google Search (`searchEntryPoint.renderedContent`) cuando Gemini lo proporcione.
-9. Si Gemini no devuelve fuentes web fundamentadas, rechazar el resultado como investigación verificada.
-10. Devolver el expediente como investigación externa, nunca como contenido oficial aprobado de SERCO.
+1. Validar consulta (3–2000 caracteres).
+2. Ejecutar una búsqueda Tavily básica.
+3. Normalizar hasta ocho resultados, validar URLs HTTP(S) y eliminar duplicados.
+4. Pasar títulos, URLs, fechas y fragmentos a Gemini.
+5. Pedir a Gemini análisis en español, contraste, limitaciones y referencias numeradas [1], [2], etc.
+6. Devolver el informe y las fuentes asociadas.
+7. Si Tavily no devuelve fuentes utilizables, no solicitar redacción a Gemini.
+8. La investigación sigue siendo externa y no se publica automáticamente como contenido oficial SERCO.
 
 ## Endpoint
 
@@ -47,57 +52,48 @@ Respuesta exitosa (estructura):
 ```json
 {
   "status": "completed",
-  "provider": "gemini",
-  "model": "gemini-3.8-flash",
+  "provider": "tavily+gemini",
+  "searchProvider": "tavily",
+  "answerProvider": "gemini",
   "query": "Consulta investigada",
   "report": "Informe documental...",
   "sources": [
     {
+      "id": 1,
       "url": "https://example.org/documento",
-      "title": "Título de la fuente"
+      "title": "Título de la fuente",
+      "publishedDate": null
     }
   ],
   "sourceCount": 1,
-  "searchQueries": ["consulta enviada a Google Search"],
-  "searchSuggestionsHtml": "<contenido oficial de Google, cuando se proporcione>",
+  "searchUsage": { "credits": 1 },
+  "searchSuggestionsHtml": null,
   "groundingSupports": [],
   "persistence": "not_configured"
 }
 ```
 
-Errores controlados: 400 solicitud inválida, 405 método no permitido, 413 cuerpo demasiado grande, 429 límite del proveedor, 502 fallo del proveedor, 503 configuración no disponible y 500 error interno.
+Las referencias [n] que redacta Gemini se basan en la lista de fuentes recuperadas por Tavily. No se afirma una alineación de citas por segmento equivalente a Google Grounding; la UI debe mostrar las referencias y sus URLs junto al informe.
 
-## Requisitos de presentación de Google Search
+## Seguridad y control de consumo
 
-Cuando Gemini devuelve `groundingMetadata.searchEntryPoint.renderedContent`, Google exige mostrar las sugerencias de búsqueda proporcionadas, sin modificar su presentación, y mantenerlas visibles junto con el resultado fundamentado. También exige mostrar las fuentes. La futura interfaz deberá presentar ese contenido oficial de Google en un contenedor seguro compatible, y mostrar las fuentes y sus relaciones con las afirmaciones.
+- Las claves se leen exclusivamente en el backend y nunca se envían al navegador.
+- Tavily usa endpoint fijo y autenticación Bearer.
+- Se usa búsqueda `basic` (1 crédito), ocho resultados máximos y no se solicitan respuestas IA ni contenido completo.
+- Errores 429, 432 y 433 se tratan como límites de cuota/solicitudes; no hay fallback a un proveedor de pago.
+- No hay activación automática de planes ni pagos desde la aplicación.
+- La ruta conserva el control administrativo temporal `SERCO_RESEARCH_ACCESS_TOKEN`; no debe incrustarse en JavaScript público.
+- No se autopublica contenido externo.
 
-No se debe sustituir el HTML de sugerencias por chips inventados ni alterar sus estilos. La interfaz pública todavía no está conectada a este endpoint; por tanto, no se afirma que la presentación requerida ya esté resuelta.
+## Pendientes antes de operación real
 
-Documentación de requisitos de presentación:
-https://firebase.google.com/docs/ai-logic/grounding-google-search
-
-## Seguridad y límites
-
-- La clave Gemini se lee exclusivamente desde el servidor y nunca se envía al navegador.
-- No se acepta una URL arbitraria como destino de fetch: el adaptador solo conecta con el endpoint fijo de Gemini.
-- La investigación trata páginas externas como datos no confiables e ignora instrucciones encontradas dentro de ellas.
-- El endpoint no publica ni modifica artículos.
-- Se desactiva el almacenamiento en caché de la respuesta HTTP.
-- Se limita la consulta a 2000 caracteres.
-- Los mensajes HTTP no exponen detalles internos de credenciales o del proveedor.
-- La ruta conserva el control transitorio `SERCO_RESEARCH_ACCESS_TOKEN`; responde 503 si falta y 401 si el token no coincide. No debe incrustarse en JavaScript público.
-
-## Pendiente antes de operación real
-
-1. Confirmar que `GEMINI_API_KEY` esté disponible en Preview y Production del proyecto Vercel independiente.
-2. Confirmar que la cuenta/API y el modelo admitan Google Search grounding y revisar límites y costos. La búsqueda fundamentada puede generar cargos según las consultas que Google Search ejecute.
-3. Configurar `SERCO_RESEARCH_ACCESS_TOKEN` solo para el uso administrativo temporal. Antes de exponer investigación a visitantes, sustituirlo por autenticación y autorización integradas con Supabase Auth/RLS.
-4. Conectar la interfaz pública al flujo de sugerencia de investigación cuando la cobertura SERCO sea insuficiente, manteniendo claramente separadas las respuestas oficiales y las investigaciones externas.
-5. Presentar obligatoriamente `searchSuggestionsHtml` cuando venga en la respuesta y mostrar las fuentes; enlazar las citas con sus segmentos mediante `groundingSupports`.
-6. Implementar persistencia privada para `research_sessions` y `research_sources` según el modelo aprobado en etapa 3. Por ahora el resultado es temporal y declara `persistence: not_configured`.
-7. Añadir límites de frecuencia y consumo.
-8. Implementar revisión editorial humana; no existe autopublicación.
-9. Ejecutar pruebas automatizadas y una prueba real controlada con Gemini en Vercel.
+1. Crear una clave en https://app.tavily.com y agregarla como `TAVILY_API_KEY` en el proyecto Vercel independiente, tanto en Preview como Production cuando corresponda.
+2. Confirmar que el panel de Tavily permanezca en el plan gratuito y que el pago por uso no esté activado.
+3. Conectar la interfaz pública mediante autenticación, autorización y límites; nunca exponer claves ni el token administrativo.
+4. Mostrar las fuentes numeradas junto al informe y validar que cada referencia [n] tenga una fuente correspondiente.
+5. Implementar persistencia privada para `research_sessions` y `research_sources`; por ahora `persistence: not_configured`.
+6. Implementar límites de frecuencia y consumo del lado servidor.
+7. Ejecutar pruebas reales controladas con claves configuradas en Vercel.
 
 ## Pruebas
 
@@ -105,4 +101,4 @@ https://firebase.google.com/docs/ai-logic/grounding-google-search
 node --test tests/*.test.js
 ```
 
-Las pruebas de esta etapa usan respuestas simuladas; no consumen API ni validan credenciales reales. No se afirma que el proveedor esté conectado hasta completar las tareas pendientes.
+Las pruebas automatizadas usan respuestas simuladas; no consumen créditos Tavily ni llamadas reales de Gemini.
