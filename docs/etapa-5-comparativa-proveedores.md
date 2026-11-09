@@ -24,6 +24,7 @@ Los identificadores son valores iniciales de evaluación, no una selección defi
 - Cloudflare Workers AI incluye 10,000 Neurons diarios en Workers Free; al exceder la asignación, las operaciones gratuitas fallan. Algunos modelos requieren un método de pago y no deben seleccionarse.
 - Gemini ofrece cuota gratuita para modelos seleccionados, incluido Gemini 3.8 Flash según la tabla de precios consultada. Los límites exactos por proyecto se muestran en AI Studio.
 - Groq publica límites de plan gratuito por modelo. La cuenta debe confirmar sus límites efectivos en la página Limits.
+- Antes de ejecutar una comparación real, confirma que cada cuenta esté en su modalidad gratuita y que no tenga facturación habilitada. El código no puede detectar ni impedir cobros configurados directamente en las cuentas del proveedor.
 
 ## Contrato común
 
@@ -44,28 +45,37 @@ La salida del modelo se limita a JSON con \`text\` y \`citationIds\`. El orquest
 - \`src/services/ai/providers/groq-answer-provider.js\`
 - \`src/services/ai/providers/cloudflare-answer-provider.js\`
 - \`tests/ai-provider-contract.test.js\`: pruebas con fetch simulado.
+- \`scripts/compare-ai-providers.js\`: comparación real opcional con dos escenarios ficticios.
+- \`.github/workflows/pruebas-adaptadores-ia.yml\`: ejecuta la suite completa de pruebas en cada cambio relevante de la rama \`desarrollo\`.
+- \`.github/workflows/comparar-proveedores-ia.yml\`: comparación manual, nunca automática, mediante secretos de GitHub Actions.
 
-No se modificó \`api/ask.js\`; el endpoint público permanece deshabilitado y sin proveedor conectado.
+## Pruebas automatizadas
 
-## Ejecutar pruebas simuladas
+La suite completa se ejecutó correctamente en GitHub Actions con Node.js 22:
 
-Requiere Node.js con \`node:test\`, sin dependencias adicionales:
+- 34 pruebas.
+- 34 aprobadas.
+- 0 fallidas.
+- Incluye orquestador RAG, handlers HTTP, proveedor de investigación OpenAI y los tres adaptadores nuevos.
+- Son pruebas simuladas: no consumen API y no prueban todavía las credenciales ni la calidad real de los modelos.
 
-\`\`\`bash
-node --test tests/ai-provider-contract.test.js
-\`\`\`
+## Ejecutar comparación real sin exponer claves
 
-Estas pruebas verifican contratos, endpoints, cabeceras, formatos JSON, credenciales ausentes, cuotas agotadas y salidas inválidas. No consumen API ni prueban la disponibilidad real de las cuentas.
+La comparación se ejecuta manualmente desde GitHub Actions. No se debe pegar ninguna clave en el chat, en archivos del repositorio ni en variables públicas de Vercel.
 
-## Pruebas reales pendientes
+1. Crear las claves en las cuentas gratuitas de cada proveedor, sin habilitar facturación ni agregar tarjeta.
+2. En el repositorio GitHub, abrir **Settings → Secrets and variables → Actions**.
+3. Crear únicamente los secretos de los proveedores que se vayan a probar:
+   - \`GEMINI_API_KEY\`
+   - \`GROQ_API_KEY\`
+   - \`CLOUDFLARE_ACCOUNT_ID\`
+   - \`CLOUDFLARE_API_TOKEN\`
+4. Abrir **Actions → Comparar proveedores gratuitos de IA → Run workflow**.
+5. Elegir la rama \`desarrollo\` y ejecutar manualmente.
 
-1. Crear una clave gratuita de Gemini AI Studio.
-2. Crear una clave Groq y comprobar la pestaña Free Plan Limits de la cuenta.
-3. Crear un API Token de Cloudflare con permiso Workers AI y confirmar que la cuenta usa Workers Free, sin método de pago.
-4. Configurar las claves solo en el entorno local de pruebas o en secretos de servidor autorizados; nunca pegarlas en GitHub ni en el chat.
-5. Ejecutar el mismo conjunto de preguntas públicas/ficticias contra cada proveedor, de uno en uno.
-6. Registrar modelo, fecha, duración, resultado, uso reportado y errores de cuota.
-7. Evaluar calidad de respuesta y citas antes de elegir el proveedor principal.
+El script omite proveedores sin credenciales. Para Cloudflare se necesitan tanto el ID de cuenta como el token. El token debe tener únicamente el permiso de Workers AI necesario para ejecutar modelos. No agregar secretos de OpenAI a este flujo.
+
+El script realiza dos solicitudes por cada proveedor configurado. Utiliza únicamente una ficha ficticia de prueba; no envía documentos privados ni contenido real de SERCO. El resultado se muestra en los logs de la ejecución. Ejecutarlo solo después de verificar que las cuentas están en modalidad gratuita y sin facturación habilitada.
 
 ## Fuentes oficiales
 
