@@ -1,0 +1,27 @@
+name: Pruebas de adaptadores IA
+
+on:
+  push:
+    branches:
+      - desarrollo
+    paths:
+      - "src/services/ai/**"
+      - "tests/ai-provider-contract.test.js"
+      - ".github/workflows/pruebas-adaptadores-ia.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-ai-provider-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Ejecutar pruebas de contrato
+        run: node --test tests/ai-provider-contract.test.js
