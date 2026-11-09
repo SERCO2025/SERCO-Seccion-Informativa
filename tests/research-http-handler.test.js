@@ -55,7 +55,7 @@ test("envía consulta al proveedor y devuelve el informe", async () => {
 });
 
 test("responde 503 si falta configurar la clave de Gemini", async () => {
-  const provider = createOpenAIResearchProvider({ apiKey: "", fetchImpl: async () => { throw new Error("No debe llamar"); } });
+  const provider = createGeminiResearchProvider({ apiKey: "", fetchImpl: async () => { throw new Error("No debe llamar"); } });
   const handler = createResearchHttpHandler(provider);
   const res = responseRecorder();
   await handler({ method: "POST", headers: {}, body: { query: "Investigar especificaciones de concreto" } }, res);
@@ -68,7 +68,7 @@ test("no expone detalles internos del proveedor", async () => {
     async research() {
       const error = new Error("detalle privado de credencial");
       error.code = "RESEARCH_UPSTREAM_ERROR";
-      const { ResearchProviderError } = require("../src/services/research/openai-research-provider");
+      const { ResearchProviderError } = require("../src/services/research/gemini-research-provider");
       throw new ResearchProviderError(error.message, error.code);
     }
   });
