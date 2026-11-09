@@ -56,6 +56,34 @@ test("rechaza cuerpos mayores al límite", async () => {
   assert.equal(res.statusCode, 413);
 });
 
+test("rechaza un cuerpo de texto grande aunque no declare Content-Length", async () => {
+  const handler = createAskHttpHandler({ async ask() { throw new Error("No debe ejecutarse."); } });
+  const res = responseRecorder();
+
+  await handler({
+    method: "POST",
+    headers: {},
+    body: JSON.stringify({ question: "x".repeat(9000) })
+  }, res);
+
+  assert.equal(res.statusCode, 413);
+  assert.equal(res.payload.error.code, "BODY_TOO_LARGE");
+});
+
+test("rechaza un cuerpo ya parseado que excede el límite", async () => {
+  const handler = createAskHttpHandler({ async ask() { throw new Error("No debe ejecutarse."); } });
+  const res = responseRecorder();
+
+  await handler({
+    method: "POST",
+    headers: {},
+    body: { question: "x".repeat(9000) }
+  }, res);
+
+  assert.equal(res.statusCode, 413);
+  assert.equal(res.payload.error.code, "BODY_TOO_LARGE");
+});
+
 test("envía la pregunta al orquestador y devuelve el resultado", async () => {
   let received = null;
   const handler = createAskHttpHandler({
