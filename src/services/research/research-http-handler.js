@@ -4,7 +4,7 @@ const {
   validateResearchRequest,
   ResearchConfigurationError,
   ResearchProviderError
-} = require("./openai-research-provider");
+} = require("./gemini-research-provider");
 
 const MAX_BODY_BYTES = 8192;
 
