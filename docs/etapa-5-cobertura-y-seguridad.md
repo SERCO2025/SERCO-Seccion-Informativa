@@ -24,6 +24,12 @@ El control de seguridad actual es basado en patrones de lenguaje, no un análisi
 
 El orquestador transmite `missingInformation` al generador, que ya la incorpora al prompt de cobertura parcial.
 
+## Pruebas de integración
+
+La ejecución de GitHub Actions del commit `2fd45eb723ab244dc30b7b16b7cf4b801fce88b6` terminó correctamente: **71 pruebas aprobadas, 0 fallidas**. Incluye integración HTTP → recuperación → cobertura → seguridad → generación → validación de citas, además de límites de tamaño del cuerpo HTTP y aclaraciones para recomendaciones constructivas.
+
+Ejecución: https://github.com/SERCO2025/SERCO-Seccion-Informativa/actions/runs/42605722031
+
 ## Estado operativo
 
 La ruta ya no está bloqueada por adaptadores ausentes. Sin embargo, esto no significa que esté lista para exposición pública. Requiere configuración de variables de entorno del servidor (Supabase y proveedores), corpus editorial publicado y pruebas integrales. No se creó ni configuró el proyecto Vercel independiente, no se activó el endpoint en el sitio corporativo y no se modificó `main`.
