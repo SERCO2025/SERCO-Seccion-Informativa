@@ -69,11 +69,12 @@ Errores controlados: 400 solicitud inválida, 405 método no permitido, 413 cuer
 ## Pendiente antes de operación real
 
 1. Configurar `OPENAI_API_KEY` como variable secreta del proyecto Vercel de SERCO-Seccion-Informativa.
-2. Confirmar que el modelo configurado esté habilitado en la cuenta API y revisar costos/límites.
-3. Implementar persistencia privada para `research_sessions` y `research_sources` según el modelo aprobado en etapa 3.
-4. Incorporar autenticación, autorización y límites de frecuencia/consumo antes de exponer el endpoint a usuarios públicos. La ruta actual no incluye autenticación y debe mantenerse fuera del alcance público hasta protegerla.
-5. Implementar el flujo de revisión editorial; no existe autopublicación.
-6. Ejecutar pruebas automatizadas y pruebas de integración contra OpenAI en un entorno controlado.
+2. Configurar `SERCO_RESEARCH_ACCESS_TOKEN` como secreto independiente. La ruta exige `Authorization: Bearer <token>` y responde 503 si el secreto no existe, o 401 si el token no coincide. Este control es una protección transitoria de acceso administrativo; no debe incrustarse en el JavaScript del navegador.
+3. Confirmar que el modelo configurado esté habilitado en la cuenta API y revisar costos/límites.
+4. Implementar persistencia privada para `research_sessions` y `research_sources` según el modelo aprobado en etapa 3. Por ahora el resultado es temporal y declara `persistence: not_configured`.
+5. Sustituir el control transitorio por autenticación y autorización integradas con Supabase Auth/RLS antes de habilitar uso desde el panel. Añadir límites de frecuencia y consumo.
+6. Implementar el flujo de revisión editorial; no existe autopublicación.
+7. Ejecutar pruebas automatizadas y pruebas de integración contra OpenAI en un entorno controlado.
 
 ## Pruebas
 
