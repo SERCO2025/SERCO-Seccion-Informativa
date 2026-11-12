@@ -5,7 +5,7 @@ const PUBLIC_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_
 const SECRET_KEY = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const ADMIN_EMAIL = (process.env.SERCO_ADMIN_EMAIL || "").trim().toLowerCase();
 const MAX_FILE_BYTES = 25 * 1024 * 1024;
-const ALLOWED = new Set(["image/jpeg","image/png","image/webp","image/gif","application/pdf"]);
+const ALLOWED = new Set(["image/jpeg","image/png","image/webp","image/gif","application/pdf","application/msword","application/vnd.openxmlformats-officedocument.wordprocessingml.document","video/mp4","video/webm"]);
 
 function send(res,status,payload){res.setHeader("Cache-Control","no-store");res.setHeader("Content-Type","application/json; charset=utf-8");return res.status(status).json(payload);}
 function bodyOf(req){if(req.body&&typeof req.body==="object")return req.body;if(typeof req.body==="string"){try{return JSON.parse(req.body)}catch{}}return{};}
@@ -24,7 +24,7 @@ module.exports=async function editorUpload(req,res){
   const size=Number(body.size_bytes||0);
   const articleId=String(body.article_id||"").trim();
   if(!name||!articleId||!Number.isFinite(size)||size<=0||size>MAX_FILE_BYTES||!ALLOWED.has(mime))
-    return send(res,422,{error:{code:"INVALID_FILE",message:"Archivo no permitido. Admite JPG, PNG, WEBP, GIF o PDF hasta 25 MB."}});
+    return send(res,422,{error:{code:"INVALID_FILE",message:"Archivo no permitido. Admite imágenes JPG/PNG/WEBP/GIF, PDF, DOC/DOCX y MP4/WEBM hasta 25 MB."}});
   const path="publicaciones/"+articleId+"/recursos/"+Date.now()+"-"+name;
   const signed=await fetch(BASE+"/storage/v1/object/upload/sign/serco-publicaciones/"+path,{
    method:"POST",headers:{apikey:SECRET_KEY,Authorization:"Bearer "+SECRET_KEY,"Content-Type":"application/json"},
