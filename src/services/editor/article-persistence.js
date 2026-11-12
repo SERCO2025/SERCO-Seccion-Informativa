@@ -21,7 +21,7 @@ function sanitizeHtml(html) {
     let attrs="";
     if(tag==="a"){const match=rawAttrs.match(/\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);const url=match&&(match[1]||match[2]||match[3]||"");if(url&&/^(https?:\/\/|mailto:)/i.test(url))attrs+=' href="'+url.replace(/&/g,"&amp;").replace(/"/g,"&quot;")+'" rel="noopener noreferrer"';}
     if(tag==="img"){const match=rawAttrs.match(/\bsrc\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);const alt=rawAttrs.match(/\balt\s*=\s*(?:"([^"]*)"|'([^']*)')/i);const url=match&&(match[1]||match[2]||match[3]||"");if(!url||!/^https:\/\//i.test(url))return "";attrs+=' src="'+url.replace(/&/g,"&amp;").replace(/"/g,"&quot;")+'"';if(alt)attrs+=' alt="'+(alt[1]||alt[2]||"").replace(/&/g,"&amp;").replace(/"/g,"&quot;")+'"';attrs+=' loading="lazy"';}
-    if(tag==="th"||tag==="td"){for(const key of ["colspan","rowspan"]){const m=rawAttrs.match(new RegExp("\\b"+key+"\\\\s*=\\\\s*[\\\"']?([1-9][0-9]?)[\\\"']?","i"));if(m)attrs+=" "+key+'="'+m[1]+'"';}}
+    if(tag==="th"||tag==="td"){const colspan=rawAttrs.match(/\bcolspan\s*=\s*["']?([1-9][0-9]?)["']?/i);const rowspan=rawAttrs.match(/\browspan\s*=\s*["']?([1-9][0-9]?)["']?/i);if(colspan)attrs+=' colspan="'+colspan[1]+'"';if(rowspan)attrs+=' rowspan="'+rowspan[1]+'"';}
     return "<"+tag+attrs+">";
   });
 }
