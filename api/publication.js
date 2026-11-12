@@ -38,7 +38,7 @@ module.exports=async function publicPublication(req,res){
    rest("/rest/v1/article_versions?select=version_number,content_json,created_at&id=eq."+encodeURIComponent(article.published_version_id)+"&article_id=eq."+encodeURIComponent(article.id)+"&limit=1"),
    rest("/rest/v1/article_sources?select=title,source_type,source_url,author,published_date&article_id=eq."+encodeURIComponent(article.id)),
    rest("/rest/v1/article_assets?select=id,bucket_id,storage_path,original_name,mime_type,alt_text,description,source_url,author,license,keywords,category,captured_at&article_id=eq."+encodeURIComponent(article.id)),
-   rest("/rest/v1/article_categories?select=category:categories(name,slug,is_primary)&article_id=eq."+encodeURIComponent(article.id)),
+   rest("/rest/v1/article_categories?select=is_primary,category:categories(name,slug)&article_id=eq."+encodeURIComponent(article.id)),
    rest("/rest/v1/article_tags?select=tag:tags(name,slug)&article_id=eq."+encodeURIComponent(article.id)),
    rest("/rest/v1/article_relations?select=relation_type,related:articles!article_relations_related_article_id_fkey(public_id,title,slug,status)&article_id=eq."+encodeURIComponent(article.id))
   ]);
@@ -49,7 +49,7 @@ module.exports=async function publicPublication(req,res){
    publication:{id:article.id,public_id:article.public_id,slug:article.slug,title:article.title,summary:article.summary,
     content_type:article.content_type,author:article.author_name,origin:article.origin,specialty:article.specialty,
     version:version.version_number,updated_at:article.updated_at,content:version.content_json},
-   sources,categories:categories.map(x=>x.category),tags:tags.map(x=>x.tag),assets:publicAssets,
+   sources,categories:categories.map(x=>({...x.category,is_primary:x.is_primary})),tags:tags.map(x=>x.tag),assets:publicAssets,
    relations:relations.filter(x=>x.related&&x.related.status==="published")
   });
  }catch{
