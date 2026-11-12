@@ -71,7 +71,7 @@ function createArticlePersistence(options={}) {
       const status=document.status||"draft";
       if(!["draft","review","approved","published","archived"].includes(status))throw new Error("VALIDATION: Estado editorial no válido.");
       const assets=Array.isArray(document.assets)?document.assets:[];
-      for(const asset of assets){const keywords=Array.isArray(asset.keywords)?asset.keywords:[];if(!asset.storage_path||!asset.original_name||!asset.alt_text||!asset.description||!asset.license||!/^https?:\\/\\//i.test(String(asset.source_url||""))||!keywords.length)throw new Error("VALIDATION: Cada recurso requiere archivo, texto alternativo, descripción, fuente HTTP/HTTPS, licencia y palabras clave.");}
+      for(const asset of assets){const keywords=Array.isArray(asset.keywords)?asset.keywords:[];if(!asset.storage_path||!asset.original_name||!asset.alt_text||!asset.description||!asset.license||!/^https?:\/\//i.test(String(asset.source_url||""))||!keywords.length)throw new Error("VALIDATION: Cada recurso requiere archivo, texto alternativo, descripción, fuente HTTP/HTTPS, licencia y palabras clave.");}
       const slug=String(document.slug||"").trim()||slugify(title)+"-"+(articleId?String(articleId).slice(0,8):randomUUID().slice(0,8));
       const normalized={
         ...document,slug,title,summary,content_html:contentHtml,content_text:contentText,
