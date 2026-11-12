@@ -24,7 +24,7 @@ Supabase: proyecto `SERCO's Project` (`hlwxgetogjvieejcmttf`). La base de datos 
 
 ## API del editor
 - `editor-login.html`: pantalla pública de inicio de sesión (sin funciones editoriales).\n- `api/editor-auth.js`: inicio de sesión, verificación y cierre de sesión de la cuenta autorizada; sesión en cookie HttpOnly.\n- `api/editor-page.js`: entrega la interfaz únicamente después de validar la cookie y el correo administrador.\n- `src/private/dashboard.html`: plantilla privada del editor; no se sirve como archivo estático.
-- `api/editor.js`: catálogo administrativo, recuperación documental y guardado transaccional.
+- `api/editor.js`: catálogo administrativo, recuperación documental y guardado transaccional.\n- `src/services/editor/article-persistence.js`: servicio compartido de persistencia y validación para publicaciones manuales e investigaciones IA.
 - `api/editor-upload.js`: emisión de URL firmada para cargas autenticadas al bucket privado.\n- `vercel.json`: reescribe `/dashboard.html` hacia `api/editor-page.js` y empaqueta la plantilla privada.
 - `api/ask.js`: consultas públicas a la base de conocimiento.
 - `api/research-public.js`: investigación externa pública con límites de uso.
@@ -41,7 +41,7 @@ Supabase: proyecto `SERCO's Project` (`hlwxgetogjvieejcmttf`). La base de datos 
 - `supabase/migrations/20261109092925_index_knowledge_foreign_keys.sql`: índices de claves foráneas.
 - `supabase/migrations/20261109092946_restrict_knowledge_tables_to_backend.sql`: acceso restringido al backend.
 - `supabase/migrations/20261109123300_public_api_rate_limits.sql` y `20261109124000_public_api_rate_limit_order.sql`: límites de consultas públicas.
-- `supabase/migrations/20261112144735_serco_editorial_content_model_and_atomic_save.sql`: modelo editorial, bucket privado y operación transaccional.
+- `supabase/migrations/20261112144735_serco_editorial_content_model_and_atomic_save.sql`: modelo editorial, bucket privado y operación transaccional.\n- `supabase/migrations/20261112160000_extend_published_search_with_public_ids_and_sources.sql`: ID público y fuentes originales en resultados de búsqueda.\n- `supabase/migrations/20261112163000_require_asset_source_and_keywords.sql`: trazabilidad obligatoria de recursos multimedia.
 
 ## Variables de entorno requeridas en Vercel
 - `SUPABASE_URL`: URL del proyecto Supabase.
@@ -59,4 +59,4 @@ Supabase: proyecto `SERCO's Project` (`hlwxgetogjvieejcmttf`). La base de datos 
 6. Los archivos de la biblioteca corporativa `serco-media` no se mueven ni se reutilizan para esta biblioteca.
 
 ## Estado de integración
-La migración y las tablas están creadas en Supabase. Las rutas API administrativas, la pantalla de acceso, la entrega privada del editor y la conexión del frontend están añadidas a `desarrollo`. La carga con URL firmada está implementada en el código, pero aún requiere pruebas en un despliegue con las variables de entorno configuradas. La publicación automática de investigaciones de IA permanece desactivada hasta validar el ciclo completo.
+La migración y las tablas están creadas en Supabase. Las rutas API administrativas, la pantalla de acceso, la entrega privada del editor y la conexión del frontend están añadidas a `desarrollo`. La carga con URL firmada está implementada en el código. Las investigaciones externas se registran mediante el mismo servicio documental y quedan en revisión editorial; no se publican automáticamente hasta validar el ciclo completo. La conexión operativa aún requiere la clave secreta del servidor y el correo de administrador en Vercel, además de pruebas de extremo a extremo.
