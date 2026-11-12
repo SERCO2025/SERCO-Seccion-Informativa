@@ -28,11 +28,39 @@ function stripHtml(value) {
 }
 function sanitizeHtml(html) {
   let value = String(html || "").slice(0, 500000);
-  value = value.replace(/<(script|style|iframe|object|embed|form|input|button|meta|link)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, "");
-  value = value.replace(/<(script|style|iframe|object|embed|form|input|button|meta|link)\b[^>]*\/?>/gi, "");
-  value = value.replace(/\s+on[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "");
-  value = value.replace(/\s+(href|src)\s*=\s*("|')\s*javascript:[\s\S]*?\2/gi, "");
-  return value;
+  value = value.replace(/<!--[\s\S]*?-->/g, "");
+  value = value.replace(/<(script|style|iframe|object|embed|form|input|button|meta|link|svg|math)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, "");
+  value = value.replace(/<(script|style|iframe|object|embed|form|input|button|meta|link|svg|math)\b[^>]*\/?>/gi, "");
+  const allowed = new Set(["p","br","h1","h2","h3","h4","h5","h6","strong","b","em","i","u","ul","ol","li","blockquote","table","thead","tbody","tfoot","tr","th","td","a","hr","figure","figcaption","img"]);
+  return value.replace(/<\/?([a-z0-9]+)\b([^>]*)>/gi, (whole, rawTag, rawAttrs) => {
+    const tag = rawTag.toLowerCase();
+    if (!allowed.has(tag)) return "";
+    if (whole.startsWith("</")) return "</" + tag + ">";
+    let attrs = "";
+    if (tag === "a") {
+      const href = rawAttrs.match(/\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
+      const target = rawAttrs.match(/\btarget\s*=\s*(?:"([^"]*)"|'([^']*)')/i);
+      const url = href && (href[1] || href[2] || href[3] || "");
+      if (url && /^(https?:\/\/|mailto:)/i.test(url)) attrs += ' href="' + url.replace(/&/g,"&amp;").replace(/"/g,"&quot;") + '" rel="noopener noreferrer"';
+      if (target && (target[1] || target[2]) === "_blank") attrs += ' target="_blank"';
+    }
+    if (tag === "img") {
+      const src = rawAttrs.match(/\bsrc\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
+      const alt = rawAttrs.match(/\balt\s*=\s*(?:"([^"]*)"|'([^']*)')/i);
+      const url = src && (src[1] || src[2] || src[3] || "");
+      if (!url || !/^https:\/\//i.test(url)) return "";
+      attrs += ' src="' + url.replace(/&/g,"&amp;").replace(/"/g,"&quot;") + '"';
+      if (alt) attrs += ' alt="' + (alt[1] || alt[2] || "").replace(/&/g,"&amp;").replace(/"/g,"&quot;") + '"';
+      attrs += ' loading="lazy"';
+    }
+    if (["th","td"].includes(tag)) {
+      const colspan = rawAttrs.match(/\bcolspan\s*=\s*["']?([1-9][0-9]?)["']?/i);
+      const rowspan = rawAttrs.match(/\browspan\s*=\s*["']?([1-9][0-9]?)["']?/i);
+      if (colspan) attrs += ' colspan="' + colspan[1] + '"';
+      if (rowspan) attrs += ' rowspan="' + rowspan[1] + '"';
+    }
+    return "<" + tag + attrs + ">";
+  });
 }
 function makeChunks(html, text) {
   const parts = [];
