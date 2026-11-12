@@ -41,7 +41,7 @@ Supabase: proyecto `SERCO's Project` (`hlwxgetogjvieejcmttf`). La base de datos 
 - `supabase/migrations/20261109092925_index_knowledge_foreign_keys.sql`: índices de claves foráneas.
 - `supabase/migrations/20261109092946_restrict_knowledge_tables_to_backend.sql`: acceso restringido al backend.
 - `supabase/migrations/20261109123300_public_api_rate_limits.sql` y `20261109124000_public_api_rate_limit_order.sql`: límites de consultas públicas.
-- `supabase/migrations/20261112144735_serco_editorial_content_model_and_atomic_save.sql`: modelo editorial, bucket privado y operación transaccional.\n- `supabase/migrations/20261112160000_extend_published_search_with_public_ids_and_sources.sql`: ID público y fuentes originales en resultados de búsqueda.\n- `supabase/migrations/20261112163000_require_asset_source_and_keywords.sql`: trazabilidad obligatoria de recursos multimedia.
+- `supabase/migrations/20261112144735_serco_editorial_content_model_and_atomic_save.sql`: modelo editorial, bucket privado y operación transaccional.\n- `supabase/migrations/20261112145352_extend_published_search_with_public_ids_and_sources.sql`: ID público y fuentes originales en resultados de búsqueda.\n- `supabase/migrations/20261112145528_require_asset_source_and_keywords.sql`: trazabilidad obligatoria de recursos multimedia.
 
 ## Variables de entorno requeridas en Vercel
 - `SUPABASE_URL`: URL del proyecto Supabase.
