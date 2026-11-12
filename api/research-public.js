@@ -17,24 +17,24 @@ function escapeHtml(value) {
   return String(value || "").replace(/[&<>"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"' : "&quot;" }[char]));
 }
 function reportToHtml(report) {
-  const lines = String(report || "").split(/\\r?\\n/);
+  const lines = String(report || "").split(/\r?\n/);
   const output = [];
   let list = false;
   for (const raw of lines) {
     const line = raw.trim();
     if (!line) { if (list) { output.push("</ul>"); list = false; } continue; }
-    const heading = line.match(/^(#{1,3})\\s+(.+)$/);
-    const bullet = line.match(/^[-*]\\s+(.+)$/);
+    const heading = line.match(/^(#{1,3})\s+(.+)$/);
+    const bullet = line.match(/^[-*]\s+(.+)$/);
     if (heading) { if (list) { output.push("</ul>"); list = false; } const level = Math.min(4, heading[1].length + 1); output.push("<h" + level + ">" + escapeHtml(heading[2]) + "</h" + level + ">"); }
     else if (bullet) { if (!list) { output.push("<ul>"); list = true; } output.push("<li>" + escapeHtml(bullet[1]) + "</li>"); }
     else { if (list) { output.push("</ul>"); list = false; } output.push("<p>" + escapeHtml(line) + "</p>"); }
   }
   if (list) output.push("</ul>");
-  return output.join("\\n");
+  return output.join("\n");
 }
 function summaryFromReport(report, query) {
-  const plain = String(report || "").replace(/[#*`_>]/g, " ").replace(/\\s+/g, " ").trim();
-  const summary = plain.split(/(?<=[.!?])\\s+/).slice(0, 3).join(" ").slice(0, 650);
+  const plain = String(report || "").replace(/[#*`_>]/g, " ").replace(/\s+/g, " ").trim();
+  const summary = plain.split(/(?<=[.!?])\s+/).slice(0, 3).join(" ").slice(0, 650);
   return summary.length >= 30 ? summary : ("Investigación documental sobre " + query + ". " + plain).slice(0, 650);
 }
 const persistingProvider = {
@@ -45,7 +45,7 @@ const persistingProvider = {
         title: source.title,
         source_type: "website",
         source_url: source.url,
-        published_date: /^\\d{4}-\\d{2}-\\d{2}$/.test(String(source.publishedDate || "")) ? source.publishedDate : null
+        published_date: /^\d{4}-\d{2}-\d{2}$/.test(String(source.publishedDate || "")) ? source.publishedDate : null
       }));
       if (!sources.length) throw new Error("La investigación no devolvió fuentes bibliográficas registrables.");
       const saved = await persistence.save({
@@ -60,7 +60,7 @@ const persistingProvider = {
           origin: "ai_research",
           specialty: "Investigación e innovación",
           categories: ["Investigación e innovación", "Investigación técnica"],
-          tags: ["Investigación IA", "Fuentes externas", ...String(result.query).split(/\\s+/).filter((word) => word.length > 3).slice(0, 8)],
+          tags: ["Investigación IA", "Fuentes externas", ...String(result.query).split(/\s+/).filter((word) => word.length > 3).slice(0, 8)],
           sources,
           assets: [],
           relations: [],
