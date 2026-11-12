@@ -1,5 +1,6 @@
 "use strict";
 
+const { randomUUID } = require("node:crypto");
 const BASE = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
 const PUBLIC_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || "";
 const SECRET_KEY = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
@@ -146,8 +147,20 @@ module.exports = async function editorApi(req, res) {
       if (!document || typeof document !== "object") return send(res,400,{error:{code:"INVALID_DOCUMENT",message:"Falta el documento editorial."}});
       const contentHtml = sanitizeHtml(document.content_html || "");
       const contentText = stripHtml(contentHtml);
+      let stableSlug = String(document.slug || "").trim();
+      if (!stableSlug) {
+        if (body.article_id) {
+          const current = await supabaseRest("/rest/v1/articles?select=slug&id=eq." + encodeURIComponent(body.article_id) + "&limit=1");
+          stableSlug = current[0]?.slug || "";
+        }
+        if (!stableSlug) {
+          stableSlug = String(document.title || "").normalize("NFD").replace(/[\\u0300-\\u036f]/g, "")
+            .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") + "-" + randomUUID().slice(0, 8);
+        }
+      }
       const normalized = {
         ...document,
+        slug: stableSlug,
         content_html: contentHtml,
         content_text: contentText,
         author_name: String(document.author_name || document.author || "").trim(),
