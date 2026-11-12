@@ -9,7 +9,7 @@ function reply(res, status, payload) {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   return res.status(status).json(payload);
 }
-function bodyOf(req) {
+function cookieToken(req) {\n  const raw = String(req.headers && req.headers.cookie || "");\n  const match = raw.match(/(?:^|;\\s*)serco_editor_session=([^;]+)/);\n  return match ? decodeURIComponent(match[1]) : "";\n}\nfunction setSessionCookie(res, token, maxAge) {\n  res.setHeader("Set-Cookie", "serco_editor_session=" + encodeURIComponent(token || "") + "; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=" + maxAge);\n}\nfunction bodyOf(req) {
   if (req.body && typeof req.body === "object") return req.body;
   if (typeof req.body === "string") {
     try { return JSON.parse(req.body); } catch {}
@@ -26,7 +26,7 @@ module.exports = async function editorAuth(req, res) {
   }
   const body = bodyOf(req);
   const action = body.action || "login";
-  const token = typeof body.access_token === "string" ? body.access_token : "";
+  const token = typeof body.access_token === "string" && body.access_token ? body.access_token : cookieToken(req);
   try {
     if (action === "login") {
       const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
@@ -45,7 +45,7 @@ module.exports = async function editorAuth(req, res) {
       if (String(result.user.email || "").toLowerCase() !== ADMIN_EMAIL) {
         return reply(res, 403, { error: { code: "ADMIN_ONLY", message: "La cuenta autenticada no está autorizada." } });
       }
-      return reply(res, 200, { access_token: result.access_token, refresh_token: result.refresh_token, expires_in: result.expires_in, user: { id: result.user.id, email: result.user.email } });
+      setSessionCookie(res, result.access_token, Math.max(60, Number(result.expires_in) || 3600));\n      return reply(res, 200, { access_token: result.access_token, refresh_token: result.refresh_token, expires_in: result.expires_in, user: { id: result.user.id, email: result.user.email } });
     }
     if (action === "verify") {
       if (!token) return reply(res, 401, { error: { code: "UNAUTHORIZED", message: "Sesión no válida." } });
