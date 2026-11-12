@@ -115,11 +115,13 @@ function buildCitations(citationIds, evidence) {
     return {
       citationId: item.id,
       articleId: item.articleId,
+      publicId: typeof item.publicId === "string" ? item.publicId : null,
       slug: item.slug,
       title: item.title,
       version: item.version,
       section: typeof item.section === "string" ? item.section : null,
-      excerpt: typeof item.excerpt === "string" ? item.excerpt : item.content.slice(0, 320)
+      excerpt: typeof item.excerpt === "string" ? item.excerpt : item.content.slice(0, 320),
+      sources: Array.isArray(item.sources) ? item.sources : []
     };
   });
 }
@@ -128,11 +130,13 @@ function publicEvidence(evidence) {
   return evidence.map((item) => ({
     id: item.id,
     articleId: item.articleId,
+    publicId: typeof item.publicId === "string" ? item.publicId : null,
     slug: item.slug,
     title: item.title,
     version: item.version,
     section: typeof item.section === "string" ? item.section : null,
-    content: item.content
+    content: item.content,
+    sources: Array.isArray(item.sources) ? item.sources : []
   }));
 }
 
