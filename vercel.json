@@ -1,0 +1,13 @@
+{
+  "functions": {
+    "api/editor-page.js": {
+      "includeFiles": "src/private/dashboard.html"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/dashboard.html",
+      "destination": "/api/editor-page"
+    }
+  ]
+}
