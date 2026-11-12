@@ -12,7 +12,7 @@ module.exports = async function editorPage(req, res) {
     return res.status(405).end("Method Not Allowed");
   }
   const cookie = String(req.headers && req.headers.cookie || "");
-  const match = cookie.match(/(?:^|;\\s*)serco_editor_session=([^;]+)/);
+  const match = cookie.match(/(?:^|;\s*)serco_editor_session=([^;]+)/);
   const token = match ? decodeURIComponent(match[1]) : "";
   if (!BASE || !PUBLIC_KEY || !ADMIN_EMAIL || !token) {
     res.statusCode = 302;
