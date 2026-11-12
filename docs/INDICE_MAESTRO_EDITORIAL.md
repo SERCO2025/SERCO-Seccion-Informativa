@@ -50,7 +50,7 @@ Supabase: proyecto `SERCO's Project` (`hlwxgetogjvieejcmttf`). La base de datos 
 - `SERCO_ADMIN_EMAIL`: correo exacto autorizado para administrar la biblioteca.
 - `GEMINI_API_KEY` y `TAVILY_API_KEY`: proveedores de investigación, si no están ya configurados.
 
-## Reglas de integridad
+## Guía operativa\n- `docs/CONFIGURACION_ENTORNO_EDITORIAL.md`: variables requeridas, configuración del administrador, entorno Vercel y pruebas de activación.\n\n## Reglas de integridad
 1. Una publicación tiene un único documento íntegro y puede relacionarse con varias categorías y etiquetas sin duplicarse.
 2. Cada guardado crea una versión nueva y genera fragmentos asociados a esa versión.
 3. Solo la versión publicada se expone a la recuperación pública.
