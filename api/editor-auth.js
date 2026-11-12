@@ -66,6 +66,7 @@ module.exports = async function editorAuth(req, res) {
     }
     if (action === "logout") {
       if (token) await fetch(BASE + "/auth/v1/logout", { method: "POST", headers: { apikey: PUBLIC_KEY, Authorization: "Bearer " + token } }).catch(() => {});
+      setSessionCookie(res, "", 0);
       return reply(res, 200, { ok: true });
     }
     return reply(res, 400, { error: { code: "INVALID_ACTION", message: "Acción no reconocida." } });
