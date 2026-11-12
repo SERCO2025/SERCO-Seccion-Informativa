@@ -9,6 +9,7 @@ async function rest(path){
  return data;
 }
 async function signedAsset(asset){
+ if(asset.bucket_id!=="serco-publicaciones")return {...asset,url:null};
  const response=await fetch(BASE+"/storage/v1/object/sign/"+encodeURIComponent(asset.bucket_id)+"/"+asset.storage_path.split("/").map(encodeURIComponent).join("/"),{
   method:"POST",headers:{apikey:SECRET,Authorization:"Bearer "+SECRET,"Content-Type":"application/json"},
   body:JSON.stringify({expiresIn:3600})
@@ -29,7 +30,10 @@ module.exports=async function publicPublication(req,res){
   const query=typeof req.query?.q==="string"?req.query.q.trim():"";
   if(!id&&!publicId&&!query)return res.status(400).json({error:{code:"MISSING_LOOKUP",message:"Indica el ID, public_id o q para buscar una publicación."}});
   if(query.length>160)return res.status(400).json({error:{code:"INVALID_QUERY",message:"La búsqueda supera el límite permitido."}});
-  let filter=id?"id=eq."+encodeURIComponent(id):publicId?"public_id=eq."+encodeURIComponent(publicId):"title=ilike.*"+encodeURIComponent(query)+"*";
+  if(id&&!/^[0-9a-f-]{36}$/i.test(id))return res.status(400).json({error:{code:"INVALID_ID",message:"El UUID no tiene un formato válido."}});
+  if(publicId&&!/^CERCO-INFO-[0-9]+$/i.test(publicId))return res.status(400).json({error:{code:"INVALID_PUBLIC_ID",message:"El identificador CERCO-INFO no tiene un formato válido."}});
+  const safeQuery=query.replace(/[,*()]/g," ").replace(/\\s+/g," ").trim();
+  let filter=id?"id=eq."+encodeURIComponent(id):publicId?"public_id=eq."+encodeURIComponent(publicId):"title=ilike.*"+encodeURIComponent(safeQuery)+"*";
   const articles=await rest("/rest/v1/articles?select=id,public_id,slug,title,summary,status,content_type,author_name,origin,specialty,created_at,updated_at,published_version_id&status=eq.published&published_version_id=not.is.null&"+filter+"&order=updated_at.desc&limit="+(query?10:1));
   if(!articles.length)return res.status(404).json({error:{code:"PUBLICATION_NOT_FOUND",message:"No se encontró una publicación vigente con esos datos."}});
   if(query&&!id&&!publicId)return res.status(200).json({results:articles.map(a=>({id:a.id,public_id:a.public_id,slug:a.slug,title:a.title,summary:a.summary,specialty:a.specialty}))});
