@@ -62,7 +62,7 @@ module.exports = async function editorAuth(req, res) {
       if (!response.ok || String(user.email || "").toLowerCase() !== ADMIN_EMAIL) {
         return reply(res, 401, { error: { code: "UNAUTHORIZED", message: "La sesión no pertenece a la cuenta administradora autorizada." } });
       }
-      return reply(res, 200, { user: { id: user.id, email: user.email } });
+      return reply(res, 200, { access_token: token, user: { id: user.id, email: user.email } });
     }
     if (action === "logout") {
       if (token) await fetch(BASE + "/auth/v1/logout", { method: "POST", headers: { apikey: PUBLIC_KEY, Authorization: "Bearer " + token } }).catch(() => {});
