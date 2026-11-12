@@ -53,7 +53,8 @@ module.exports = async function editorAuth(req, res) {
       if (String(result.user.email || "").toLowerCase() !== ADMIN_EMAIL) {
         return reply(res, 403, { error: { code: "ADMIN_ONLY", message: "La cuenta autenticada no está autorizada." } });
       }
-      setSessionCookie(res, result.access_token, Math.max(60, Number(result.expires_in) || 3600));\n      return reply(res, 200, { access_token: result.access_token, refresh_token: result.refresh_token, expires_in: result.expires_in, user: { id: result.user.id, email: result.user.email } });
+      setSessionCookie(res, result.access_token, Math.max(60, Number(result.expires_in) || 3600));
+      return reply(res, 200, { access_token: result.access_token, refresh_token: result.refresh_token, expires_in: result.expires_in, user: { id: result.user.id, email: result.user.email } });
     }
     if (action === "verify") {
       if (!token) return reply(res, 401, { error: { code: "UNAUTHORIZED", message: "Sesión no válida." } });
