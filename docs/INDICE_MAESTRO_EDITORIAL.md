@@ -23,9 +23,9 @@ Supabase: proyecto `SERCO's Project` (`hlwxgetogjvieejcmttf`). La base de datos 
 - Bucket `serco-media`: biblioteca corporativa preexistente; permanece independiente y sin cambios.
 
 ## API del editor
-- `api/editor-auth.js`: inicio de sesión, verificación y cierre de sesión de la cuenta autorizada.
+- `editor-login.html`: pantalla pública de inicio de sesión (sin funciones editoriales).\n- `api/editor-auth.js`: inicio de sesión, verificación y cierre de sesión de la cuenta autorizada; sesión en cookie HttpOnly.\n- `api/editor-page.js`: entrega la interfaz únicamente después de validar la cookie y el correo administrador.\n- `src/private/dashboard.html`: plantilla privada del editor; no se sirve como archivo estático.
 - `api/editor.js`: catálogo administrativo, recuperación documental y guardado transaccional.
-- `api/editor-upload.js`: emisión de URL firmada para cargas autenticadas al bucket privado.
+- `api/editor-upload.js`: emisión de URL firmada para cargas autenticadas al bucket privado.\n- `vercel.json`: reescribe `/dashboard.html` hacia `api/editor-page.js` y empaqueta la plantilla privada.
 - `api/ask.js`: consultas públicas a la base de conocimiento.
 - `api/research-public.js`: investigación externa pública con límites de uso.
 - `api/research.js`: investigación restringida.
@@ -59,4 +59,4 @@ Supabase: proyecto `SERCO's Project` (`hlwxgetogjvieejcmttf`). La base de datos 
 6. Los archivos de la biblioteca corporativa `serco-media` no se mueven ni se reutilizan para esta biblioteca.
 
 ## Estado de integración
-La migración y las tablas están creadas en Supabase. Las rutas API administrativas ya están añadidas a la rama `desarrollo`. La conexión del frontend, el proceso completo de carga de archivos, la configuración de variables del entorno y las pruebas de extremo a extremo siguen pendientes de terminar antes de habilitar el editor en producción.
+La migración y las tablas están creadas en Supabase. Las rutas API administrativas, la pantalla de acceso, la entrega privada del editor y la conexión del frontend están añadidas a `desarrollo`. La carga con URL firmada está implementada en el código, pero aún requiere pruebas en un despliegue con las variables de entorno configuradas. La publicación automática de investigaciones de IA permanece desactivada hasta validar el ciclo completo.
