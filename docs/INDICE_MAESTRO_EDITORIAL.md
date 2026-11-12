@@ -25,7 +25,7 @@ Supabase: proyecto `SERCO's Project` (`hlwxgetogjvieejcmttf`). La base de datos 
 ## API del editor
 - `editor-login.html`: pantalla pública de inicio de sesión (sin funciones editoriales).\n- `api/editor-auth.js`: inicio de sesión, verificación y cierre de sesión de la cuenta autorizada; sesión en cookie HttpOnly.\n- `api/editor-page.js`: entrega la interfaz únicamente después de validar la cookie y el correo administrador.\n- `src/private/dashboard.html`: plantilla privada del editor; no se sirve como archivo estático.
 - `api/editor.js`: catálogo administrativo, recuperación documental y guardado transaccional.\n- `src/services/editor/article-persistence.js`: servicio compartido de persistencia y validación para publicaciones manuales e investigaciones IA.
-- `api/editor-upload.js`: emisión de URL firmada para cargas autenticadas al bucket privado.\n- `vercel.json`: reescribe `/dashboard.html` hacia `api/editor-page.js` y empaqueta la plantilla privada.
+- `api/editor-upload.js`: emisión de URL firmada para cargas autenticadas al bucket privado.\n- `api/publication.js`: recuperación pública del documento íntegro por UUID, ID CERCO-INFO o título; solo versiones publicadas y enlaces temporales a archivos privados.\n- `vercel.json`: reescribe `/dashboard.html` hacia `api/editor-page.js` y empaqueta la plantilla privada.
 - `api/ask.js`: consultas públicas a la base de conocimiento.
 - `api/research-public.js`: investigación externa pública con límites de uso.
 - `api/research.js`: investigación restringida.
