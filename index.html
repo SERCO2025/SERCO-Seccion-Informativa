@@ -77,7 +77,23 @@ form.addEventListener("submit",async event=>{
   officialMeta.textContent="BIBLIOTECA OFICIAL SERCO · COBERTURA: "+String(result.coverage||"no determinada").toUpperCase();
   officialText.textContent=result.answer||"No se recibió una respuesta.";
   if(Array.isArray(result.citations)&&result.citations.length){
-   result.citations.forEach(citation=>{const li=document.createElement("li");li.textContent=(citation.title||"Publicación SERCO")+(citation.section?" · "+citation.section:"");officialSources.appendChild(li)});
+   result.citations.forEach(citation=>{
+    const li=document.createElement("li");
+    li.textContent=(citation.publicId?citation.publicId+" · ":"")+(citation.title||"Publicación SERCO")+(citation.section?" · "+citation.section:"");
+    if(Array.isArray(citation.sources)&&citation.sources.length){
+     const sourceList=document.createElement("ul");
+     citation.sources.forEach(source=>{
+      const sourceItem=document.createElement("li"),link=document.createElement("a");
+      link.href=source.source_url;link.target="_blank";link.rel="noopener noreferrer";
+      link.textContent=source.title||source.source_url;sourceItem.appendChild(link);
+      if(source.author)sourceItem.appendChild(document.createTextNode(" · "+source.author));
+      if(source.published_date)sourceItem.appendChild(document.createTextNode(" · "+source.published_date));
+      sourceList.appendChild(sourceItem);
+     });
+     li.appendChild(sourceList);
+    }
+    officialSources.appendChild(li);
+   });
    show(officialSources);
   }
   show(official);
@@ -102,7 +118,7 @@ yes.addEventListener("click",async()=>{
    if(source.publishedDate)li.appendChild(document.createTextNode(" · "+source.publishedDate));
    sources.appendChild(li);
   });
-  show(research);busy(false,"Investigación externa completada. Revisa las fuentes antes de utilizar la información.");
+  show(research);busy(false,result.persistence==="saved_for_review"?"Investigación registrada para revisión editorial como "+(result.publication?.publicId||"publicación SERCO")+".":"Investigación completada, pero no se pudo registrar en la biblioteca editorial. Revisa la configuración del servidor.");
  }catch(error){researchAllowed=false;show(consent);busy(false,error.message||"No fue posible completar la investigación externa.")}
 });
 no.addEventListener("click",()=>{hide(consent);busy(false,"Se conservó únicamente la respuesta basada en la biblioteca oficial SERCO.")});
