@@ -54,7 +54,7 @@
    <div class="page-head"><div><div class="eyebrow">Gestión documental</div><h1 id="editor-heading">Nueva publicación</h1><p>Documento completo, estructurado y recuperable. Los fragmentos de búsqueda no sustituyen el contenido original.</p></div><div class="head-actions"><button class="btn" onclick="openView('catalog')">Cancelar</button><button class="btn primary" onclick="saveEditor('draft')">Guardar borrador</button></div></div>
    <div class="notice"><span class="notice-icon">◈</span><div><strong>Identidad documental permanente</strong><small>El identificador CERCO-INFO se asignará desde el servidor al crear el registro. No se debe generar en el navegador ni duplicar por categoría.</small></div></div>
    <div class="validation-panel" id="validation-panel" role="alert" aria-live="assertive"><strong id="validation-title">Faltan datos obligatorios</strong><ul id="validation-list"></ul></div>
-   <div class="completion"><div class="completion-top"><span>Completitud del documento</span><strong id="completion-label">0 de 6 requisitos</strong></div><div class="completion-track"><div class="completion-fill" id="completion-fill"></div></div></div>
+   <div class="completion"><div class="completion-top"><span>Completitud del documento</span><strong id="completion-label">0 de 7 requisitos</strong></div><div class="completion-track"><div class="completion-fill" id="completion-fill"></div></div></div>
    <p class="required-legend"><b>* Campo obligatorio.</b> Los campos opcionales se identifican expresamente.</p>
    <div class="editor-layout">
     <div class="editor-main">
@@ -67,7 +67,7 @@
       <div class="editor-tools" role="toolbar" aria-label="Herramientas de contenido">
        <button class="tool" title="Negrita" onclick="format('bold')">B</button><button class="tool" title="Cursiva" onclick="format('italic')"><i>I</i></button><button class="tool" title="Subrayado" onclick="format('underline')"><u>U</u></button><span class="tool-sep"></span><button class="tool" title="Encabezado 2" onclick="format('formatBlock','h2')">H2</button><button class="tool" title="Encabezado 3" onclick="format('formatBlock','h3')">H3</button><button class="tool" title="Párrafo" onclick="format('formatBlock','p')">¶</button><span class="tool-sep"></span><button class="tool" title="Lista" onclick="format('insertUnorderedList')">☷</button><button class="tool" title="Lista numerada" onclick="format('insertOrderedList')">1.</button><button class="tool" title="Cita" onclick="insertBlock('blockquote','Cita técnica o extracto de referencia.')">❞</button><span class="tool-sep"></span><button class="tool" title="Insertar tabla" onclick="insertTable()">▦</button><button class="tool" title="Insertar imagen" onclick="document.getElementById('asset-upload').click()">▧</button><button class="tool" title="Enlace" onclick="insertLink()">↗</button><button class="tool" title="Separador" onclick="format('insertHorizontalRule')">—</button>
       </div>
-      <div class="field" id="content-field"><div class="field" id="content-field"><div class="content-editor" id="pub-content" contenteditable="true" spellcheck="true" aria-label="Contenido completo de la publicación"></div><div class="field-hint">Obligatorio: desarrolla el tema con información suficiente, secciones y explicaciones. Como mínimo, 80 caracteres.</div></div></div>
+      <div class="field" id="content-field"><div class="content-editor" id="pub-content" contenteditable="true" spellcheck="true" aria-label="Contenido completo de la publicación"></div><div class="field-hint">Obligatorio: desarrolla el tema con información suficiente, secciones y explicaciones. Como mínimo, 80 caracteres.</div></div>
       <div class="help">Usa encabezados jerárquicos y secciones descriptivas. El contenido íntegro se conservará en la versión documental; los fragmentos se generarán aparte para recuperación.</div>
      </div></div>
      <div class="editor-card"><div class="editor-card-head"><h3>03 · Fuentes y referencias</h3><small class="required-mark">* Al menos una fuente</small></div><div class="editor-card-body">
@@ -194,7 +194,8 @@ function validateEditor(){
   const required=[["alt","texto alternativo"],["description","descripción"],["source","fuente original"],["license","licencia o permiso"],["keywords","palabras clave"]];
   required.forEach(([key,label])=>{if(!String(asset[key]||"").trim())errors.push({wrap:null,id:null,message:"Completa "+label+" del recurso «"+asset.name+"»."})});
  });
- const total=checks.length+1,done=checks.filter(x=>x[2]).length+(state.sources.length?1:0);
+ const assetChecks=state.assets.flatMap(a=>[!!a.alt.trim(),!!a.description.trim(),!!a.source.trim(),!!a.license.trim(),!!a.keywords.trim()]);
+ const total=checks.length+1+assetChecks.length,done=checks.filter(x=>x[2]).length+(state.sources.length?1:0)+assetChecks.filter(Boolean).length;
  const label=document.getElementById("completion-label"),fill=document.getElementById("completion-fill");
  if(label)label.textContent=done+" de "+total+" requisitos";
  if(fill)fill.style.width=Math.round(done/total*100)+"%";
@@ -206,7 +207,8 @@ function updateCompletion(){validateEditorQuietly()}
 function validateEditorQuietly(){
  const doc=collectDocument(document.getElementById("pub-status").value);
  const checks=[!!doc.title,doc.summary.length>=30,doc.content_text.length>=80,!!doc.author,!!doc.specialty,state.categories.length>0,state.sources.length>0];
- const done=checks.filter(Boolean).length,total=checks.length;
+ const assetChecks=state.assets.flatMap(a=>[!!a.alt.trim(),!!a.description.trim(),!!a.source.trim(),!!a.license.trim(),!!a.keywords.trim()]);
+ const done=checks.filter(Boolean).length+assetChecks.filter(Boolean).length,total=checks.length+assetChecks.length;
  document.getElementById("completion-label").textContent=done+" de "+total+" requisitos";
  document.getElementById("completion-fill").style.width=Math.round(done/total*100)+"%";
 }
