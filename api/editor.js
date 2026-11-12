@@ -1,6 +1,8 @@
 "use strict";
 
 const { randomUUID } = require("node:crypto");
+const { createArticlePersistence } = require("../src/services/editor/article-persistence");
+const articlePersistence = createArticlePersistence();
 const BASE = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
 const PUBLIC_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || "";
 const SECRET_KEY = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
@@ -210,12 +212,12 @@ module.exports = async function editorApi(req, res) {
           concepts: document.concepts || []
         }
       };
-      const chunks = makeChunks(contentHtml,contentText);
-      const saved = await supabaseRest("/rest/v1/rpc/save_article_bundle",{
-        method:"POST",prefer:"return=representation",
-        body:{p_article_id:body.article_id||null,p_document:normalized,p_chunks:chunks}
+      const persisted = await articlePersistence.save({
+        articleId: body.article_id || null,
+        document: normalized,
+        userId: user.id
       });
-      return send(res,200,{saved,chunk_count:chunks.length});
+      return send(res,200,persisted);
     }
     res.setHeader("Allow","GET, POST");
     return send(res,405,{error:{code:"METHOD_NOT_ALLOWED",message:"Usa GET o POST."}});
