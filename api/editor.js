@@ -122,6 +122,26 @@ module.exports = async function editorApi(req, res) {
     }
     if (req.method === "POST") {
       const body = parseBody(req);
+      if (body.action === "reserve") {
+        const articleId = String(body.article_id || "");
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(articleId)) {
+          return send(res, 400, { error: { code: "INVALID_ARTICLE_ID", message: "Identificador interno no válido." } });
+        }
+        const title = String(body.title || "").trim();
+        const summary = String(body.summary || "").trim();
+        if (title.length < 5 || summary.length < 30) {
+          return send(res, 422, { error: { code: "VALIDATION_ERROR", message: "Completa título y resumen antes de preparar los archivos." } });
+        }
+        const slug = title.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") + "-" + articleId.slice(0, 8);
+        const reserved = await supabaseRest("/rest/v1/articles", {
+          method: "POST",
+          body: { id: articleId, slug, title, summary, content_type: body.content_type || "article", status: "draft",
+            author_name: String(body.author_name || "").trim(), origin: body.origin || "manual",
+            specialty: body.specialty || null, featured: !!body.featured,
+            ai_retrieval_enabled: body.ai_retrieval_enabled !== false }
+        });
+        return send(res, 200, { article: Array.isArray(reserved) ? reserved[0] : reserved });
+      }
       const document = body.document;
       if (!document || typeof document !== "object") return send(res,400,{error:{code:"INVALID_DOCUMENT",message:"Falta el documento editorial."}});
       const contentHtml = sanitizeHtml(document.content_html || "");
