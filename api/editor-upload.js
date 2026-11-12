@@ -32,7 +32,7 @@ module.exports=async function editorUpload(req,res){
   });
   const result=await signed.json().catch(()=>({}));
   if(!signed.ok||!result.url)return send(res,502,{error:{code:"UPLOAD_URL_FAILED",message:"No se pudo preparar la carga segura del archivo."}});
-  const signedUrl=/^https?:\\/\\//i.test(result.url)?result.url:(BASE+"/storage/v1"+(result.url.startsWith("/")?result.url:"/"+result.url));
+  const signedUrl=/^https?:\/\//i.test(result.url)?result.url:(BASE+"/storage/v1"+(result.url.startsWith("/")?result.url:"/"+result.url));
   return send(res,200,{bucket_id:"serco-publicaciones",storage_path:path,signed_url:signedUrl,token:new URL(signedUrl).searchParams.get("token"),original_name:name,mime_type:mime,size_bytes:size});
  }catch{
   return send(res,502,{error:{code:"UPLOAD_PREPARE_FAILED",message:"No fue posible preparar la carga del archivo."}});
