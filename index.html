@@ -80,6 +80,7 @@ form.addEventListener("submit",async event=>{
    result.citations.forEach(citation=>{
     const li=document.createElement("li");
     li.textContent=(citation.publicId?citation.publicId+" · ":"")+(citation.title||"Publicación SERCO")+(citation.section?" · "+citation.section:"");
+    if(citation.publicId){const docLink=document.createElement("a");docLink.href="/api/publication?public_id="+encodeURIComponent(citation.publicId);docLink.textContent="Abrir documento completo";docLink.target="_blank";docLink.rel="noopener noreferrer";li.appendChild(document.createTextNode(" · "));li.appendChild(docLink)}
     if(Array.isArray(citation.sources)&&citation.sources.length){
      const sourceList=document.createElement("ul");
      citation.sources.forEach(source=>{
