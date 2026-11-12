@@ -107,6 +107,7 @@ function createSupabaseKnowledgeRetriever(options = {}) {
           typeof row.article_id !== "string" ||
           typeof row.slug !== "string" ||
           typeof row.title !== "string" ||
+          (row.public_id !== null && typeof row.public_id !== "string") ||
           !Number.isInteger(row.version) ||
           typeof row.content !== "string" ||
           !row.content.trim()
@@ -120,13 +121,15 @@ function createSupabaseKnowledgeRetriever(options = {}) {
         return {
           id: row.chunk_id,
           articleId: row.article_id,
+          publicId: typeof row.public_id === "string" ? row.public_id : null,
           slug: row.slug,
           title: row.title,
           version: row.version,
           section: typeof row.section === "string" ? row.section : null,
           content: row.content,
           excerpt: row.content.slice(0, 320),
-          rank: typeof row.rank === "number" ? row.rank : null
+          rank: typeof row.rank === "number" ? row.rank : null,
+          sources: Array.isArray(row.sources) ? row.sources.filter((source) => source && typeof source.title === "string" && typeof source.source_url === "string") : []
         };
       });
 
