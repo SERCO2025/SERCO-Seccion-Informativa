@@ -9,7 +9,15 @@ function reply(res, status, payload) {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   return res.status(status).json(payload);
 }
-function cookieToken(req) {\n  const raw = String(req.headers && req.headers.cookie || "");\n  const match = raw.match(/(?:^|;\\s*)serco_editor_session=([^;]+)/);\n  return match ? decodeURIComponent(match[1]) : "";\n}\nfunction setSessionCookie(res, token, maxAge) {\n  res.setHeader("Set-Cookie", "serco_editor_session=" + encodeURIComponent(token || "") + "; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=" + maxAge);\n}\nfunction bodyOf(req) {
+function cookieToken(req) {
+  const raw = String(req.headers && req.headers.cookie || "");
+  const match = raw.match(/(?:^|;\s*)serco_editor_session=([^;]+)/);
+  return match ? decodeURIComponent(match[1]) : "";
+}
+function setSessionCookie(res, token, maxAge) {
+  res.setHeader("Set-Cookie", "serco_editor_session=" + encodeURIComponent(token || "") + "; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=" + maxAge);
+}
+function bodyOf(req) {
   if (req.body && typeof req.body === "object") return req.body;
   if (typeof req.body === "string") {
     try { return JSON.parse(req.body); } catch {}
