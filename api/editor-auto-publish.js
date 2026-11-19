@@ -170,7 +170,9 @@ function summary(report) {
   return plainText(report).split(/(?<=[.!?])\s+/).slice(0, 3).join(" ").slice(0, 650);
 }
 async function supabaseRest(path) {
-  const response = await fetch(BASE + path, { headers: { apikey: SECRET_KEY, Authorization: "Bearer " + SECRET_KEY } });
+  const headers = { apikey: SECRET_KEY };
+  if (!SECRET_KEY.startsWith("sb_secret_")) headers.Authorization = "Bearer " + SECRET_KEY;
+  const response = await fetch(BASE + path, { headers });
   const payload = await response.json().catch(() => null);
   if (!response.ok) throw new Error("CATALOG_HTTP_" + response.status + ": " + String(payload && (payload.message || payload.details || payload.hint || payload.code) || "Respuesta no disponible"));
   return payload;
