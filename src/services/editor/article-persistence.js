@@ -88,6 +88,7 @@ function createArticlePersistence(options={}) {
       const response=await fetchImpl(url+"/rest/v1/rpc/save_article_bundle",{
         method:"POST",
         headers:{apikey:secret,...(secret.startsWith("sb_secret_")?{}:{Authorization:"Bearer "+secret}),"Content-Type":"application/json"},
+        signal:AbortSignal.timeout(15000),
         body:JSON.stringify({p_article_id:articleId,p_document:normalized,p_chunks:chunks})
       });
       const payload=await response.json().catch(()=>null);
