@@ -19,6 +19,7 @@ function jsonResponse(payload, status = 200) {
 const row = {
   chunk_id: "chunk-uuid",
   article_id: "article-uuid",
+  public_id: null,
   slug: "tipos-de-cimentacion",
   title: "Tipos de cimentación",
   version: 2,
