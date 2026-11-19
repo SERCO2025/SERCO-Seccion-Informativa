@@ -172,7 +172,7 @@ function summary(report) {
 async function supabaseRest(path) {
   const response = await fetch(BASE + path, { headers: { apikey: SECRET_KEY, Authorization: "Bearer " + SECRET_KEY } });
   const payload = await response.json().catch(() => null);
-  if (!response.ok) throw new Error("No se pudo consultar el catálogo editorial.");
+  if (!response.ok) throw new Error("CATALOG_HTTP_" + response.status + ": " + String(payload && (payload.message || payload.details || payload.hint || payload.code) || "Respuesta no disponible"));
   return payload;
 }
 async function generate(topic, index, batchId) {
