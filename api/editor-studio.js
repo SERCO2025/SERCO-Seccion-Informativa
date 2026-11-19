@@ -4,7 +4,7 @@ const BASE = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
 const PUBLIC_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || "";
 const ADMIN_EMAIL = (process.env.SERCO_ADMIN_EMAIL || "").trim().toLowerCase();
 
-const STUDIO_HTML = String.raw\`<!doctype html>
+const STUDIO_HTML = String.raw`<!doctype html>
 <html lang="es">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -165,14 +165,14 @@ async function init(){const token=sessionStorage.getItem("serco_editor_access_to
 init();
 setInterval(()=>{if(state.token&&!document.hidden)loadCatalog(true)},60000);
 </script>
-</body></html>\`;
+</body></html>`;
 
 module.exports = async function editorialStudio(req, res) {
   res.setHeader("Cache-Control", "no-store, private");
   res.setHeader("X-Robots-Tag", "noindex, nofollow, noarchive");
   if (req.method !== "GET") { res.setHeader("Allow", "GET"); return res.status(405).end("Method Not Allowed"); }
   const cookie = String(req.headers && req.headers.cookie || "");
-  const match = cookie.match(/(?:^|;\\s*)serco_editor_session=([^;]+)/);
+  const match = cookie.match(/(?:^|;\s*)serco_editor_session=([^;]+)/);
   const token = match ? decodeURIComponent(match[1]) : "";
   if (!BASE || !PUBLIC_KEY || !ADMIN_EMAIL || !token) { res.statusCode=302;res.setHeader("Location","/editor-login.html");return res.end(); }
   try {
