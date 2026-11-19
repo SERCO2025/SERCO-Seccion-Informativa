@@ -69,6 +69,7 @@ function createTavilySearchProvider(options = {}) {
       }
 
       let response;
+      console.info("[research:tavily] request_started");
       try {
         response = await fetchImpl(TAVILY_SEARCH_URL, {
           method: "POST",
@@ -87,14 +88,17 @@ function createTavilySearchProvider(options = {}) {
             include_usage: true
           })
         });
-      } catch {
+      } catch (error) {
+        console.error("[research:tavily] request_failed", { name: error && error.name, code: error && error.code });
         throw new TavilySearchError("No fue posible conectar con el servicio de búsqueda Tavily.", "TAVILY_CONNECTION_ERROR");
       }
 
+      console.info("[research:tavily] response_received", { status: response.status, ok: response.ok });
       let payload;
       try {
         payload = await response.json();
-      } catch {
+      } catch (error) {
+        console.error("[research:tavily] response_parse_failed", { name: error && error.name, code: error && error.code });
         throw new TavilySearchError("Tavily devolvió una respuesta que no es JSON válido.", "TAVILY_INVALID_RESPONSE");
       }
 
@@ -109,6 +113,7 @@ function createTavilySearchProvider(options = {}) {
       }
 
       const results = normalizeTavilyResults(payload);
+      console.info("[research:tavily] results_normalized", { resultCount: results.length });
       if (results.length === 0) {
         throw new TavilySearchError("Tavily no devolvió resultados web utilizables.", "NO_SEARCH_RESULTS");
       }
