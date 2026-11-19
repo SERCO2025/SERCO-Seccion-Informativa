@@ -102,6 +102,7 @@ function createGeminiResearchProvider(options = {}) {
               "x-goog-api-key": apiKey,
               "Content-Type": "application/json"
             },
+            signal: AbortSignal.timeout(45000),
             body: JSON.stringify({
               system_instruction: { parts: [{ text: instructions }] },
               contents: [{
