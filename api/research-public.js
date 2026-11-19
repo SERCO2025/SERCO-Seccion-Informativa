@@ -40,6 +40,7 @@ function summaryFromReport(report, query) {
 const persistingProvider = {
   async research(input) {
     const result = await provider.research(input);
+    console.info("[research:persistence] report_ready", { sourceCount: Array.isArray(result.sources) ? result.sources.length : 0 });
     try {
       const sources = (result.sources || []).filter((source) => source && source.url && source.title).map((source) => ({
         title: source.title,
@@ -48,6 +49,7 @@ const persistingProvider = {
         published_date: /^\d{4}-\d{2}-\d{2}$/.test(String(source.publishedDate || "")) ? source.publishedDate : null
       }));
       if (!sources.length) throw new Error("La investigación no devolvió fuentes bibliográficas registrables.");
+      console.info("[research:persistence] save_started", { sourceCount: sources.length });
       const saved = await persistence.save({
         document: {
           title: ("Investigación: " + result.query).slice(0, 240),
@@ -70,8 +72,10 @@ const persistingProvider = {
           editorial_metadata: { provider: result.provider, model: result.model, research_date: new Date().toISOString(), external_research: true }
         }
       });
+      console.info("[research:persistence] save_completed", { indexedChunks: saved.chunk_count });
       return { ...result, persistence: "saved_for_review", publication: { id: saved.saved.article_id, publicId: saved.saved.public_id, version: saved.saved.version_number }, indexedChunks: saved.chunk_count };
     } catch (error) {
+      console.error("[research:persistence] save_failed", { name: error && error.name, code: error && error.code });
       return { ...result, persistence: "failed", persistenceMessage: "La investigación se respondió, pero no pudo registrarse como documento editorial." };
     }
   }
