@@ -132,7 +132,11 @@ function createGeminiResearchProvider(options = {}) {
         if (response.status === 401 || response.status === 403) {
           throw new ResearchConfigurationError("La credencial de Gemini no fue aceptada.", "RESEARCH_CREDENTIAL_INVALID");
         }
-        throw new ResearchProviderError("Gemini no pudo completar el análisis.", "RESEARCH_UPSTREAM_ERROR");
+        const upstreamMessage = payload && payload.error && typeof payload.error.message === "string"
+          ? payload.error.message
+          : payload && typeof payload.message === "string" ? payload.message : response.statusText;
+        const detail = String(upstreamMessage || "Respuesta sin detalle").replace(/[\\r\\n]+/g, " ").slice(0, 500);
+        throw new ResearchProviderError("Gemini HTTP " + response.status + ": " + detail, "RESEARCH_UPSTREAM_ERROR");
       }
 
       const report = collectOutputText(payload);
