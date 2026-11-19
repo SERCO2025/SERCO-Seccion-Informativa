@@ -4,7 +4,7 @@ const { createTavilySearchProvider } = require("../src/services/research/tavily-
 const { createGeminiResearchProvider } = require("../src/services/research/gemini-research-provider");
 const { createArticlePersistence } = require("../src/services/editor/article-persistence");
 
-const BASE = (process.env.SUPABASE_URL || "").replace(/\\/+$/, "");
+const BASE = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
 const SECRET_KEY = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const CRON_TOKEN = process.env.SERCO_AUTO_PUBLISH_TOKEN || "";
 const SEARCH = createTavilySearchProvider({ maxResults: 8 });
@@ -148,26 +148,26 @@ function escapeHtml(value) {
   return String(value || "").replace(/[&<>"]/g, (c) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
 }
 function reportToHtml(report) {
-  const lines = String(report || "").split(/\\r?\\n/);
+  const lines = String(report || "").split(/\r?\n/);
   const out = [];
   let list = false;
   for (const raw of lines) {
     const line = raw.trim();
     if (!line) { if (list) { out.push("</ul>"); list = false; } continue; }
-    const heading = line.match(/^(#{1,3})\\s+(.+)$/);
-    const bullet = line.match(/^[-*]\\s+(.+)$/);
+    const heading = line.match(/^(#{1,3})\s+(.+)$/);
+    const bullet = line.match(/^[-*]\s+(.+)$/);
     if (heading) { if (list) { out.push("</ul>"); list = false; } const level = Math.min(4, heading[1].length + 1); out.push("<h" + level + ">" + escapeHtml(heading[2]) + "</h" + level + ">"); }
     else if (bullet) { if (!list) { out.push("<ul>"); list = true; } out.push("<li>" + escapeHtml(bullet[1]) + "</li>"); }
     else { if (list) { out.push("</ul>"); list = false; } out.push("<p>" + escapeHtml(line) + "</p>"); }
   }
   if (list) out.push("</ul>");
-  return out.join("\\n");
+  return out.join("\n");
 }
 function plainText(report) {
-  return String(report || "").replace(/[#*_`>]/g, " ").replace(/\\s+/g, " ").trim();
+  return String(report || "").replace(/[#*_`>]/g, " ").replace(/\s+/g, " ").trim();
 }
 function summary(report) {
-  return plainText(report).split(/(?<=[.!?])\\s+/).slice(0, 3).join(" ").slice(0, 650);
+  return plainText(report).split(/(?<=[.!?])\s+/).slice(0, 3).join(" ").slice(0, 650);
 }
 async function supabaseRest(path) {
   const response = await fetch(BASE + path, { headers: { apikey: SECRET_KEY, Authorization: "Bearer " + SECRET_KEY } });
@@ -182,9 +182,9 @@ async function generate(topic, index, batchId) {
     "Explica el concepto desde nivel básico y desarrolla una entrada de diccionario técnico en español."
   ].join(" ");
   const result = await RESEARCH.research({ query });
-  const sources = (result.sources || []).filter((s) => s && s.title && /^https?:\\/\\//i.test(s.url || "")).slice(0, 8).map((s) => ({
+  const sources = (result.sources || []).filter((s) => s && s.title && /^https?:\/\//i.test(s.url || "")).slice(0, 8).map((s) => ({
     title: s.title, source_type: "website", source_url: s.url,
-    published_date: /^\\d{4}-\\d{2}-\\d{2}$/.test(String(s.publishedDate || "")) ? s.publishedDate : null,
+    published_date: /^\d{4}-\d{2}-\d{2}$/.test(String(s.publishedDate || "")) ? s.publishedDate : null,
     metadata: { provider: "Tavily", score: s.score || null }
   }));
   if (sources.length < 2) throw new Error("La investigación de " + topic[0] + " no reunió al menos dos fuentes verificables.");
@@ -194,7 +194,7 @@ async function generate(topic, index, batchId) {
   const summaryText = summary(body);
   if (summaryText.length < 30) throw new Error("No se pudo generar un resumen suficiente para " + topic[0] + ".");
   const document = {
-    title, slug: "diccionario-" + topic[0].normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,""),
+    title, slug: "diccionario-" + topic[0].normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,""),
     summary: summaryText, content_type: "dictionary_entry", status: "published",
     author_name: "SERCO · Diccionario técnico automatizado", origin: "ai_research",
     specialty: topic[2], categories: ["Diccionario técnico", topic[1], topic[2]],
