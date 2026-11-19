@@ -47,6 +47,7 @@ function createPublicRateLimiter(options = {}) {
             Authorization: "Bearer " + secretKey,
             "Content-Type": "application/json"
           },
+          signal: AbortSignal.timeout(8000),
           body: JSON.stringify({ p_scope: scope, p_client_hash: clientHash })
         });
       } catch {
