@@ -76,6 +76,7 @@ function createTavilySearchProvider(options = {}) {
             Authorization: "Bearer " + apiKey,
             "Content-Type": "application/json"
           },
+          signal: AbortSignal.timeout(15000),
           body: JSON.stringify({
             query,
             search_depth: searchDepth,
