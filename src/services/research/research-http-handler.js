@@ -64,9 +64,12 @@ function createResearchHttpHandler(provider) {
     }
 
     try {
+      console.info("[research:http] request_accepted");
       const result = await provider.research({ query });
+      console.info("[research:http] request_completed", { sourceCount: Array.isArray(result.sources) ? result.sources.length : 0, persistence: result.persistence || "unknown" });
       return send(res, 200, result);
     } catch (error) {
+      console.error("[research:http] request_failed", { name: error && error.name, code: error && error.code });
       if (error instanceof ResearchConfigurationError || error instanceof TavilyConfigurationError) {
         return send(res, 503, {
           error: {
