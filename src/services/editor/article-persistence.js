@@ -87,7 +87,7 @@ function createArticlePersistence(options={}) {
       if(!chunks.length)throw new Error("VALIDATION: No se generaron fragmentos para la búsqueda.");
       const response=await fetchImpl(url+"/rest/v1/rpc/save_article_bundle",{
         method:"POST",
-        headers:{apikey:secret,Authorization:"Bearer "+secret,"Content-Type":"application/json"},
+        headers:{apikey:secret,...(secret.startsWith("sb_secret_")?{}:{Authorization:"Bearer "+secret}),"Content-Type":"application/json"},
         body:JSON.stringify({p_article_id:articleId,p_document:normalized,p_chunks:chunks})
       });
       const payload=await response.json().catch(()=>null);
