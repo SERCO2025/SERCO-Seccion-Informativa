@@ -224,10 +224,10 @@ module.exports = async function automaticEditorialPublisher(req, res) {
   try {
     const existing = await supabaseRest("/rest/v1/articles?select=title&origin=eq.ai_research&content_type=eq.dictionary_entry&limit=1000");
     const titles = new Set((existing || []).map((a) => String(a.title || "").toLowerCase()));
-    const pending = TOPICS.filter((t) => !titles.has(("Diccionario técnico: " + t[0]).toLowerCase())).slice(0, 3);
-    if (pending.length < 3) return send(res, 409, { error: "TOPIC_QUEUE_EXHAUSTED", remaining: pending.length });
+    const pending = TOPICS.filter((t) => !titles.has(("Diccionario técnico: " + t[0]).toLowerCase())).slice(0, 1);
+    if (pending.length < 1) return send(res, 409, { error: "TOPIC_QUEUE_EXHAUSTED", remaining: pending.length });
     const batchId = new Date().toISOString().replace(/[:.]/g, "-");
-    const results = await Promise.all(pending.map((topic, index) => generate(topic, index, batchId)));
+    const results = [await generate(pending[0], 0, batchId)];
     return send(res, 200, { success: true, generated: results.length, batch_id: batchId, publications: results });
   } catch (error) {
     return send(res, 502, { error: "AUTO_PUBLISH_FAILED", message: String(error && error.message || "Error desconocido") });
