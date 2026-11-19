@@ -65,6 +65,7 @@ function createGeminiResearchProvider(options = {}) {
       }
 
       const searchResult = await searchProvider.search({ query });
+      console.info("[research:gemini] search_completed", { resultCount: searchResult.results.length, searchProvider: searchResult.provider });
       const sources = searchResult.results.slice(0, MAX_SOURCE_COUNT).map((source, index) => ({
         id: index + 1,
         url: source.url,
@@ -93,6 +94,7 @@ function createGeminiResearchProvider(options = {}) {
       ].join("\n");
 
       let response;
+      console.info("[research:gemini] generation_started", { model });
       try {
         response = await fetchImpl(
           GEMINI_API_BASE + encodeURIComponent(model) + ":generateContent",
@@ -115,14 +117,17 @@ function createGeminiResearchProvider(options = {}) {
             })
           }
         );
-      } catch {
+      } catch (error) {
+        console.error("[research:gemini] request_failed", { name: error && error.name, code: error && error.code });
         throw new ResearchProviderError("No fue posible conectar con el servicio de análisis Gemini.");
       }
 
+      console.info("[research:gemini] response_received", { status: response.status, ok: response.ok });
       let payload;
       try {
         payload = await response.json();
-      } catch {
+      } catch (error) {
+        console.error("[research:gemini] response_parse_failed", { name: error && error.name, code: error && error.code });
         throw new ResearchProviderError("Gemini devolvió una respuesta que no es JSON válido.");
       }
 
@@ -141,6 +146,7 @@ function createGeminiResearchProvider(options = {}) {
       }
 
       const report = collectOutputText(payload);
+      console.info("[research:gemini] report_parsed", { hasReport: Boolean(report), sourceCount: sources.length });
       if (!report) {
         throw new ResearchProviderError("Gemini no devolvió contenido para el informe.", "EMPTY_RESEARCH_REPORT");
       }
