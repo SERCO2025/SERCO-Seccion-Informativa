@@ -111,10 +111,22 @@ function createGeminiResearchProvider(options = {}) {
               contents: [{
                 role: "user",
                 parts: [{
-                  text: "Prepara una investigación documental a partir de estos resultados de búsqueda web. Consulta solicitada:\n" +
+                  text: "Prepara la investigación documental, la respuesta breve y la explicación ampliada a partir de estos resultados de búsqueda web. Consulta solicitada:\n" +
                     query + "\n\nEVIDENCIA RECUPERADA:\n" + sourceContext
                 }]
-              }]
+              }],
+              generationConfig: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                  type: "OBJECT",
+                  properties: {
+                    internalReport: { type: "STRING" },
+                    visitorAnswer: { type: "STRING" },
+                    expandedAnswer: { type: "STRING" }
+                  },
+                  required: ["internalReport", "visitorAnswer", "expandedAnswer"]
+                }
+              }
             })
           }
         );
