@@ -34,12 +34,20 @@ test("rechaza cuerpo JSON inválido y exceso de tamaño", async () => {
   assert.equal(large.statusCode, 413);
 });
 
-test("envía consulta al proveedor y devuelve el informe", async () => {
+test("envía consulta al proveedor y devuelve las respuestas pública y ampliada", async () => {
   let received;
   const handler = createResearchHttpHandler({
     async research(input) {
       received = input;
-      return { status: "completed", report: "Informe", sources: [] };
+      return {
+        status: "completed",
+        query: input.query,
+        visitorAnswer: "Respuesta breve",
+        expandedAnswer: "Respuesta ampliada",
+        sources: [],
+        sourceCount: 0,
+        persistence: "not_configured"
+      };
     }
   });
   const res = responseRecorder();
@@ -50,8 +58,23 @@ test("envía consulta al proveedor y devuelve el informe", async () => {
   }, res);
   assert.deepEqual(received, { query: "Investigar especificaciones de concreto" });
   assert.equal(res.statusCode, 200);
-  assert.equal(res.payload.report, "Informe");
+  assert.equal(res.payload.visitorAnswer, "Respuesta breve");
+  assert.equal(res.payload.expandedAnswer, "Respuesta ampliada");
   assert.equal(res.headers["Cache-Control"], "no-store");
+});
+
+test("reserva HTTP 429 para el límite público y devuelve 503 si Gemini está limitado", async () => {
+  const { ResearchProviderError } = require("../src/services/research/gemini-research-provider");
+  const handler = createResearchHttpHandler({
+    async research() {
+      throw new ResearchProviderError("Gemini agotó su cuota", "RESEARCH_RATE_LIMITED");
+    }
+  });
+  const res = responseRecorder();
+  await handler({ method: "POST", headers: {}, body: { query: "Investigar especificaciones de concreto" } }, res);
+  assert.equal(res.statusCode, 503);
+  assert.equal(res.payload.error.code, "RESEARCH_PROVIDER_RATE_LIMITED");
+  assert.equal(res.payload.error.message.includes("cuota"), false);
 });
 
 test("responde 503 si falta configurar la clave de Gemini", async () => {
