@@ -50,6 +50,8 @@ function createGeminiResearchProvider(options = {}) {
   const model = options.model || process.env.GEMINI_RESEARCH_MODEL || DEFAULT_MODEL;
   const fetchImpl = options.fetchImpl || globalThis.fetch;
   const searchProvider = options.searchProvider || null;
+  const sleepImpl = options.sleepImpl || ((milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)));
+  const maxTransientRetries = Number.isInteger(options.maxTransientRetries) ? Math.max(0, Math.min(options.maxTransientRetries, 2)) : 1;
 
   return {
     async research(input) {
@@ -95,47 +97,59 @@ function createGeminiResearchProvider(options = {}) {
       ].join("\n");
 
       let response;
+      let attempt = 0;
       console.info("[research:gemini] generation_started", { model });
-      try {
-        response = await fetchImpl(
-          GEMINI_API_BASE + encodeURIComponent(model) + ":generateContent",
-          {
-            method: "POST",
-            headers: {
-              "x-goog-api-key": apiKey,
-              "Content-Type": "application/json"
-            },
-            signal: AbortSignal.timeout(45000),
-            body: JSON.stringify({
-              system_instruction: { parts: [{ text: instructions }] },
-              contents: [{
-                role: "user",
-                parts: [{
-                  text: "Prepara la investigación documental, la respuesta breve y la explicación ampliada a partir de estos resultados de búsqueda web. Consulta solicitada:\n" +
-                    query + "\n\nEVIDENCIA RECUPERADA:\n" + sourceContext
-                }]
-              }],
-              generationConfig: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                  type: "OBJECT",
-                  properties: {
-                    internalReport: { type: "STRING" },
-                    visitorAnswer: { type: "STRING" },
-                    expandedAnswer: { type: "STRING" }
-                  },
-                  required: ["internalReport", "visitorAnswer", "expandedAnswer"]
+      while (true) {
+        try {
+          response = await fetchImpl(
+            GEMINI_API_BASE + encodeURIComponent(model) + ":generateContent",
+            {
+              method: "POST",
+              headers: {
+                "x-goog-api-key": apiKey,
+                "Content-Type": "application/json"
+              },
+              signal: AbortSignal.timeout(45000),
+              body: JSON.stringify({
+                system_instruction: { parts: [{ text: instructions }] },
+                contents: [{
+                  role: "user",
+                  parts: [{
+                    text: "Prepara la investigación documental, la respuesta breve y la explicación ampliada a partir de estos resultados de búsqueda web. Consulta solicitada:\n" +
+                      query + "\n\nEVIDENCIA RECUPERADA:\n" + sourceContext
+                  }]
+                }],
+                generationConfig: {
+                  responseMimeType: "application/json",
+                  responseSchema: {
+                    type: "OBJECT",
+                    properties: {
+                      internalReport: { type: "STRING" },
+                      visitorAnswer: { type: "STRING" },
+                      expandedAnswer: { type: "STRING" }
+                    },
+                    required: ["internalReport", "visitorAnswer", "expandedAnswer"]
+                  }
                 }
-              }
-            })
-          }
-        );
-      } catch (error) {
-        console.error("[research:gemini] request_failed", { name: error && error.name, code: error && error.code });
-        throw new ResearchProviderError("No fue posible conectar con el servicio de análisis Gemini.");
+              })
+            }
+          );
+        } catch (error) {
+          console.error("[research:gemini] request_failed", { name: error && error.name, code: error && error.code, attempt: attempt + 1 });
+          throw new ResearchProviderError("No fue posible conectar con el servicio de análisis Gemini.");
+        }
+
+        if (response.status !== 503 || attempt >= maxTransientRetries) break;
+        attempt += 1;
+        console.warn("[research:gemini] transient_upstream_retry", {
+          httpStatus: response.status,
+          attempt,
+          maxAttempts: maxTransientRetries + 1
+        });
+        await sleepImpl(1000 * attempt);
       }
 
-      console.info("[research:gemini] response_received", { status: response.status, ok: response.ok });
+      console.info("[research:gemini] response_received", { status: response.status, ok: response.ok, attempts: attempt + 1 });
       let payload;
       try {
         payload = await response.json();
@@ -183,6 +197,14 @@ function createGeminiResearchProvider(options = {}) {
         }
         if (response.status === 401 || response.status === 403) {
           throw new ResearchConfigurationError("La credencial de Gemini no fue aceptada.", "RESEARCH_CREDENTIAL_INVALID");
+        }
+        if (response.status === 503) {
+          console.error("[research:gemini] upstream_unavailable", {
+            httpStatus: response.status,
+            status: upstreamError.status || null,
+            message: detail,
+            attempts: attempt + 1
+          });
         }
         throw new ResearchProviderError("Gemini HTTP " + response.status + ": " + detail, "RESEARCH_UPSTREAM_ERROR");
       }
