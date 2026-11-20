@@ -53,10 +53,10 @@ const persistingProvider = {
       const saved = await persistence.save({
         document: {
           title: ("Investigación: " + result.query).slice(0, 240),
-          summary: summaryFromReport(result.report, result.query),
+          summary: summaryFromReport(result.internalReport, result.query),
           content_type: "research",
-          content_html: reportToHtml(result.report),
-          content_text: result.report,
+          content_html: reportToHtml(result.internalReport),
+          content_text: result.internalReport,
           status: "review",
           author_name: "SERCO · Investigación asistida por IA",
           origin: "ai_research",
@@ -68,7 +68,7 @@ const persistingProvider = {
           relations: [],
           featured: false,
           ai_retrieval_enabled: true,
-          search_metadata: { title: result.query, description: summaryFromReport(result.report, result.query), query: result.query },
+          search_metadata: { title: result.query, description: summaryFromReport(result.internalReport, result.query), query: result.query },
           editorial_metadata: { provider: result.provider, model: result.model, research_date: new Date().toISOString(), external_research: true }
         }
       });
