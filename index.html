@@ -98,8 +98,11 @@ form.addEventListener("submit",async event=>{
    show(officialSources);
   }
   show(official);
-  if(result.status==="insufficient"||result.status==="partial"){
-   consentText.textContent=result.status==="partial"
+  const responseStatus=String(result.status||"").toLowerCase();
+  const responseCoverage=String(result.coverage||"").toLowerCase();
+  const needsExternalResearch=["insufficient","partial"].includes(responseStatus)||["insufficient","partial"].includes(responseCoverage);
+  if(needsExternalResearch){
+   consentText.textContent=responseStatus==="partial"||responseCoverage==="partial"
     ?"La biblioteca oficial de SERCO solo contiene información parcial. ¿Deseas que busque información complementaria en Internet?"
     :"No encontré información suficiente en la biblioteca oficial de SERCO. ¿Deseas que busque información adicional en Internet?";
    show(consent);
