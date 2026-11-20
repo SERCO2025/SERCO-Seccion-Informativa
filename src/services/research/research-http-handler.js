@@ -83,7 +83,7 @@ function createResearchHttpHandler(provider) {
         name: error && error.name,
         code: error && error.code,
         message: error && typeof error.message === "string"
-          ? error.message.replace(/[\\r\\n]+/g, " ").slice(0, 500)
+          ? error.message.replace(/[\r\n]+/g, " ").slice(0, 500)
           : "Error sin mensaje"
       });
       if (error instanceof ResearchConfigurationError || error instanceof TavilyConfigurationError) {
