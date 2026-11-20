@@ -50,7 +50,7 @@ test("busca primero con Tavily y entrega evidencia a Gemini para redactar", asyn
       return {
         ok: true,
         async json() {
-          return { candidates: [{ content: { parts: [{ text: "Informe con referencia [1]." }] } }] };
+          return { candidates: [{ content: { parts: [{ text: JSON.stringify({ internalReport: "Expediente con referencia [1].", visitorAnswer: "Respuesta breve con referencia [1].", expandedAnswer: "Explicación ampliada con referencia [1]." }) }] } }] };
         }
       };
     }
@@ -60,16 +60,56 @@ test("busca primero con Tavily y entrega evidencia a Gemini para redactar", asyn
   assert.equal(geminiRequest.url, "https://generativelanguage.googleapis.com/v1beta/models/test-model:generateContent");
   assert.equal(geminiRequest.options.headers["x-goog-api-key"], "test-gemini-key");
   assert.equal(geminiRequest.body.tools, undefined);
-  assert.match(geminiRequest.body.system_instruction.parts[0].text, /referencias numeradas/);
+  assert.match(geminiRequest.body.system_instruction.parts[0].text, /referencias \[1\]/);
   assert.match(geminiRequest.body.contents[0].parts[0].text, /Fragmento recuperado de la fuente/);
   assert.equal(result.provider, "tavily+gemini");
   assert.equal(result.searchProvider, "tavily");
   assert.equal(result.answerProvider, "gemini");
-  assert.equal(result.report, "Informe con referencia [1].");
+  assert.equal(result.internalReport, "Expediente con referencia [1].");
+  assert.equal(result.visitorAnswer, "Respuesta breve con referencia [1].");
+  assert.equal(result.expandedAnswer, "Explicación ampliada con referencia [1].");
   assert.equal(result.sources[0].id, 1);
   assert.equal(result.sources[0].url, "https://example.org/norma");
   assert.equal(result.searchUsage.credits, 1);
   assert.equal(result.searchSuggestionsHtml, null);
+});
+
+test("reintenta una respuesta HTTP 503 de Gemini sin repetir Tavily", async () => {
+  let searchCalls = 0;
+  let geminiCalls = 0;
+  const provider = createGeminiResearchProvider({
+    apiKey: "test-gemini-key",
+    searchProvider: {
+      async search() {
+        searchCalls += 1;
+        return {
+          provider: "tavily",
+          results: [{ url: "https://example.org", title: "Fuente", content: "Texto" }],
+          usage: { credits: 1 }
+        };
+      }
+    },
+    sleepImpl: async () => {},
+    fetchImpl: async () => {
+      geminiCalls += 1;
+      if (geminiCalls === 1) return { ok: false, status: 503, statusText: "Unavailable", async json() { return { error: { message: "Temporalmente no disponible" } }; } };
+      return {
+        ok: true,
+        async json() {
+          return { candidates: [{ content: { parts: [{ text: JSON.stringify({
+            internalReport: "Informe",
+            visitorAnswer: "Respuesta",
+            expandedAnswer: "Ampliación"
+          }) }] } }] };
+        }
+      };
+    }
+  });
+
+  const result = await provider.research({ query: "Investigación de prueba" });
+  assert.equal(result.visitorAnswer, "Respuesta");
+  assert.equal(searchCalls, 1);
+  assert.equal(geminiCalls, 2);
 });
 
 test("no realiza llamadas si falta la clave Gemini", async () => {
