@@ -95,10 +95,13 @@ function createResearchHttpHandler(provider) {
         });
       }
       if (error instanceof ResearchProviderError || error instanceof TavilySearchError) {
-        const status = error.code === "RESEARCH_RATE_LIMITED" ? 429 : 502;
+        // El 429 público queda reservado al rate limiter de SERCO. Un límite del proveedor
+        // externo es una indisponibilidad temporal y no debe mostrarse como cuota del visitante.
+        const providerLimited = error.code === "RESEARCH_RATE_LIMITED";
+        const status = providerLimited ? 503 : 502;
         return send(res, status, {
           error: {
-            code: error.code,
+            code: providerLimited ? "RESEARCH_PROVIDER_RATE_LIMITED" : error.code,
             message: "No fue posible completar la investigación en este momento."
           }
         });
