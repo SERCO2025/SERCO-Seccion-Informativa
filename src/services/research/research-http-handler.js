@@ -67,7 +67,17 @@ function createResearchHttpHandler(provider) {
       console.info("[research:http] request_accepted");
       const result = await provider.research({ query });
       console.info("[research:http] request_completed", { sourceCount: Array.isArray(result.sources) ? result.sources.length : 0, persistence: result.persistence || "unknown" });
-      return send(res, 200, result);
+      return send(res, 200, {
+        status: result.status,
+        query: result.query,
+        visitorAnswer: result.visitorAnswer,
+        expandedAnswer: result.expandedAnswer,
+        sources: Array.isArray(result.sources) ? result.sources : [],
+        sourceCount: result.sourceCount || 0,
+        persistence: result.persistence || "unknown",
+        publication: result.publication || null,
+        indexedChunks: result.indexedChunks || 0
+      });
     } catch (error) {
       console.error("[research:http] request_failed", { name: error && error.name, code: error && error.code });
       if (error instanceof ResearchConfigurationError || error instanceof TavilyConfigurationError) {
