@@ -149,7 +149,7 @@ function createGeminiResearchProvider(options = {}) {
         const upstreamMessage = typeof upstreamError.message === "string"
           ? upstreamError.message
           : payload && typeof payload.message === "string" ? payload.message : response.statusText;
-        const detail = String(upstreamMessage || "Respuesta sin detalle").replace(/[\\r\\n]+/g, " ").slice(0, 500);
+        const detail = String(upstreamMessage || "Respuesta sin detalle").replace(/[\r\n]+/g, " ").slice(0, 500);
 
         if (response.status === 429) {
           const quotaDetails = Array.isArray(upstreamError.details)
