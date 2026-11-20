@@ -49,10 +49,15 @@ module.exports=async function publicPublication(req,res){
   const version=versions[0];
   if(!version)return res.status(404).json({error:{code:"PUBLISHED_VERSION_NOT_FOUND",message:"La versión publicada no está disponible."}});
   const publicAssets=await Promise.all(assets.map(signedAsset));
+  const publicContent=version.content_json&&typeof version.content_json==="object"?{...version.content_json}:version.content_json;
+  if(publicContent&&publicContent.editorial_metadata&&typeof publicContent.editorial_metadata==="object"){
+   publicContent.editorial_metadata={...publicContent.editorial_metadata};
+   delete publicContent.editorial_metadata.internal_research_report;
+  }
   return res.status(200).json({
    publication:{id:article.id,public_id:article.public_id,slug:article.slug,title:article.title,summary:article.summary,
     content_type:article.content_type,author:article.author_name,origin:article.origin,specialty:article.specialty,
-    version:version.version_number,updated_at:article.updated_at,content:version.content_json},
+    version:version.version_number,updated_at:article.updated_at,content:publicContent},
    sources,categories:categories.map(x=>({...x.category,is_primary:x.is_primary})),tags:tags.map(x=>x.tag),assets:publicAssets,
    relations:relations.filter(x=>x.related&&x.related.status==="published")
   });
