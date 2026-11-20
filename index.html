@@ -115,14 +115,21 @@ yes.addEventListener("click",async()=>{
  researchAllowed=true;hide(consent);busy(true,"Buscando fuentes en Internet con Tavily y preparando el análisis con Gemini...");
  try{
   const result=await post("/api/research-public",{query:pendingQuery});
-  report.textContent=result.report||"La investigación no devolvió un informe.";
+  if(!result||typeof result.report!=="string"||!result.report.trim()){
+   throw new Error("La búsqueda terminó, pero el servidor no entregó el informe para mostrarlo.");
+  }
+  report.textContent=result.report;
+  sources.replaceChildren();
   if(Array.isArray(result.sources))result.sources.forEach(source=>{
+   if(!source||typeof source.url!=="string"||!/^https?:\\/\\//i.test(source.url))return;
    const li=document.createElement("li"),link=document.createElement("a");
    link.href=source.url;link.target="_blank";link.rel="noopener noreferrer";link.textContent=source.title||source.url;li.appendChild(link);
    if(source.publishedDate)li.appendChild(document.createTextNode(" · "+source.publishedDate));
    sources.appendChild(li);
   });
-  show(research);busy(false,result.persistence==="saved_for_review"?"Investigación registrada para revisión editorial como "+(result.publication?.publicId||"publicación SERCO")+".":"Investigación completada, pero no se pudo registrar en la biblioteca editorial. Revisa la configuración del servidor.");
+  show(research);
+  busy(false,result.persistence==="saved_for_review"?"Investigación terminada y registrada para revisión editorial como "+(result.publication?.publicId||"publicación SERCO")+".":"Investigación terminada y disponible arriba, pero no se pudo registrar en la biblioteca editorial.");
+  research.scrollIntoView({behavior:"smooth",block:"start"});
  }catch(error){researchAllowed=false;show(consent);busy(false,error.message||"No fue posible completar la investigación externa.")}
 });
 no.addEventListener("click",()=>{hide(consent);busy(false,"Se conservó únicamente la respuesta basada en la biblioteca oficial SERCO.")});
