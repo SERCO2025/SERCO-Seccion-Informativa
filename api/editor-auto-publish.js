@@ -7,8 +7,9 @@ const { createArticlePersistence } = require("../src/services/editor/article-per
 const BASE = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
 const SECRET_KEY = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const CRON_TOKEN = process.env.SERCO_AUTO_PUBLISH_TOKEN || "";
+const AUTOMATION_GEMINI_API_KEY = process.env.GEMINI_AUTOMATION_API_KEY || "";
 const SEARCH = createTavilySearchProvider({ maxResults: 8 });
-const RESEARCH = createGeminiResearchProvider({ searchProvider: SEARCH });
+const RESEARCH = createGeminiResearchProvider({ searchProvider: SEARCH, apiKey: AUTOMATION_GEMINI_API_KEY });
 const PERSISTENCE = createArticlePersistence();
 
 const TOPICS = [
@@ -219,7 +220,7 @@ async function generate(topic, index, batchId) {
 }
 module.exports = async function automaticEditorialPublisher(req, res) {
   if (req.method !== "POST") { res.setHeader("Allow", "POST"); return send(res, 405, { error: "METHOD_NOT_ALLOWED" }); }
-  if (!BASE || !SECRET_KEY || !process.env.GEMINI_API_KEY || !process.env.TAVILY_API_KEY || !CRON_TOKEN) {
+  if (!BASE || !SECRET_KEY || !AUTOMATION_GEMINI_API_KEY || !process.env.TAVILY_API_KEY || !CRON_TOKEN) {
     return send(res, 503, { error: "AUTO_PUBLISH_NOT_CONFIGURED" });
   }
   const auth = String(req.headers && req.headers.authorization || "");
