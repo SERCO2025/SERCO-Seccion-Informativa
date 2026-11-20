@@ -145,16 +145,45 @@ function createGeminiResearchProvider(options = {}) {
       }
 
       if (!response.ok) {
+        const upstreamError = payload && payload.error && typeof payload.error === "object" ? payload.error : {};
+        const upstreamMessage = typeof upstreamError.message === "string"
+          ? upstreamError.message
+          : payload && typeof payload.message === "string" ? payload.message : response.statusText;
+        const detail = String(upstreamMessage || "Respuesta sin detalle").replace(/[\\r\\n]+/g, " ").slice(0, 500);
+
         if (response.status === 429) {
-          throw new ResearchProviderError("Gemini alcanzó su límite temporal de solicitudes.", "RESEARCH_RATE_LIMITED");
+          const quotaDetails = Array.isArray(upstreamError.details)
+            ? upstreamError.details.map((item) => {
+              const metadata = item && item.metadata && typeof item.metadata === "object" ? item.metadata : {};
+              const violations = Array.isArray(item && item.violations)
+                ? item.violations.map((violation) => ({
+                  quotaMetric: violation && violation.quotaMetric,
+                  quotaId: violation && violation.quotaId,
+                  quotaDimensions: violation && violation.quotaDimensions
+                }))
+                : [];
+              return {
+                reason: item && item.reason,
+                domain: item && item.domain,
+                quotaMetric: metadata.quota_metric,
+                quotaId: metadata.quota_id,
+                quotaLimit: metadata.quota_limit,
+                retryDelay: metadata.retryDelay || metadata.retry_delay,
+                violations
+              };
+            })
+            : [];
+          console.error("[research:gemini] upstream_rate_limit", {
+            httpStatus: response.status,
+            status: upstreamError.status || null,
+            message: detail,
+            quotaDetails
+          });
+          throw new ResearchProviderError("Gemini HTTP 429: " + detail, "RESEARCH_RATE_LIMITED");
         }
         if (response.status === 401 || response.status === 403) {
           throw new ResearchConfigurationError("La credencial de Gemini no fue aceptada.", "RESEARCH_CREDENTIAL_INVALID");
         }
-        const upstreamMessage = payload && payload.error && typeof payload.error.message === "string"
-          ? payload.error.message
-          : payload && typeof payload.message === "string" ? payload.message : response.statusText;
-        const detail = String(upstreamMessage || "Respuesta sin detalle").replace(/[\\r\\n]+/g, " ").slice(0, 500);
         throw new ResearchProviderError("Gemini HTTP " + response.status + ": " + detail, "RESEARCH_UPSTREAM_ERROR");
       }
 
