@@ -128,7 +128,7 @@ yes.addEventListener("click",async()=>{
   expandedAnswerToggle.textContent="Ver explicación ampliada";
   sources.replaceChildren();
   if(Array.isArray(result.sources))result.sources.forEach(source=>{
-   if(!source||typeof source.url!=="string"||!/^https?:\\/\\//i.test(source.url))return;
+   if(!source||typeof source.url!=="string"||!/^https?:\/\//i.test(source.url))return;
    const li=document.createElement("li"),link=document.createElement("a");
    link.href=source.url;link.target="_blank";link.rel="noopener noreferrer";link.textContent=source.title||source.url;li.appendChild(link);
    if(source.publishedDate)li.appendChild(document.createTextNode(" · "+source.publishedDate));
