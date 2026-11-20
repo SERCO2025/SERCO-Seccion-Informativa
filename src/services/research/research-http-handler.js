@@ -79,7 +79,13 @@ function createResearchHttpHandler(provider) {
         indexedChunks: result.indexedChunks || 0
       });
     } catch (error) {
-      console.error("[research:http] request_failed", { name: error && error.name, code: error && error.code });
+      console.error("[research:http] request_failed", {
+        name: error && error.name,
+        code: error && error.code,
+        message: error && typeof error.message === "string"
+          ? error.message.replace(/[\\r\\n]+/g, " ").slice(0, 500)
+          : "Error sin mensaje"
+      });
       if (error instanceof ResearchConfigurationError || error instanceof TavilyConfigurationError) {
         return send(res, 503, {
           error: {
