@@ -190,8 +190,10 @@ async function generate(topic, index, batchId) {
     metadata: { provider: "Tavily", score: s.score || null }
   }));
   if (sources.length < 2) throw new Error("La investigación de " + topic[0] + " no reunió al menos dos fuentes verificables.");
-  const body = String(result.report || "").trim();
-  if (body.length < 1200) throw new Error("El contenido de " + topic[0] + " no alcanzó la extensión mínima de calidad.");
+  const body = String(result.expandedAnswer || "").trim();
+  const internalReport = String(result.internalReport || "").trim();
+  if (body.length < 1200) throw new Error("La explicación pública de " + topic[0] + " no alcanzó la extensión mínima de calidad.");
+  if (internalReport.length < 1200) throw new Error("El expediente interno de " + topic[0] + " no alcanzó la extensión mínima de calidad.");
   const title = "Diccionario técnico: " + topic[0];
   const summaryText = summary(body);
   if (summaryText.length < 30) throw new Error("No se pudo generar un resumen suficiente para " + topic[0] + ".");
@@ -208,7 +210,8 @@ async function generate(topic, index, batchId) {
       provider: result.provider, model: result.model, research_date: new Date().toISOString(),
       external_research: true, automated_dictionary: true, automation_batch: batchId,
       sequence_in_batch: index + 1, source_count: sources.length,
-      editorial_note: "Generado automáticamente con búsqueda externa y fuentes registradas. Verificar jurisdicción, vigencia y aplicación específica al revisar."
+      editorial_note: "Contenido público generado a partir de investigación externa y fuentes registradas. Verificar jurisdicción, vigencia y aplicación específica al revisar.",
+      internal_research_report: internalReport
     }
   };
   const saved = await PERSISTENCE.save({ document });
