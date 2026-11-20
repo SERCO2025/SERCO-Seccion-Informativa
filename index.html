@@ -44,7 +44,10 @@ button:disabled{opacity:.55;cursor:wait}.panel{max-width:820px;margin:18px auto 
 </div></section>
 <section class="research hidden" id="researchPanel">
 <div class="meta">INVESTIGACIÓN EXTERNA · TAVILY + GEMINI · NO ES CONTENIDO OFICIAL SERCO</div>
-<h2>Resultado de la investigación</h2><p id="researchReport"></p><h2>Fuentes consultadas</h2><ol class="sources" id="researchSources"></ol>
+<h2>Respuesta complementaria</h2><p id="researchReport"></p>
+<button id="expandedAnswerToggle" class="secondary" type="button">Ver explicación ampliada</button>
+<div id="expandedAnswerPanel" class="hidden"><h2>Explicación ampliada</h2><p id="expandedAnswer"></p></div>
+<h2>Fuentes consultadas</h2><ol class="sources" id="researchSources"></ol>
 </section>
 <div class="status" id="status"></div>
 </section>
@@ -56,12 +59,12 @@ const el=id=>document.getElementById(id);
 const form=el("searchForm"),input=el("query"),askButton=el("askButton"),official=el("officialAnswer");
 const officialMeta=el("officialMeta"),officialText=el("officialText"),officialSources=el("officialSources");
 const consent=el("consentPanel"),consentText=el("consentText"),yes=el("researchYes"),no=el("researchNo");
-const research=el("researchPanel"),report=el("researchReport"),sources=el("researchSources"),status=el("status");
+const research=el("researchPanel"),report=el("researchReport"),expandedAnswer=el("expandedAnswer"),expandedAnswerPanel=el("expandedAnswerPanel"),expandedAnswerToggle=el("expandedAnswerToggle"),sources=el("researchSources"),status=el("status");
 let pendingQuery="",researchAllowed=false;
 function show(node){node.classList.remove("hidden")}
 function hide(node){node.classList.add("hidden")}
 function busy(value,message){askButton.disabled=value;yes.disabled=value;no.disabled=value;status.textContent=message||""}
-function reset(){hide(official);hide(consent);hide(research);officialSources.replaceChildren();sources.replaceChildren();pendingQuery="";researchAllowed=false}
+function reset(){hide(official);hide(consent);hide(research);hide(expandedAnswerPanel);expandedAnswerToggle.textContent="Ver explicación ampliada";officialSources.replaceChildren();sources.replaceChildren();pendingQuery="";researchAllowed=false}
 async function post(url,body){
  const response=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),cache:"no-store"});
  let data;try{data=await response.json()}catch{throw new Error("El servidor devolvió una respuesta no válida.")}
@@ -115,10 +118,14 @@ yes.addEventListener("click",async()=>{
  researchAllowed=true;hide(consent);busy(true,"Buscando fuentes en Internet con Tavily y preparando el análisis con Gemini...");
  try{
   const result=await post("/api/research-public",{query:pendingQuery});
-  if(!result||typeof result.report!=="string"||!result.report.trim()){
-   throw new Error("La búsqueda terminó, pero el servidor no entregó el informe para mostrarlo.");
+  if(!result||typeof result.visitorAnswer!=="string"||!result.visitorAnswer.trim()||
+     typeof result.expandedAnswer!=="string"||!result.expandedAnswer.trim()){
+   throw new Error("La búsqueda terminó, pero el servidor no entregó la respuesta para el visitante.");
   }
-  report.textContent=result.report;
+  report.textContent=result.visitorAnswer;
+  expandedAnswer.textContent=result.expandedAnswer;
+  hide(expandedAnswerPanel);
+  expandedAnswerToggle.textContent="Ver explicación ampliada";
   sources.replaceChildren();
   if(Array.isArray(result.sources))result.sources.forEach(source=>{
    if(!source||typeof source.url!=="string"||!/^https?:\\/\\//i.test(source.url))return;
@@ -131,6 +138,11 @@ yes.addEventListener("click",async()=>{
   busy(false,result.persistence==="saved_for_review"?"Investigación terminada y registrada para revisión editorial como "+(result.publication?.publicId||"publicación SERCO")+".":"Investigación terminada y disponible arriba, pero no se pudo registrar en la biblioteca editorial.");
   research.scrollIntoView({behavior:"smooth",block:"start"});
  }catch(error){researchAllowed=false;show(consent);busy(false,error.message||"No fue posible completar la investigación externa.")}
+});
+expandedAnswerToggle.addEventListener("click",()=>{
+ const opening=expandedAnswerPanel.classList.contains("hidden");
+ if(opening){show(expandedAnswerPanel);expandedAnswerToggle.textContent="Ocultar explicación ampliada";expandedAnswerPanel.scrollIntoView({behavior:"smooth",block:"nearest"});}
+ else{hide(expandedAnswerPanel);expandedAnswerToggle.textContent="Ver explicación ampliada";}
 });
 no.addEventListener("click",()=>{hide(consent);busy(false,"Se conservó únicamente la respuesta basada en la biblioteca oficial SERCO.")});
 })();
