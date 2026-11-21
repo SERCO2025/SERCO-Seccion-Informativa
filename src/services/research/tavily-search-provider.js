@@ -94,14 +94,9 @@ function createTavilySearchProvider(options = {}) {
       }
 
       console.info("[research:tavily] response_received", { status: response.status, ok: response.ok });
-      let payload;
-      try {
-        payload = await response.json();
-      } catch (error) {
-        console.error("[research:tavily] response_parse_failed", { name: error && error.name, code: error && error.code });
-        throw new TavilySearchError("Tavily devolvió una respuesta que no es JSON válido.", "TAVILY_INVALID_RESPONSE");
-      }
 
+      // El estado HTTP es la señal primaria: los cuerpos de error pueden estar vacíos
+      // o no ser JSON, especialmente cuando el servicio aplica límites o falla.
       if (!response.ok) {
         if ([401, 403].includes(response.status)) {
           throw new TavilyConfigurationError("La credencial de Tavily no fue aceptada.", "TAVILY_CREDENTIAL_INVALID");
@@ -110,6 +105,14 @@ function createTavilySearchProvider(options = {}) {
           throw new TavilySearchError("Tavily alcanzó un límite de solicitudes o créditos.", "RESEARCH_RATE_LIMITED");
         }
         throw new TavilySearchError("Tavily no pudo completar la búsqueda.", "TAVILY_UPSTREAM_ERROR");
+      }
+
+      let payload;
+      try {
+        payload = await response.json();
+      } catch (error) {
+        console.error("[research:tavily] response_parse_failed", { name: error && error.name, code: error && error.code });
+        throw new TavilySearchError("Tavily devolvió una respuesta que no es JSON válido.", "TAVILY_INVALID_RESPONSE");
       }
 
       const results = normalizeTavilyResults(payload);
