@@ -262,6 +262,20 @@ test("rechaza citas de una sección que no aparecen en su índice de afirmacione
   assert.throws(() => parseResearchOutput(raw, 2), { code: "INVALID_RESEARCH_OUTPUT" });
 });
 
+test("rechaza una oración citada que no tiene su propia entrada de evidencia", () => {
+  const raw = JSON.stringify({
+    internalReport: "Informe documental con referencia [1]. Otro dato sustantivo también cita [1].",
+    visitorAnswer: "Respuesta sustentada en la fuente [1].",
+    expandedAnswer: "Explicación ampliada con referencia [1].",
+    claimEvidence: [
+      { section: "internalReport", claim: "Informe documental con referencia [1].", assessment: "supported", sourceIds: [1] },
+      { section: "visitorAnswer", claim: "Respuesta sustentada en la fuente [1].", assessment: "supported", sourceIds: [1] },
+      { section: "expandedAnswer", claim: "Explicación ampliada con referencia [1].", assessment: "supported", sourceIds: [1] }
+    ]
+  });
+  assert.throws(() => parseResearchOutput(raw, 1), { code: "INVALID_RESEARCH_OUTPUT" });
+});
+
 test("envía las solicitudes correctas a Gemini, Groq y Cloudflare Workers AI", async () => {
   const calls = [];
   const adapters = createProviderAdapters({
