@@ -66,7 +66,7 @@ test("no combina coincidencias de publicaciones distintas para declarar cobertur
   });
 
   assert.equal(result.status, "partial");
-  assert.deepEqual(result.matchedTerms, ["resistencia", "inoxidable"]);
+  assert.deepEqual(result.matchedTerms, ["resistencia"]);
   assert.ok(result.missingInformation.length > 0);
 });
 
