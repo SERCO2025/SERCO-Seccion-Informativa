@@ -41,7 +41,7 @@ function parseBody(req) {
   return body;
 }
 
-function createResearchHttpHandler(provider) {
+function createResearchHttpHandler(provider, options = {}) {
   if (!provider || typeof provider.research !== "function") {
     throw new TypeError("Se requiere un proveedor con el método research().");
   }
@@ -63,6 +63,34 @@ function createResearchHttpHandler(provider) {
       return send(res, status, { error: { code: error.code || "INVALID_REQUEST", message: error.message } });
     }
 
+    let reservation = null;
+    if (typeof options.beforeResearch === "function") {
+      try {
+        reservation = await options.beforeResearch(req, query);
+        if (reservation && reservation.allowed === false) {
+          return send(res, 429, {
+            error: {
+              code: "PUBLIC_RATE_LIMITED",
+              message: "Se alcanzó el límite temporal de investigaciones. Inténtalo más tarde."
+            }
+          });
+        }
+      } catch (error) {
+        console.error("[research:http] quota_reservation_failed", {
+          name: error && error.name,
+          code: error && error.code
+        });
+        return send(res, 503, {
+          error: {
+            code: error && error.code === "PUBLIC_RATE_LIMIT_NOT_CONFIGURED"
+              ? error.code
+              : "PUBLIC_RATE_LIMIT_UNAVAILABLE",
+            message: "La investigación externa no está disponible temporalmente."
+          }
+        });
+      }
+    }
+
     try {
       console.info("[research:http] request_accepted");
       const result = await provider.research({ query });
@@ -79,6 +107,17 @@ function createResearchHttpHandler(provider) {
         indexedChunks: result.indexedChunks || 0
       });
     } catch (error) {
+      if (reservation && reservation.reservationId && typeof options.onResearchFailure === "function") {
+        try {
+          await options.onResearchFailure(reservation, error);
+          console.info("[research:http] quota_released_after_failure");
+        } catch (releaseError) {
+          console.error("[research:http] quota_release_failed", {
+            name: releaseError && releaseError.name,
+            code: releaseError && releaseError.code
+          });
+        }
+      }
       console.error("[research:http] request_failed", {
         name: error && error.name,
         code: error && error.code,
