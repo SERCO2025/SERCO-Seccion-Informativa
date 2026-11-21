@@ -1,6 +1,6 @@
 "use strict";
 
-const PROJECT_SPECIFIC_ACTION = /\b(debo|debe|deberia|debería|deberian|deberían|conviene|recomiend\w*|diseñ\w*|dimension\w*|calcul\w*|construir|colocar|reforzar|excavar|cimentar|soportar|resistir|autorizar|validar|usar|es seguro|puedo usar)\b/i;
+const PROJECT_SPECIFIC_ACTION = /\b(debo|debe|deberia|debería|deberian|deberían|conviene|recomiend\w*|diseñ\w*|dimension\w*|calcul\w*|construir|hacer|fabricar|armar|instalar|colocar|reforzar|excavar|cimentar|soportar|aguanta|resiste|autorizar|validar|usar|utilizar|elegir|seleccionar|necesito|lleva|es seguro|puedo usar|es adecuado|es suficiente|es apto|qué (?:medida|tamaño|calibre|diámetro|espesor|peralte|sección)|cuánto (?:acero|concreto|cemento|varilla|material))\b/i;
 const HIGH_IMPACT_DOMAIN = /\b(cimentaci[oó]n|zapata|losa|columna|castillo|viga|trabe|muro de contenci[oó]n|estructura|carga|sismo|talud|excavaci[oó]n|acero|concreto|armado|refuerzo|anclaje|estabilidad|seguridad estructural)\b/i;
 
 function createConstructionSafetyGuard() {

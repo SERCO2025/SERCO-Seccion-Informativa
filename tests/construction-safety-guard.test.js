@@ -41,3 +41,28 @@ test("no bloquea una definición aunque mencione un elemento estructural", async
   const result = await guard.evaluate({ question: "¿Cómo se define una columna de concreto?" });
   assert.equal(result.decision, "allow");
 });
+
+test("solicita contexto para definir el calibre de varilla de una columna", async () => {
+  const result = await guard.evaluate({ question: "¿Qué calibre de varilla lleva una columna de concreto?" });
+  assert.equal(result.decision, "clarify");
+});
+
+test("solicita contexto para estimar concreto requerido en una losa", async () => {
+  const result = await guard.evaluate({ question: "¿Cuánto concreto necesito para una losa de mi construcción?" });
+  assert.equal(result.decision, "clarify");
+});
+
+test("solicita contexto para evaluar capacidad de carga de una viga", async () => {
+  const result = await guard.evaluate({ question: "¿Aguanta esta viga el peso de un segundo piso?" });
+  assert.equal(result.decision, "clarify");
+});
+
+test("solicita contexto para definir el espesor de un muro de contención", async () => {
+  const result = await guard.evaluate({ question: "¿Qué espesor debe tener un muro de contención?" });
+  assert.equal(result.decision, "clarify");
+});
+
+test("mantiene permitidas las preguntas conceptuales sobre dimensiones", async () => {
+  const result = await guard.evaluate({ question: "¿Qué significa el peralte de una viga?" });
+  assert.equal(result.decision, "allow");
+});
