@@ -129,17 +129,12 @@ function validateClaimEvidenceAgainstSections(value, sections, sourceCount) {
     const claimReferenceSet = new Set(claimReferences);
     const sourceIdSet = new Set(item.sourceIds);
 
-    if (["supported", "partial"].includes(item.assessment)) {
-      if (claimReferenceSet.size === 0 || claimReferenceSet.size !== sourceIdSet.size) return false;
-      for (const sourceId of sourceIdSet) {
-        if (!claimReferenceSet.has(sourceId)) return false;
-      }
-    } else {
-      for (const sourceId of claimReferenceSet) {
-        if (!sourceIdSet.has(sourceId)) return false;
-      }
-      if (item.assessment === "unsupported" && claimReferenceSet.size > 0) return false;
+    if (claimReferenceSet.size !== sourceIdSet.size) return false;
+    for (const sourceId of sourceIdSet) {
+      if (!claimReferenceSet.has(sourceId)) return false;
     }
+    if (["supported", "partial"].includes(item.assessment) && claimReferenceSet.size === 0) return false;
+    if (item.assessment === "unsupported" && claimReferenceSet.size > 0) return false;
   }
 
   for (const sectionName of sectionNames) {
