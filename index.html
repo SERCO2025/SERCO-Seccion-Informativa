@@ -60,7 +60,8 @@ const form=el("searchForm"),input=el("query"),askButton=el("askButton"),official
 const officialMeta=el("officialMeta"),officialText=el("officialText"),officialSources=el("officialSources");
 const consent=el("consentPanel"),consentText=el("consentText"),yes=el("researchYes"),no=el("researchNo");
 const research=el("researchPanel"),report=el("researchReport"),expandedAnswer=el("expandedAnswer"),expandedAnswerPanel=el("expandedAnswerPanel"),expandedAnswerToggle=el("expandedAnswerToggle"),sources=el("researchSources"),status=el("status");
-let pendingQuery="",researchAllowed=false;
+let pendingQuery="",researchAllowed=false,researchProviderLimited=false;
+try{researchProviderLimited=sessionStorage.getItem("sercoResearchProviderLimited")==="1"}catch{}
 function show(node){node.classList.remove("hidden")}
 function hide(node){node.classList.add("hidden")}
 function busy(value,message){askButton.disabled=value;yes.disabled=value;no.disabled=value;status.textContent=message||""}
@@ -68,7 +69,7 @@ function reset(){hide(official);hide(consent);hide(research);hide(expandedAnswer
 async function post(url,body){
  const response=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),cache:"no-store"});
  let data;try{data=await response.json()}catch{throw new Error("El servidor devolvió una respuesta no válida.")}
- if(!response.ok)throw new Error(data&&data.error&&data.error.message||"No fue posible completar la solicitud.");
+ if(!response.ok){const error=new Error(data&&data.error&&data.error.message||"No fue posible completar la solicitud.");error.code=data&&data.error&&data.error.code||"REQUEST_FAILED";error.status=response.status;throw error;}
  return data;
 }
 form.addEventListener("submit",async event=>{
@@ -104,7 +105,7 @@ form.addEventListener("submit",async event=>{
   const responseStatus=String(result.status||"").toLowerCase();
   const responseCoverage=String(result.coverage||"").toLowerCase();
   const needsExternalResearch=["insufficient","partial"].includes(responseStatus)||["insufficient","partial"].includes(responseCoverage);
-  if(needsExternalResearch){
+  if(needsExternalResearch&&!researchProviderLimited){
    consentText.textContent=responseStatus==="partial"||responseCoverage==="partial"
     ?"La biblioteca oficial de SERCO solo contiene información parcial. ¿Deseas que busque información complementaria en Internet?"
     :"No encontré información suficiente en la biblioteca oficial de SERCO. ¿Deseas que busque información adicional en Internet?";
@@ -137,7 +138,16 @@ yes.addEventListener("click",async()=>{
   show(research);
   busy(false,result.persistence==="saved_for_review"?"Investigación terminada y registrada para revisión editorial como "+(result.publication?.publicId||"publicación SERCO")+".":"Investigación terminada y disponible arriba, pero no se pudo registrar en la biblioteca editorial.");
   research.scrollIntoView({behavior:"smooth",block:"start"});
- }catch(error){researchAllowed=false;consentText.textContent="La investigación externa no pudo completarse. La pregunta original se conserva. Puedes volver a intentarlo cuando el servicio esté disponible.";yes.textContent="Reintentar investigación";no.textContent="Cancelar";show(consent);busy(false,error.message||"No fue posible completar la investigación externa.")}
+ }catch(error){
+  if(error&&error.code==="RESEARCH_PROVIDER_RATE_LIMITED"){
+   researchAllowed=true;researchProviderLimited=true;
+   try{sessionStorage.setItem("sercoResearchProviderLimited","1")}catch{}
+   hide(consent);
+   busy(false,"Tavily encontró fuentes, pero Gemini alcanzó su cuota diaria gratuita. La investigación no pudo sintetizarse. No vuelvas a autorizar esta misma búsqueda: el servicio externo seguirá detenido durante esta sesión para evitar intentos inútiles.");
+  }else{
+   researchAllowed=false;consentText.textContent="La investigación externa no pudo completarse. La pregunta original se conserva. Puedes volver a intentarlo cuando el servicio esté disponible.";yes.textContent="Reintentar investigación";no.textContent="Cancelar";show(consent);busy(false,error.message||"No fue posible completar la investigación externa.");
+  }
+ }
 });
 expandedAnswerToggle.addEventListener("click",()=>{
  const opening=expandedAnswerPanel.classList.contains("hidden");
