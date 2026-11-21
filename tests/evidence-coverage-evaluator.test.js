@@ -17,7 +17,7 @@ test("reconoce singular y plural por raíz conservadora", () => {
 test("clasifica como suficiente cuando todos los términos de contenido están respaldados", async () => {
   const result = await evaluator.evaluate({
     question: "¿Qué tipos de cimentación existen?",
-    evidence: [{ title: "Tipos de cimentaciones", section: "Clasificación", content: "La publicación explica los tipos de cimentaciones existentes." }]
+    evidence: [{ title: "Tipos de cimentaciones", section: "Clasificación", content: "La publicación explica los tipos de cimentaciones que existen." }]
   });
   assert.equal(result.status, "sufficient");
   assert.deepEqual(result.missingInformation, []);
