@@ -318,6 +318,34 @@ test("rechaza una afirmación sin cita en la explicación ampliada", () => {
   assert.throws(() => parseResearchOutput(raw, 1), { code: "INVALID_RESEARCH_OUTPUT" });
 });
 
+test("rechaza una afirmación sin cita cuando la oración comienza en minúscula", () => {
+  const raw = JSON.stringify({
+    internalReport: "Informe documental con referencia [1].",
+    visitorAnswer: "La primera afirmación está respaldada [1]. además, se agrega un dato factual sin referencia.",
+    expandedAnswer: "Explicación ampliada con referencia [1].",
+    claimEvidence: [
+      { section: "internalReport", claim: "Informe documental con referencia [1].", assessment: "supported", sourceIds: [1] },
+      { section: "visitorAnswer", claim: "La primera afirmación está respaldada [1].", assessment: "supported", sourceIds: [1] },
+      { section: "expandedAnswer", claim: "Explicación ampliada con referencia [1].", assessment: "supported", sourceIds: [1] }
+    ]
+  });
+  assert.throws(() => parseResearchOutput(raw, 1), { code: "INVALID_RESEARCH_OUTPUT" });
+});
+
+test("no confunde la abreviatura Dr. con el final de una oración", () => {
+  const raw = JSON.stringify({
+    internalReport: "Informe documental con referencia [1].",
+    visitorAnswer: "El Dr. Pérez presentó el informe [1].",
+    expandedAnswer: "Explicación ampliada con referencia [1].",
+    claimEvidence: [
+      { section: "internalReport", claim: "Informe documental con referencia [1].", assessment: "supported", sourceIds: [1] },
+      { section: "visitorAnswer", claim: "El Dr. Pérez presentó el informe [1].", assessment: "supported", sourceIds: [1] },
+      { section: "expandedAnswer", claim: "Explicación ampliada con referencia [1].", assessment: "supported", sourceIds: [1] }
+    ]
+  });
+  assert.doesNotThrow(() => parseResearchOutput(raw, 1));
+});
+
 test("envía las solicitudes correctas a Gemini, Groq y Cloudflare Workers AI", async () => {
   const calls = [];
   const adapters = createProviderAdapters({
