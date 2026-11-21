@@ -40,15 +40,28 @@ function createEvidenceCoverageEvaluator() {
       }
 
       const queryTokens = [...new Set(tokenize(input.question))];
-      const evidenceTokens = new Set(
-        input.evidence.flatMap((item) => tokenize([
+      const evidenceGroups = new Map();
+
+      input.evidence.forEach((item, index) => {
+        const articleId = item && typeof item.articleId === "string" ? item.articleId.trim() : "";
+        const evidenceId = item && typeof item.id === "string" ? item.id : String(index);
+        const groupId = articleId ? "article:" + articleId : "evidence:" + evidenceId;
+        const tokens = tokenize([
           item && item.title,
           item && item.section,
           item && item.content
-        ].filter(Boolean).join(" ")))
-      );
+        ].filter(Boolean).join(" "));
 
-      if (queryTokens.length === 0 || evidenceTokens.size === 0) {
+        if (!evidenceGroups.has(groupId)) {
+          evidenceGroups.set(groupId, new Set());
+        }
+
+        for (const token of tokens) {
+          evidenceGroups.get(groupId).add(token);
+        }
+      });
+
+      if (queryTokens.length === 0 || evidenceGroups.size === 0) {
         return {
           status: "insufficient",
           matchedTerms: [],
@@ -56,11 +69,35 @@ function createEvidenceCoverageEvaluator() {
         };
       }
 
-      const matchedTerms = queryTokens.filter((queryToken) =>
-        [...evidenceTokens].some((evidenceToken) => tokensMatch(queryToken, evidenceToken))
-      );
+      let bestCoverage = null;
+      for (const evidenceTokens of evidenceGroups.values()) {
+        if (evidenceTokens.size === 0) continue;
+
+        const matchedTerms = queryTokens.filter((queryToken) =>
+          [...evidenceTokens].some((evidenceToken) => tokensMatch(queryToken, evidenceToken))
+        );
+        const ratio = matchedTerms.length / queryTokens.length;
+
+        if (
+          !bestCoverage ||
+          ratio > bestCoverage.ratio ||
+          (ratio === bestCoverage.ratio && matchedTerms.length > bestCoverage.matchedTerms.length)
+        ) {
+          bestCoverage = { matchedTerms, ratio };
+        }
+      }
+
+      if (!bestCoverage) {
+        return {
+          status: "insufficient",
+          matchedTerms: [],
+          missingInformation: ["La evidencia recuperada no contiene términos útiles para comprobar su correspondencia."]
+        };
+      }
+
+      const matchedTerms = bestCoverage.matchedTerms;
       const missingTerms = queryTokens.filter((queryToken) => !matchedTerms.includes(queryToken));
-      const ratio = matchedTerms.length / queryTokens.length;
+      const ratio = bestCoverage.ratio;
 
       let status = "insufficient";
       if (missingTerms.length === 0 && matchedTerms.length >= 1) {

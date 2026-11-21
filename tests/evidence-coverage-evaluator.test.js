@@ -39,3 +39,62 @@ test("clasifica como insuficiente cuando no hay correspondencia léxica", async 
   });
   assert.equal(result.status, "insufficient");
 });
+
+test("no combina coincidencias de publicaciones distintas para declarar cobertura suficiente", async () => {
+  const result = await evaluator.evaluate({
+    question: "¿Qué resistencia del acero inoxidable?",
+    evidence: [
+      {
+        id: "chunk-resistencia",
+        articleId: "article-resistencia",
+        title: "Resistencia mecánica",
+        content: "La resistencia mecánica depende de la composición."
+      },
+      {
+        id: "chunk-acero",
+        articleId: "article-acero",
+        title: "Acero estructural",
+        content: "El acero estructural se utiliza en construcción."
+      },
+      {
+        id: "chunk-inoxidable",
+        articleId: "article-inoxidable",
+        title: "Material inoxidable",
+        content: "El material inoxidable resiste la corrosión."
+      }
+    ]
+  });
+
+  assert.equal(result.status, "partial");
+  assert.deepEqual(result.matchedTerms, ["resistencia"]);
+  assert.ok(result.missingInformation.length > 0);
+});
+
+test("combina fragmentos de una misma publicación para evaluar su cobertura", async () => {
+  const result = await evaluator.evaluate({
+    question: "¿Qué resistencia del acero inoxidable?",
+    evidence: [
+      {
+        id: "chunk-resistencia-1",
+        articleId: "article-acero-inoxidable",
+        title: "Resistencia mecánica",
+        content: "La resistencia mecánica depende de la composición."
+      },
+      {
+        id: "chunk-acero-2",
+        articleId: "article-acero-inoxidable",
+        title: "Acero estructural",
+        content: "El acero estructural se utiliza en construcción."
+      },
+      {
+        id: "chunk-inoxidable-3",
+        articleId: "article-acero-inoxidable",
+        title: "Material inoxidable",
+        content: "El material inoxidable resiste la corrosión."
+      }
+    ]
+  });
+
+  assert.equal(result.status, "sufficient");
+  assert.deepEqual(result.missingInformation, []);
+});
