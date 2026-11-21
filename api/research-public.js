@@ -1,14 +1,14 @@
 "use strict";
 
 const { createTavilySearchProvider } = require("../src/services/research/tavily-search-provider");
-const { createGeminiResearchProvider } = require("../src/services/research/gemini-research-provider");
+const { createSequentialResearchProvider } = require("../src/services/research/sequential-research-provider");
 const { createResearchHttpHandler } = require("../src/services/research/research-http-handler");
 const { createArticlePersistence } = require("../src/services/editor/article-persistence");
 const { createPublicRateLimiter } = require("../src/services/security/public-api-rate-limiter");
 const { getCitationOrder } = require("../src/services/research/citation-order");
 
 const tavilySearchProvider = createTavilySearchProvider();
-const provider = createGeminiResearchProvider({ searchProvider: tavilySearchProvider });
+const provider = createSequentialResearchProvider({ searchProvider: tavilySearchProvider });
 const persistence = createArticlePersistence();
 
 function escapeHtml(value) {
