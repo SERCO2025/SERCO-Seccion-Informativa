@@ -262,7 +262,7 @@ function createGeminiResearchProvider(options = {}) {
         throw new ResearchProviderError("Gemini devolvió una investigación incompleta.", "INCOMPLETE_RESEARCH_OUTPUT");
       }
       const invalidCitation = [internalReport, visitorAnswer, expandedAnswer].some((section) => {
-        const references = [...section.matchAll(/\\[(\\d+)\\]/g)];
+        const references = [...section.matchAll(/\[(\d+)\]/g)];
         return references.some((match) => {
           const sourceId = Number(match[1]);
           return !Number.isInteger(sourceId) || sourceId < 1 || sourceId > sources.length;
