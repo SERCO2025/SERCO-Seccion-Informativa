@@ -133,3 +133,18 @@ test("no atribuye contenido sobre deslindes a una publicación ajena", async () 
   assert.equal(result.status, "insufficient");
   assert.deepEqual(result.matchedTerms, []);
 });
+
+test("no recupera resultados cuando la consulta solo contiene un verbo genérico", async () => {
+  const result = await evaluator.evaluate({
+    question: "¿Para qué sirven?",
+    evidence: [{
+      id: "chunk-epp",
+      articleId: "article-epp",
+      title: "Diccionario técnico: equipo de protección personal (EPP)",
+      content: "El equipo sirve para proteger al trabajador."
+    }]
+  });
+
+  assert.equal(result.status, "insufficient");
+  assert.deepEqual(result.matchedTerms, []);
+});

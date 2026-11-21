@@ -28,7 +28,7 @@ as $$
     'una','uno','unos','unas','los','las','del','de','el','la',
     'y','o','u','es','son','ser','esta','estan','este','esa',
     'ese','hay','mi','su','sus','me','puede','pueden',
-    'sirve','sirven','servir','sirviendo','sirvio','existe','existen'
+    'sirve','sirven','servir','sirviendo','sirvio'
    )
    and plainto_tsquery('spanish'::regconfig, lower(token)) <> ''::tsquery
  ),
