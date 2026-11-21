@@ -111,7 +111,7 @@ form.addEventListener("submit",async event=>{
     :"No encontré información suficiente en la biblioteca oficial de SERCO. ¿Deseas que busque información adicional en Internet?";
    show(consent);
   }
-  busy(false,"");
+  busy(false,researchProviderLimited&&needsExternalResearch?"La biblioteca SERCO no contiene información suficiente y la investigación externa permanece detenida porque Gemini alcanzó su cuota diaria gratuita. No se volverá a solicitar autorización para buscar durante esta sesión.":"");
  }catch(error){busy(false,error.message||"No fue posible consultar la biblioteca SERCO.")}
 });
 yes.addEventListener("click",async()=>{
