@@ -2,8 +2,6 @@
 -- Conserva la búsqueda estricta; el fallback exige al menos dos términos sustantivos
 -- cuando la consulta contiene dos o más, y descarta verbos interrogativos genéricos.
 
-drop function if exists public.search_published_chunks(text, integer);
-
 create or replace function public.search_published_chunks(p_query text,p_limit integer default 8)
 returns table(
  chunk_id uuid, article_id uuid, public_id text, slug text, title text,
