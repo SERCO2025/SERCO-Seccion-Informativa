@@ -15,11 +15,11 @@ function getClientAddress(req) {
   const forwarded = headers["x-vercel-forwarded-for"] || headers["x-forwarded-for"];
   if (typeof forwarded !== "string" || !forwarded.trim()) return "";
   const addresses = forwarded.split(",").map((value) => value.trim()).filter(Boolean);
-  return addresses.length ? addresses[addresses.length - 1].replace(/^\\[|\\]$/g, "") : "";
+  return addresses.length ? addresses[addresses.length - 1].replace(/^\[|\]$/g, "") : "";
 }
 
 function createPublicRateLimiter(options = {}) {
-  const supabaseUrl = (options.url || process.env.SUPABASE_URL || "").replace(/\\/+$/, "");
+  const supabaseUrl = (options.url || process.env.SUPABASE_URL || "").replace(/\/+$/, "");
   const secretKey = options.secretKey || process.env.SUPABASE_SECRET_KEY || "";
   const fetchImpl = options.fetchImpl || globalThis.fetch;
 
