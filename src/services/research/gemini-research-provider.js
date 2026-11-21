@@ -55,7 +55,7 @@ function buildContextualSearchQuery(query) {
     ].join(" ");
   }
   if (/\bvarillas?\b/.test(normalized) &&
-      !/\b(zahori(?:es)?|radiestesia|adivinacion|soldadura|electrodo)\b/.test(normalized)) {
+      !/\b(zahori(?:es)?|radiestesia|adivinacion|buscar agua|encontrar agua|localizar agua|busqueda de agua|agua subterranea|soldadura|electrodo)\b/.test(normalized)) {
     return [
       query,
       "Consulta técnica comparativa: distingue los usos de varillas en construcción y acero de refuerzo, geotecnia y exploración de suelos, materiales e instrumentos de medición.",
@@ -68,8 +68,8 @@ function buildContextualSearchQuery(query) {
 function isGenericVarillasQuery(query) {
   const normalized = String(query || "").normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "").toLowerCase();
-  return /\bvarillas?\b/.test(normalized) &&
-    !/\b(zahori(?:es)?|radiestesia|adivinacion)\b/.test(normalized);
+  const explicitDowsingIntent = /\b(zahori(?:es)?|radiestesia|adivinacion|buscar agua|encontrar agua|localizar agua|busqueda de agua|agua subterranea)\b/.test(normalized);
+  return /\bvarillas?\b/.test(normalized) && !explicitDowsingIntent;
 }
 
 function isClearlyDowsingResult(source) {

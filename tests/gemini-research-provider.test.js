@@ -51,6 +51,20 @@ test("excluye fuentes centradas en zahoríes para una consulta genérica sobre v
   assert.equal(selected[0].url, "https://example.org/suelos");
 });
 
+test("conserva la búsqueda de radiestesia cuando la pregunta expresa que busca agua", () => {
+  const query = "¿Sirven las varillas para buscar agua?";
+  assert.equal(buildContextualSearchQuery(query), query);
+  const selected = selectUsableResearchResults([
+    {
+      url: "https://example.org/zahori",
+      title: "Varillas para encontrar agua",
+      content: "La radiestesia utiliza varillas para localizar agua subterránea.",
+      score: 0.99
+    }
+  ], query);
+  assert.equal(selected.length, 1);
+});
+
 test("no excluye fuentes sobre zahoríes cuando la consulta los solicita expresamente", () => {
   const selected = selectUsableResearchResults([
     {
