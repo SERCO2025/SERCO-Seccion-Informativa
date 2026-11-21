@@ -4,10 +4,7 @@ const { createTavilySearchProvider } = require("../src/services/research/tavily-
 const { createGeminiResearchProvider } = require("../src/services/research/gemini-research-provider");
 const { createResearchHttpHandler } = require("../src/services/research/research-http-handler");
 const { createArticlePersistence } = require("../src/services/editor/article-persistence");
-const {
-  createPublicRateLimiter,
-  PublicRateLimitConfigurationError
-} = require("../src/services/security/public-api-rate-limiter");
+const { createPublicRateLimiter } = require("../src/services/security/public-api-rate-limiter");
 
 const tavilySearchProvider = createTavilySearchProvider();
 const provider = createGeminiResearchProvider({ searchProvider: tavilySearchProvider });
