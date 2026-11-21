@@ -55,7 +55,7 @@ function buildContextualSearchQuery(query) {
     ].join(" ");
   }
   if (/\bvarillas?\b/.test(normalized) &&
-      !/\b(zahori|radiestesia|adivinacion|soldadura|electrodo)\b/.test(normalized)) {
+      !/\b(zahori(?:es)?|radiestesia|adivinacion|soldadura|electrodo)\b/.test(normalized)) {
     return [
       query,
       "Consulta técnica comparativa: distingue los usos de varillas en construcción y acero de refuerzo, geotecnia y exploración de suelos, materiales e instrumentos de medición.",

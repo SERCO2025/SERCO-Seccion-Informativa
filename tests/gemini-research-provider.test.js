@@ -42,7 +42,7 @@ test("ordena fuentes por score, descarta fragmentos vacíos y deduplica URL", ()
   ]);
   assert.equal(selected.length, 2);
   assert.equal(selected[0].title, "Fuente alta");
-  assert.equal(selected[1].title, "Fuente media");
+  assert.equal(selected[1].title, "Duplicada");
 });
 
 test("extrae texto de la respuesta Gemini", () => {
