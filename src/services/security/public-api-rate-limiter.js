@@ -78,6 +78,20 @@
         throw new PublicRateLimitConfigurationError("El control de solicitudes devolvió un resultado no reconocido.");
       }
       return released;
+    },
+
+    async complete(reservationId) {
+      if (typeof reservationId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(reservationId)) {
+        throw new TypeError("El identificador de reserva no es válido.");
+      }
+      if (!supabaseUrl || !secretKey || typeof fetchImpl !== "function") {
+        throw new PublicRateLimitConfigurationError("El control de solicitudes públicas no está configurado.");
+      }
+      const completed = await callRpc("complete_public_api_quota", { p_reservation_id: reservationId });
+      if (typeof completed !== "boolean") {
+        throw new PublicRateLimitConfigurationError("El control de solicitudes devolvió un resultado no reconocido.");
+      }
+      return completed;
     }
   };
 }
