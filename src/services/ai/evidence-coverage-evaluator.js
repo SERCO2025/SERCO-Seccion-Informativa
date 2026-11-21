@@ -109,7 +109,7 @@ function createEvidenceCoverageEvaluator() {
       let status = "insufficient";
       if (missingTerms.length === 0 && matchedTerms.length >= 1) {
         status = "sufficient";
-      } else if (matchedTerms.length >= 2 && ratio >= 0.5) {
+      } else if (matchedTerms.length >= 2 && ratio >= 0.25) {
         status = "partial";
       }
 

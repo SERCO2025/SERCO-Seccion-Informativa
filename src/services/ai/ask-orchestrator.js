@@ -189,29 +189,6 @@ function createAskOrchestrator(adapters) {
         );
       }
 
-      if (coverageResult.status === "insufficient") {
-        if (configured.gapRecorder && typeof configured.gapRecorder.record === "function") {
-          await configured.gapRecorder.record({
-            question,
-            reason: "insufficient_evidence",
-            missingInformation: Array.isArray(coverageResult.missingInformation)
-              ? coverageResult.missingInformation
-              : []
-          });
-        }
-
-        return {
-          status: "insufficient",
-          coverage: "insufficient",
-          answer: "La información publicada que se encontró no es suficiente para responder con fiabilidad. No voy a completar los datos faltantes mediante suposiciones.",
-          citations: [],
-          missingInformation: Array.isArray(coverageResult.missingInformation)
-            ? coverageResult.missingInformation
-            : [],
-          gapRecorded: Boolean(configured.gapRecorder && typeof configured.gapRecorder.record === "function")
-        };
-      }
-
       const safetyResult = await configured.safetyGuard.evaluate({
         question,
         evidence: publicEvidence(evidence),
@@ -245,6 +222,29 @@ function createAskOrchestrator(adapters) {
             ? safetyResult.message
             : "No es posible proporcionar esa orientación con la información y las condiciones disponibles.",
           citations: []
+        };
+      }
+
+      if (coverageResult.status === "insufficient") {
+        if (configured.gapRecorder && typeof configured.gapRecorder.record === "function") {
+          await configured.gapRecorder.record({
+            question,
+            reason: "insufficient_evidence",
+            missingInformation: Array.isArray(coverageResult.missingInformation)
+              ? coverageResult.missingInformation
+              : []
+          });
+        }
+
+        return {
+          status: "insufficient",
+          coverage: "insufficient",
+          answer: "La información publicada que se encontró no es suficiente para responder con fiabilidad. No voy a completar los datos faltantes mediante suposiciones.",
+          citations: [],
+          missingInformation: Array.isArray(coverageResult.missingInformation)
+            ? coverageResult.missingInformation
+            : [],
+          gapRecorded: Boolean(configured.gapRecorder && typeof configured.gapRecorder.record === "function")
         };
       }
 
