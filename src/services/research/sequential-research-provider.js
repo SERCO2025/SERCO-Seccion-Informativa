@@ -104,11 +104,37 @@ function normalizeEvidenceText(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
 }
 
+function splitResearchLine(value) {
+  const line = String(value || "");
+  const statements = [];
+  const boundary = /[.!?]+["')\]]*(?=\s+)/g;
+  const abbreviations = new Set([
+    "sr.", "sra.", "srta.", "dr.", "dra.", "ing.", "lic.", "prof.",
+    "etc.", "p.", "ej.", "pág.", "págs.", "núm.", "no.", "art.",
+    "arts.", "fig.", "vol.", "aprox.", "av.", "col.", "tel.", "ref.",
+    "uu."
+  ]);
+  let start = 0;
+  let match;
+
+  while ((match = boundary.exec(line)) !== null) {
+    const candidate = line.slice(start, match.index + match[0].length);
+    const lastToken = candidate.trim().match(/(?:^|\s)([\p{L}.]+)$/u);
+    const token = lastToken ? lastToken[1].toLowerCase() : "";
+    if (abbreviations.has(token)) continue;
+    statements.push(candidate);
+    start = match.index + match[0].length;
+  }
+
+  if (start < line.length) statements.push(line.slice(start));
+  return statements;
+}
+
 function splitResearchStatements(value) {
   return String(value || "")
     .split(/\r?\n/)
     .filter((line) => !/^\s{0,3}#{1,6}\s/.test(line))
-    .flatMap((line) => line.split(/(?<=[.!?])\s+(?=[A-ZÁÉÍÓÚÑ¿¡0-9#*-])/u))
+    .flatMap(splitResearchLine)
     .map(normalizeEvidenceText)
     .filter(Boolean);
 }
