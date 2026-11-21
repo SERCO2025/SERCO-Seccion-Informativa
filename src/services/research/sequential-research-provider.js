@@ -47,7 +47,7 @@ function buildResearchPrompt(query, sources) {
     "internalReport: expediente editorial exhaustivo para el equipo SERCO. Incluye objetivo, resumen ejecutivo, hallazgos, contraste y calidad de fuentes, limitaciones, discrepancias, información faltante y recomendaciones editoriales. No lo redactes como contenido aprobado.",
     "visitorAnswer: respuesta inicial directa. Contesta primero lo preguntado, normalmente entre 50 y 130 palabras y como máximo 3 párrafos breves. Incluye solo las acepciones pertinentes, un ejemplo si ayuda y referencias [n]. No incluyas metodología interna ni preguntes si desea otra búsqueda.",
     "expandedAnswer: explicación ampliada para el mismo visitante si solicita más detalles. Desarrolla conceptos pertinentes, ejemplos, distinciones técnicas y precauciones respaldadas. Mantén trazabilidad con referencias [n].",
-    "claimEvidence: índice editorial de afirmaciones sustantivas. Cada elemento contiene section (internalReport, visitorAnswer o expandedAnswer), claim (fragmento fiel de 12 a 500 caracteres), assessment (supported, partial, unsupported o uncertain) y sourceIds (índices de fuentes). Para unsupported usa sourceIds vacío; supported o partial requieren al menos una fuente. No inventes afirmaciones ni fuentes. Es autoevaluación del modelo, no verificación independiente.",
+    "claimEvidence: índice editorial de afirmaciones sustantivas. Cada elemento contiene section (internalReport, visitorAnswer o expandedAnswer), claim (fragmento textual literal de 12 a 500 caracteres, copiado de esa sección e incluyendo sus referencias [n]), assessment (supported, partial, unsupported o uncertain) y sourceIds (índices exactos de las fuentes citadas en ese fragmento). Registra las afirmaciones fácticas sustantivas y no omitas una sección que contenga afirmaciones citadas. Para unsupported usa sourceIds vacío y no añadas referencias [n]; supported o partial requieren al menos una referencia [n] y sus sourceIds deben coincidir exactamente con ellas. No inventes afirmaciones ni fuentes. Es autoevaluación del modelo, no verificación independiente.",
     "No presentes como certeza lo que las fuentes no permiten confirmar. Si la consulta es ambigua, no elijas una interpretación solo porque aparezca primero: explica las acepciones pertinentes y qué contexto permite distinguirlas.",
     "No afirmes que la investigación externa es una publicación oficial de SERCO."
   ].join("\n");
@@ -83,7 +83,7 @@ function parseResearchOutput(raw, sourceCount) {
   const visitorAnswer = typeof parsed.visitorAnswer === "string" ? parsed.visitorAnswer.trim() : "";
   const expandedAnswer = typeof parsed.expandedAnswer === "string" ? parsed.expandedAnswer.trim() : "";
   const claimEvidence = parsed.claimEvidence === undefined ? [] : parsed.claimEvidence;
-  if (!internalReport || !visitorAnswer || !expandedAnswer || !validateClaimEvidence(claimEvidence, sourceCount)) {
+  if (!internalReport || !visitorAnswer || !expandedAnswer || !validateClaimEvidenceAgainstSections(claimEvidence, { internalReport, visitorAnswer, expandedAnswer }, sourceCount)) {
     throw new ResearchSynthesisError("El proveedor devolvió una investigación incompleta o un índice editorial inválido.", "INVALID_RESEARCH_OUTPUT");
   }
 
@@ -98,6 +98,60 @@ function parseResearchOutput(raw, sourceCount) {
   }
 
   return { internalReport, visitorAnswer, expandedAnswer, claimEvidence };
+}
+
+function normalizeEvidenceText(value) {
+  return String(value || "").replace(/\\s+/g, " ").trim();
+}
+
+function validateClaimEvidenceAgainstSections(value, sections, sourceCount) {
+  if (!validateClaimEvidence(value, sourceCount)) return false;
+
+  const referencedBySection = new Map();
+  const indexedBySection = new Map();
+
+  for (const sectionName of ["internalReport", "visitorAnswer", "expandedAnswer"]) {
+    const sectionText = normalizeEvidenceText(sections && sections[sectionName]);
+    const references = [...sectionText.matchAll(/\\[(\\d+)\\]/g)].map((match) => Number(match[1]));
+    referencedBySection.set(sectionName, new Set(references));
+    indexedBySection.set(sectionName, new Set());
+  }
+
+  for (const item of value) {
+    const sectionText = normalizeEvidenceText(sections && sections[item.section]);
+    const claimText = normalizeEvidenceText(item.claim);
+    if (!sectionText || !claimText || !sectionText.includes(claimText)) return false;
+
+    const claimReferences = [...claimText.matchAll(/\\[(\\d+)\\]/g)].map((match) => Number(match[1]));
+    const claimReferenceSet = new Set(claimReferences);
+    const sourceIdSet = new Set(item.sourceIds);
+
+    if (["supported", "partial"].includes(item.assessment)) {
+      if (claimReferenceSet.size === 0 || claimReferenceSet.size !== sourceIdSet.size) return false;
+      for (const sourceId of sourceIdSet) {
+        if (!claimReferenceSet.has(sourceId)) return false;
+      }
+    } else {
+      for (const sourceId of claimReferenceSet) {
+        if (!sourceIdSet.has(sourceId)) return false;
+      }
+      if (item.assessment === "unsupported" && claimReferenceSet.size > 0) return false;
+    }
+
+    for (const sourceId of claimReferenceSet) {
+      indexedBySection.get(item.section).add(sourceId);
+    }
+  }
+
+  for (const sectionName of ["internalReport", "visitorAnswer", "expandedAnswer"]) {
+    const referenced = referencedBySection.get(sectionName);
+    const indexed = indexedBySection.get(sectionName);
+    for (const sourceId of referenced) {
+      if (!indexed.has(sourceId)) return false;
+    }
+  }
+
+  return true;
 }
 
 async function requestJson(fetchImpl, url, headers, body, timeoutMs) {
@@ -351,6 +405,7 @@ module.exports = {
   ResearchSynthesisError,
   buildResearchPrompt,
   parseResearchOutput,
+  validateClaimEvidenceAgainstSections,
   createProviderAdapters,
   createSequentialResearchProvider
 };
