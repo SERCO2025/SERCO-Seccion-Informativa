@@ -101,7 +101,7 @@ function parseResearchOutput(raw, sourceCount) {
 }
 
 function normalizeEvidenceText(value) {
-  return String(value || "").replace(/\\s+/g, " ").trim();
+  return String(value || "").replace(/\s+/g, " ").trim();
 }
 
 function validateClaimEvidenceAgainstSections(value, sections, sourceCount) {
@@ -112,7 +112,7 @@ function validateClaimEvidenceAgainstSections(value, sections, sourceCount) {
 
   for (const sectionName of ["internalReport", "visitorAnswer", "expandedAnswer"]) {
     const sectionText = normalizeEvidenceText(sections && sections[sectionName]);
-    const references = [...sectionText.matchAll(/\\[(\\d+)\\]/g)].map((match) => Number(match[1]));
+    const references = [...sectionText.matchAll(/\[(\d+)\]/g)].map((match) => Number(match[1]));
     referencedBySection.set(sectionName, new Set(references));
     indexedBySection.set(sectionName, new Set());
   }
@@ -122,7 +122,7 @@ function validateClaimEvidenceAgainstSections(value, sections, sourceCount) {
     const claimText = normalizeEvidenceText(item.claim);
     if (!sectionText || !claimText || !sectionText.includes(claimText)) return false;
 
-    const claimReferences = [...claimText.matchAll(/\\[(\\d+)\\]/g)].map((match) => Number(match[1]));
+    const claimReferences = [...claimText.matchAll(/\[(\d+)\]/g)].map((match) => Number(match[1]));
     const claimReferenceSet = new Set(claimReferences);
     const sourceIdSet = new Set(item.sourceIds);
 
