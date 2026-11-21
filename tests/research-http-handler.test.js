@@ -150,7 +150,8 @@ test("devuelve la reserva cuando el proveedor falla", async () => {
   assert.equal(released, "reservation-2");
 });
 
-test("no devuelve cuota si la investigación se completó", async () => {
+test("finaliza la reserva sin devolver cuota si la investigación se completó", async () => {
+  let completed = 0;
   let released = 0;
   const handler = createResearchHttpHandler({
     async research(input) {
@@ -165,10 +166,15 @@ test("no devuelve cuota si la investigación se completó", async () => {
     }
   }, {
     async beforeResearch() { return { allowed: true, reservationId: "reservation-3" }; },
+    async onResearchSuccess(reservation) {
+      assert.equal(reservation.reservationId, "reservation-3");
+      completed += 1;
+    },
     async onResearchFailure() { released += 1; }
   });
   const res = responseRecorder();
   await handler({ method: "POST", headers: {}, body: { query: "Consulta válida" } }, res);
   assert.equal(res.statusCode, 200);
+  assert.equal(completed, 1);
   assert.equal(released, 0);
 });
