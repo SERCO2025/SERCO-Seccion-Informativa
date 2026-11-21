@@ -55,6 +55,36 @@ test("realiza búsqueda Tavily básica de un crédito y devuelve fuentes", async
   assert.equal(result.requestId, "request-123");
 });
 
+test("clasifica el límite HTTP de Tavily aunque el cuerpo no sea JSON", async () => {
+  const provider = createTavilySearchProvider({
+    apiKey: "test-key",
+    fetchImpl: async () => ({
+      ok: false,
+      status: 429,
+      async json() { throw new SyntaxError("empty or non-JSON body"); }
+    })
+  });
+  await assert.rejects(
+    provider.search({ query: "Consulta de prueba" }),
+    { code: "RESEARCH_RATE_LIMITED" }
+  );
+});
+
+test("clasifica credenciales rechazadas aunque el cuerpo no sea JSON", async () => {
+  const provider = createTavilySearchProvider({
+    apiKey: "test-key",
+    fetchImpl: async () => ({
+      ok: false,
+      status: 403,
+      async json() { throw new SyntaxError("non-JSON body"); }
+    })
+  });
+  await assert.rejects(
+    provider.search({ query: "Consulta de prueba" }),
+    { code: "TAVILY_CREDENTIAL_INVALID" }
+  );
+});
+
 test("no realiza llamadas si falta la clave Tavily", async () => {
   let called = false;
   const provider = createTavilySearchProvider({
