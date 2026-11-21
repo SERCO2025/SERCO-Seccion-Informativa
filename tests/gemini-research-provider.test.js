@@ -32,6 +32,37 @@ test("trata varillas como una consulta técnica ambigua y distingue sectores", (
   assert.equal(buildContextualSearchQuery("¿Para qué sirven las varillas zahoríes?"), "¿Para qué sirven las varillas zahoríes?");
 });
 
+test("excluye fuentes centradas en zahoríes para una consulta genérica sobre varillas", () => {
+  const selected = selectUsableResearchResults([
+    {
+      url: "https://example.org/zahori",
+      title: "Varillas zahoríes para encontrar agua",
+      content: "La radiestesia utiliza varillas para localizar agua subterránea.",
+      score: 0.99
+    },
+    {
+      url: "https://example.org/suelos",
+      title: "Estudio geotécnico y exploración de suelos",
+      content: "La exploración geotécnica caracteriza el terreno mediante sondeos y ensayos.",
+      score: 0.8
+    }
+  ], "¿Para qué sirven las varillas?");
+  assert.equal(selected.length, 1);
+  assert.equal(selected[0].url, "https://example.org/suelos");
+});
+
+test("no excluye fuentes sobre zahoríes cuando la consulta los solicita expresamente", () => {
+  const selected = selectUsableResearchResults([
+    {
+      url: "https://example.org/zahori",
+      title: "Varillas zahoríes para encontrar agua",
+      content: "La radiestesia utiliza varillas para localizar agua subterránea.",
+      score: 0.99
+    }
+  ], "¿Qué son las varillas zahoríes?");
+  assert.equal(selected.length, 1);
+});
+
 test("ordena fuentes por score, descarta fragmentos vacíos y deduplica URL", () => {
   const selected = selectUsableResearchResults([
     { url: "https://example.org/a", title: "Sin fragmento", content: "", score: 1 },

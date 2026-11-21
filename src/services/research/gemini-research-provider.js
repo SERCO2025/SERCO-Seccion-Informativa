@@ -65,7 +65,27 @@ function buildContextualSearchQuery(query) {
   return query;
 }
 
-function selectUsableResearchResults(results) {
+function isGenericVarillasQuery(query) {
+  const normalized = String(query || "").normalize("NFD")
+    .replace(/[\\u0300-\\u036f]/g, "").toLowerCase();
+  return /\\bvarillas?\\b/.test(normalized) &&
+    !/\\b(zahori(?:es)?|radiestesia|adivinacion)\\b/.test(normalized);
+}
+
+function isClearlyDowsingResult(source) {
+  const title = String(source && source.title || "").normalize("NFD")
+    .replace(/[\\u0300-\\u036f]/g, "").toLowerCase();
+  const content = String(source && source.content || "").normalize("NFD")
+    .replace(/[\\u0300-\\u036f]/g, "").toLowerCase();
+  const technicalTitle = /\\b(geotecnia|geotecnico|estudio de suelos|mecanica de suelos|acero de refuerzo|construccion|sondeo|perforacion|geologia)\\b/.test(title);
+  if (technicalTitle) return false;
+  if (/\\b(zahori(?:es)?|radiestesia|adivinacion)\\b/.test(title)) return true;
+  return /\\b(zahori(?:es)?|radiestesia|adivinacion)\\b/.test(content) &&
+    /\\b(agua|pozos?|acuifero)\\b/.test(content);
+}
+
+function selectUsableResearchResults(results, query = "") {
+  const excludeDowsing = isGenericVarillasQuery(query);
   const candidates = (Array.isArray(results) ? results : [])
     .map((source, index) => ({ source, index }))
     .filter(({ source }) =>
@@ -73,7 +93,8 @@ function selectUsableResearchResults(results) {
       typeof source.url === "string" &&
       /^https?:\/\//i.test(source.url) &&
       typeof source.title === "string" && source.title.trim() &&
-      typeof source.content === "string" && source.content.trim()
+      typeof source.content === "string" && source.content.trim() &&
+      (!excludeDowsing || !isClearlyDowsingResult(source))
     );
   candidates.sort((a, b) => {
     const scoreA = typeof a.source.score === "number" && Number.isFinite(a.source.score) ? a.source.score : -1;
@@ -128,7 +149,7 @@ function createGeminiResearchProvider(options = {}) {
 
       const searchQuery = buildContextualSearchQuery(query);
       const searchResult = await searchProvider.search({ query: searchQuery });
-      const usableResults = selectUsableResearchResults(searchResult.results);
+      const usableResults = selectUsableResearchResults(searchResult.results, query);
       console.info("[research:gemini] search_completed", {
         receivedCount: Array.isArray(searchResult.results) ? searchResult.results.length : 0,
         usableCount: usableResults.length,
@@ -170,7 +191,13 @@ function createGeminiResearchProvider(options = {}) {
         "visitorAnswer: respuesta inicial directa para quien hizo la pregunta. Debe contestar primero lo preguntado, en lenguaje claro, normalmente entre 50 y 130 palabras y como máximo 3 párrafos breves. Incluye solo las acepciones pertinentes al contexto de la pregunta, un ejemplo breve si ayuda y referencias [n] cuando correspondan. No incluyas notas internas, recomendaciones editoriales, metodología, limitaciones de búsqueda ni información tangencial.",
         "expandedAnswer: explicación ampliada para el mismo visitante, solo si solicita más detalles. Desarrolla los conceptos realmente pertinentes, ejemplos, distinciones técnicas y precauciones respaldadas. En consultas de conceptos técnicos, procura una explicación sustancial de al menos 1200 caracteres, sin relleno y con desarrollo proporcional al tema. No incluyas información interna de webmaster ni temas laterales que no ayuden a comprender la consulta. Mantén trazabilidad con referencias [n].",
         "No presentes como certeza lo que las fuentes no permiten confirmar. Si la consulta es ambigua, no elijas una interpretación solo porque aparezca primero en los resultados: explica las acepciones técnicas pertinentes y señala qué contexto permite distinguirlas. Si la evidencia no permite determinar cuál aplica, dilo expresamente. No afirmes que una investigación externa es una publicación oficial de SERCO."
-      ].join("\n");
+      ];
+      if (isGenericVarillasQuery(query)) {
+        instructions.push(
+          "En esta consulta genérica sobre varillas, no la interpretes como una pregunta sobre zahoríes, radiestesia o búsqueda de agua. No introduzcas esa práctica ni la presentes como método de estudio de suelos. Limítate a los usos técnicos que estén respaldados por las fuentes seleccionadas; si no permiten identificar el uso concreto, explica esa limitación sin inventar una respuesta."
+        );
+      }
+      const instructionText = instructions.join("\n");
 
       let response;
       let attempt = 0;
@@ -187,7 +214,7 @@ function createGeminiResearchProvider(options = {}) {
               },
               signal: AbortSignal.timeout(requestTimeoutMs),
               body: JSON.stringify({
-                system_instruction: { parts: [{ text: instructions }] },
+                system_instruction: { parts: [{ text: instructionText }] },
                 contents: [{
                   role: "user",
                   parts: [{
@@ -376,6 +403,8 @@ module.exports = {
   validateResearchRequest,
   collectOutputText,
   buildContextualSearchQuery,
+  isGenericVarillasQuery,
+  isClearlyDowsingResult,
   selectUsableResearchResults,
   ResearchConfigurationError,
   ResearchProviderError
