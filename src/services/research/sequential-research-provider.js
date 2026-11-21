@@ -120,15 +120,10 @@ async function requestJson(fetchImpl, url, headers, body, timeoutMs) {
     );
   }
 
-  let payload;
-  try {
-    payload = await response.json();
-  } catch {
-    throw new ResearchSynthesisError("El proveedor devolvió una respuesta no válida.", "PROVIDER_INVALID_RESPONSE");
-  }
-
-  if (!response.ok || (payload && payload.success === false)) {
-    if (response.status === 429 || (payload && Array.isArray(payload.errors) && payload.errors.some((item) => String(item && item.code) === "429"))) {
+  // Clasificar primero el estado HTTP evita perder 429/401/403/402/5xx
+  // cuando el proveedor responde con un cuerpo vacío o que no es JSON.
+  if (!response.ok) {
+    if (response.status === 429) {
       throw new ResearchSynthesisError("El proveedor alcanzó su límite de solicitudes.", "PROVIDER_RATE_LIMITED");
     }
     if (response.status === 401 || response.status === 403) {
@@ -139,6 +134,20 @@ async function requestJson(fetchImpl, url, headers, body, timeoutMs) {
     }
     if (response.status >= 500) {
       throw new ResearchSynthesisError("El proveedor no está disponible temporalmente.", "PROVIDER_UPSTREAM_ERROR");
+    }
+    throw new ResearchSynthesisError("El proveedor rechazó la solicitud.", "PROVIDER_REQUEST_REJECTED");
+  }
+
+  let payload;
+  try {
+    payload = await response.json();
+  } catch {
+    throw new ResearchSynthesisError("El proveedor devolvió una respuesta no válida.", "PROVIDER_INVALID_RESPONSE");
+  }
+
+  if (payload && payload.success === false) {
+    if (Array.isArray(payload.errors) && payload.errors.some((item) => String(item && item.code) === "429")) {
+      throw new ResearchSynthesisError("El proveedor alcanzó su límite de solicitudes.", "PROVIDER_RATE_LIMITED");
     }
     throw new ResearchSynthesisError("El proveedor rechazó la solicitud.", "PROVIDER_REQUEST_REJECTED");
   }
