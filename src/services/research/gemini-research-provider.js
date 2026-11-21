@@ -46,16 +46,16 @@ function collectOutputText(response) {
 }
 
 function buildContextualSearchQuery(query) {
-  const normalized = query.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase();
-  if (/\\bdeslind(?:e|es)\\b/.test(normalized)) {
+  const normalized = query.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  if (/\bdeslind(?:e|es)\b/.test(normalized)) {
     return [
       query,
       "Contexto técnico y jurídico de México: deslinde de terrenos o predios, determinación de límites y colindancias, topografía, levantamiento, catastro y documentación de propiedad.",
       "Distingue el procedimiento técnico de medición, los aspectos registrales y los efectos jurídicos; prioriza fuentes oficiales, catastrales, académicas y normativa aplicable."
     ].join(" ");
   }
-  if (/\\bvarillas?\\b/.test(normalized) &&
-      !/\\b(zahori|radiestesia|adivinacion|soldadura|electrodo)\\b/.test(normalized)) {
+  if (/\bvarillas?\b/.test(normalized) &&
+      !/\b(zahori|radiestesia|adivinacion|soldadura|electrodo)\b/.test(normalized)) {
     return [
       query,
       "Consulta técnica comparativa: distingue los usos de varillas en construcción y acero de refuerzo, geotecnia y exploración de suelos, materiales e instrumentos de medición.",
@@ -71,7 +71,7 @@ function selectUsableResearchResults(results) {
     .filter(({ source }) =>
       source &&
       typeof source.url === "string" &&
-      /^https?:\\/\\//i.test(source.url) &&
+      /^https?:\/\//i.test(source.url) &&
       typeof source.title === "string" && source.title.trim() &&
       typeof source.content === "string" && source.content.trim()
     );
