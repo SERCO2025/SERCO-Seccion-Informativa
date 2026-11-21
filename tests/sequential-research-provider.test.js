@@ -200,6 +200,7 @@ test("rechaza un índice editorial inválido", () => {
     expandedAnswer: "Ampliación",
     claimEvidence: [{ section: "visitorAnswer", claim: "Afirmación respaldada correctamente.", assessment: "supported", sourceIds: [2] }]
   }), 1), { code: "INVALID_RESEARCH_OUTPUT" });
+});
 
 test("envía las solicitudes correctas a Gemini, Groq y Cloudflare Workers AI", async () => {
   const calls = [];
