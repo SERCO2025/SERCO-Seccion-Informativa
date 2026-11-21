@@ -47,7 +47,7 @@ function buildResearchPrompt(query, sources) {
     "internalReport: expediente editorial exhaustivo para el equipo SERCO. Incluye objetivo, resumen ejecutivo, hallazgos, contraste y calidad de fuentes, limitaciones, discrepancias, información faltante y recomendaciones editoriales. No lo redactes como contenido aprobado.",
     "visitorAnswer: respuesta inicial directa. Contesta primero lo preguntado, normalmente entre 50 y 130 palabras y como máximo 3 párrafos breves. Incluye solo las acepciones pertinentes, un ejemplo si ayuda y referencias [n]. No incluyas metodología interna ni preguntes si desea otra búsqueda.",
     "expandedAnswer: explicación ampliada para el mismo visitante si solicita más detalles. Desarrolla conceptos pertinentes, ejemplos, distinciones técnicas y precauciones respaldadas. Mantén trazabilidad con referencias [n].",
-    "claimEvidence: índice editorial de afirmaciones sustantivas. Cada elemento contiene section (internalReport, visitorAnswer o expandedAnswer), claim (fragmento textual literal de 12 a 500 caracteres, copiado de esa sección e incluyendo sus referencias [n]), assessment (supported, partial, unsupported o uncertain) y sourceIds (índices exactos de las fuentes citadas en ese fragmento). Registra las afirmaciones fácticas sustantivas y no omitas una sección que contenga afirmaciones citadas. Para unsupported usa sourceIds vacío y no añadas referencias [n]; supported o partial requieren al menos una referencia [n] y sus sourceIds deben coincidir exactamente con ellas. No inventes afirmaciones ni fuentes. Es autoevaluación del modelo, no verificación independiente.",
+    "claimEvidence: índice editorial de afirmaciones sustantivas. Cada elemento debe registrar una afirmación por elemento y contener section (internalReport, visitorAnswer o expandedAnswer), claim (fragmento textual literal de 12 a 500 caracteres, copiado de esa sección e incluyendo las referencias [n] de la oración correspondiente), assessment (supported, partial, unsupported o uncertain) y sourceIds (índices exactos de las fuentes citadas en ese fragmento). Registra las afirmaciones fácticas sustantivas y no omitas ninguna oración citada ni ninguna de las tres secciones. Para unsupported usa sourceIds vacío y no añadas referencias [n]; supported o partial requieren al menos una referencia [n] y sus sourceIds deben coincidir exactamente con ellas. No inventes afirmaciones ni fuentes. Es autoevaluación del modelo, no verificación independiente.",
     "No presentes como certeza lo que las fuentes no permiten confirmar. Si la consulta es ambigua, no elijas una interpretación solo porque aparezca primero: explica las acepciones pertinentes y qué contexto permite distinguirlas.",
     "No afirmes que la investigación externa es una publicación oficial de SERCO."
   ].join("\n");
@@ -104,17 +104,20 @@ function normalizeEvidenceText(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
 }
 
+function splitCitedStatements(value) {
+  return String(value || "")
+    .split(/\r?\n/)
+    .flatMap((line) => line.split(/(?<=[.!?])\s+(?=[A-ZÁÉÍÓÚÑ¿¡0-9#*-])/u))
+    .map(normalizeEvidenceText)
+    .filter((statement) => /\[\d+\]/.test(statement));
+}
+
 function validateClaimEvidenceAgainstSections(value, sections, sourceCount) {
-  if (!validateClaimEvidence(value, sourceCount)) return false;
+  if (!validateClaimEvidence(value, sourceCount) || value.length === 0) return false;
 
-  const referencedBySection = new Map();
-  const indexedBySection = new Map();
-
-  for (const sectionName of ["internalReport", "visitorAnswer", "expandedAnswer"]) {
-    const sectionText = normalizeEvidenceText(sections && sections[sectionName]);
-    const references = [...sectionText.matchAll(/\[(\d+)\]/g)].map((match) => Number(match[1]));
-    referencedBySection.set(sectionName, new Set(references));
-    indexedBySection.set(sectionName, new Set());
+  const sectionNames = ["internalReport", "visitorAnswer", "expandedAnswer"];
+  for (const sectionName of sectionNames) {
+    if (!value.some((item) => item.section === sectionName)) return false;
   }
 
   for (const item of value) {
@@ -137,17 +140,28 @@ function validateClaimEvidenceAgainstSections(value, sections, sourceCount) {
       }
       if (item.assessment === "unsupported" && claimReferenceSet.size > 0) return false;
     }
-
-    for (const sourceId of claimReferenceSet) {
-      indexedBySection.get(item.section).add(sourceId);
-    }
   }
 
-  for (const sectionName of ["internalReport", "visitorAnswer", "expandedAnswer"]) {
-    const referenced = referencedBySection.get(sectionName);
-    const indexed = indexedBySection.get(sectionName);
-    for (const sourceId of referenced) {
-      if (!indexed.has(sourceId)) return false;
+  for (const sectionName of sectionNames) {
+    const statements = splitCitedStatements(sections && sections[sectionName]);
+    for (const statement of statements) {
+      const statementReferences = new Set(
+        [...statement.matchAll(/\[(\d+)\]/g)].map((match) => Number(match[1]))
+      );
+      const covered = value.some((item) => {
+        if (item.section !== sectionName) return false;
+        const claimText = normalizeEvidenceText(item.claim);
+        if (!statement.includes(claimText)) return false;
+        const claimReferences = new Set(
+          [...claimText.matchAll(/\[(\d+)\]/g)].map((match) => Number(match[1]))
+        );
+        if (claimReferences.size !== statementReferences.size) return false;
+        for (const sourceId of statementReferences) {
+          if (!claimReferences.has(sourceId)) return false;
+        }
+        return true;
+      });
+      if (!covered) return false;
     }
   }
 
