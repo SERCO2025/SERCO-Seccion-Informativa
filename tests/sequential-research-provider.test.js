@@ -290,6 +290,34 @@ test("rechaza una oración citada que no tiene su propia entrada de evidencia", 
   assert.throws(() => parseResearchOutput(raw, 1), { code: "INVALID_RESEARCH_OUTPUT" });
 });
 
+test("rechaza una segunda afirmación sin cita en la respuesta inicial", () => {
+  const raw = JSON.stringify({
+    internalReport: "Informe documental con referencia [1].",
+    visitorAnswer: "La primera afirmación está respaldada [1]. La segunda afirmación carece de referencia.",
+    expandedAnswer: "Explicación ampliada con referencia [1].",
+    claimEvidence: [
+      { section: "internalReport", claim: "Informe documental con referencia [1].", assessment: "supported", sourceIds: [1] },
+      { section: "visitorAnswer", claim: "La primera afirmación está respaldada [1].", assessment: "supported", sourceIds: [1] },
+      { section: "expandedAnswer", claim: "Explicación ampliada con referencia [1].", assessment: "supported", sourceIds: [1] }
+    ]
+  });
+  assert.throws(() => parseResearchOutput(raw, 1), { code: "INVALID_RESEARCH_OUTPUT" });
+});
+
+test("rechaza una afirmación sin cita en la explicación ampliada", () => {
+  const raw = JSON.stringify({
+    internalReport: "Informe documental con referencia [1].",
+    visitorAnswer: "Respuesta inicial sustentada en la fuente [1].",
+    expandedAnswer: "Explicación ampliada con referencia [1]. Una precisión factual adicional no tiene referencia.",
+    claimEvidence: [
+      { section: "internalReport", claim: "Informe documental con referencia [1].", assessment: "supported", sourceIds: [1] },
+      { section: "visitorAnswer", claim: "Respuesta inicial sustentada en la fuente [1].", assessment: "supported", sourceIds: [1] },
+      { section: "expandedAnswer", claim: "Explicación ampliada con referencia [1].", assessment: "supported", sourceIds: [1] }
+    ]
+  });
+  assert.throws(() => parseResearchOutput(raw, 1), { code: "INVALID_RESEARCH_OUTPUT" });
+});
+
 test("envía las solicitudes correctas a Gemini, Groq y Cloudflare Workers AI", async () => {
   const calls = [];
   const adapters = createProviderAdapters({
