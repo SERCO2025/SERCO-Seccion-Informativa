@@ -3,7 +3,8 @@
 const {
   buildContextualSearchQuery,
   selectUsableResearchResults,
-  validateClaimEvidence
+  validateClaimEvidence,
+  isGenericVarillasQuery
 } = require("./gemini-research-provider");
 
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models/";
@@ -35,7 +36,7 @@ function buildResearchPrompt(query, sources) {
     "Extracto: " + source.excerpt
   ].filter(Boolean).join("\n")).join("\n\n");
 
-  const system = [
+  let system = [
     "Eres el investigador documental y asistente de respuesta pública de SERCO.",
     "Analiza exclusivamente la evidencia web proporcionada por Tavily. No inventes búsquedas ni afirmes haber consultado páginas cuyo contenido no aparece en la evidencia.",
     "Prioriza fuentes primarias: organismos oficiales, normas, universidades y publicaciones académicas. Evalúa autoridad, fecha, jurisdicción, contexto, independencia y consistencia.",
@@ -50,6 +51,9 @@ function buildResearchPrompt(query, sources) {
     "No presentes como certeza lo que las fuentes no permiten confirmar. Si la consulta es ambigua, no elijas una interpretación solo porque aparezca primero: explica las acepciones pertinentes y qué contexto permite distinguirlas.",
     "No afirmes que la investigación externa es una publicación oficial de SERCO."
   ].join("\n");
+  if (isGenericVarillasQuery(query)) {
+    system += "\nEn esta consulta genérica sobre varillas, no la interpretes como una pregunta sobre zahoríes, radiestesia o búsqueda de agua. Limítate a los usos técnicos respaldados por las fuentes; si no permiten identificar el uso concreto, explica esa limitación sin inventar una respuesta.";
+  }
 
   const user = [
     "Consulta solicitada: " + query,
