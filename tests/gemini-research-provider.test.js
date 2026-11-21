@@ -137,6 +137,7 @@ test("busca primero con Tavily y entrega evidencia a Gemini para redactar", asyn
   assert.equal(geminiRequest.options.headers["x-goog-api-key"], "test-gemini-key");
   assert.equal(geminiRequest.body.tools, undefined);
   assert.match(geminiRequest.body.system_instruction.parts[0].text, /referencias \[1\]/);
+  assert.match(geminiRequest.body.system_instruction.parts[0].text, /No preguntes si desea que busques en Internet/);
   assert.match(geminiRequest.body.contents[0].parts[0].text, /Fragmento recuperado de la fuente/);
   assert.match(geminiRequest.body.contents[0].parts[0].text, /Puntuación de relevancia de Tavily/);
   assert.equal(result.provider, "tavily+gemini");
