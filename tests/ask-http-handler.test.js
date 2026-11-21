@@ -152,3 +152,74 @@ test("responde 503 cuando el motor todavía no tiene adaptadores", async () => {
   assert.equal(res.statusCode, 503);
   assert.equal(res.payload.error.code, "SERVICE_NOT_READY");
 });
+
+
+test("valida la pregunta antes de consultar y consumir la cuota", async () => {
+  let quotaChecks = 0;
+  let askCalls = 0;
+  const handler = createAskHttpHandler({
+    async ask() { askCalls += 1; return {}; }
+  }, {
+    async beforeAsk() { quotaChecks += 1; return true; }
+  });
+  const res = responseRecorder();
+
+  await handler({ method: "POST", headers: {}, body: { question: "  " } }, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(res.payload.error.code, "INVALID_QUESTION");
+  assert.equal(quotaChecks, 0);
+  assert.equal(askCalls, 0);
+});
+
+test("rechaza por cuota después de validar la pregunta y antes de ejecutar el orquestador", async () => {
+  let receivedQuestion = null;
+  let askCalls = 0;
+  const handler = createAskHttpHandler({
+    async ask() { askCalls += 1; return {}; }
+  }, {
+    async beforeAsk(req, question) { receivedQuestion = question; return false; }
+  });
+  const res = responseRecorder();
+
+  await handler({ method: "POST", headers: {}, body: { question: "  ¿Qué es un lindero?  " } }, res);
+
+  assert.equal(receivedQuestion, "¿Qué es un lindero?");
+  assert.equal(res.statusCode, 429);
+  assert.equal(res.payload.error.code, "PUBLIC_RATE_LIMITED");
+  assert.equal(askCalls, 0);
+});
+
+test("no consume cuota cuando el JSON es inválido", async () => {
+  let quotaChecks = 0;
+  const handler = createAskHttpHandler({
+    async ask() { throw new Error("No debe ejecutarse."); }
+  }, {
+    async beforeAsk() { quotaChecks += 1; return true; }
+  });
+  const res = responseRecorder();
+
+  await handler({ method: "POST", headers: {}, body: "{" }, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(quotaChecks, 0);
+});
+
+test("responde 503 si no puede comprobar la cuota y no ejecuta el orquestador", async () => {
+  let askCalls = 0;
+  const handler = createAskHttpHandler({
+    async ask() { askCalls += 1; return {}; }
+  }, {
+    async beforeAsk() {
+      throw Object.assign(new Error("detalle interno"), { code: "PUBLIC_RATE_LIMIT_NOT_CONFIGURED" });
+    }
+  });
+  const res = responseRecorder();
+
+  await handler({ method: "POST", headers: {}, body: { question: "¿Qué es un lindero?" } }, res);
+
+  assert.equal(res.statusCode, 503);
+  assert.equal(res.payload.error.code, "PUBLIC_RATE_LIMIT_NOT_CONFIGURED");
+  assert.equal(JSON.stringify(res.payload).includes("detalle interno"), false);
+  assert.equal(askCalls, 0);
+});

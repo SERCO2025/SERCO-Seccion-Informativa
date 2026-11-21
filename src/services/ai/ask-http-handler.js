@@ -1,6 +1,6 @@
 "use strict";
 
-const { AskInputError, AskAdapterError } = require("./ask-orchestrator");
+const { AskInputError, AskAdapterError, validateQuestion } = require("./ask-orchestrator");
 
 const MAX_BODY_BYTES = 8192;
 
@@ -61,7 +61,7 @@ function parseBody(req) {
   return body;
 }
 
-function createAskHttpHandler(orchestrator) {
+function createAskHttpHandler(orchestrator, options = {}) {
   if (!orchestrator || typeof orchestrator.ask !== "function") {
     throw new TypeError("Se requiere un orquestador con el método ask().");
   }
@@ -94,12 +94,49 @@ function createAskHttpHandler(orchestrator) {
       });
     }
 
+    let question;
     try {
-      const result = await orchestrator.ask({
-        question: body.question,
-        locale: body.locale
+      question = validateQuestion(body.question);
+    } catch (error) {
+      if (error instanceof AskInputError) {
+        return send(res, 400, {
+          error: { code: error.code, message: error.message }
+        });
+      }
+      return send(res, 400, {
+        error: { code: "INVALID_QUESTION", message: "La pregunta no es válida." }
       });
+    }
 
+    if (typeof options.beforeAsk === "function") {
+      try {
+        const allowed = await options.beforeAsk(req, question);
+        if (allowed === false) {
+          return send(res, 429, {
+            error: {
+              code: "PUBLIC_RATE_LIMITED",
+              message: "Se alcanzó el límite temporal de consultas. Inténtalo más tarde."
+            }
+          });
+        }
+      } catch (error) {
+        console.error("[ask:http] quota_check_failed", {
+          name: error && error.name,
+          code: error && error.code
+        });
+        return send(res, 503, {
+          error: {
+            code: error && error.code === "PUBLIC_RATE_LIMIT_NOT_CONFIGURED"
+              ? error.code
+              : "PUBLIC_RATE_LIMIT_UNAVAILABLE",
+            message: "El servicio de consulta no está disponible temporalmente."
+          }
+        });
+      }
+    }
+
+    try {
+      const result = await orchestrator.ask({ question, locale: body.locale });
       return send(res, 200, result);
     } catch (error) {
       if (error instanceof AskInputError) {
