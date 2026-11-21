@@ -1,3 +1,28 @@
+"use strict";
+
+const { createHmac, randomUUID } = require("node:crypto");
+
+class PublicRateLimitConfigurationError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "PublicRateLimitConfigurationError";
+    this.code = "PUBLIC_RATE_LIMIT_NOT_CONFIGURED";
+  }
+}
+
+function getClientAddress(req) {
+  const headers = req && req.headers ? req.headers : {};
+  const forwarded = headers["x-vercel-forwarded-for"] || headers["x-forwarded-for"];
+  if (typeof forwarded !== "string" || !forwarded.trim()) return "";
+  const addresses = forwarded.split(",").map((value) => value.trim()).filter(Boolean);
+  return addresses.length ? addresses[addresses.length - 1].replace(/^\\[|\\]$/g, "") : "";
+}
+
+function createPublicRateLimiter(options = {}) {
+  const supabaseUrl = (options.url || process.env.SUPABASE_URL || "").replace(/\\/+$/, "");
+  const secretKey = options.secretKey || process.env.SUPABASE_SECRET_KEY || "";
+  const fetchImpl = options.fetchImpl || globalThis.fetch;
+
   async function callRpc(functionName, body) {
     let response;
     try {
