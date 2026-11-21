@@ -251,7 +251,7 @@ test("envía las solicitudes correctas a Gemini, Groq y Cloudflare Workers AI", 
   assert.equal(calls[2].url, "https://api.cloudflare.com/client/v4/accounts/cf-account-test/ai/v1/chat/completions");
   assert.equal(calls[2].init.headers.Authorization, "Bearer cf-token-test");
   assert.equal(calls[2].body.model, DEFAULT_MODELS["cloudflare-workers-ai"]);
-  assert.deepEqual(calls[2].body.response_format, { type: "json_object" });
+  assert.equal(Object.hasOwn(calls[2].body, "response_format"), false);
 });
 
 test("clasifica el límite 429 del proveedor para activar el siguiente motor", async () => {
