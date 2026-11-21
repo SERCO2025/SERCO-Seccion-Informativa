@@ -249,6 +249,20 @@ test("rechaza sourceIds que no coinciden con las referencias del fragmento", () 
   assert.throws(() => parseResearchOutput(raw, 2), { code: "INVALID_RESEARCH_OUTPUT" });
 });
 
+test("rechaza sourceIds no citados en afirmaciones marcadas como inciertas", () => {
+  const raw = JSON.stringify({
+    internalReport: "Informe documental con referencia [1].",
+    visitorAnswer: "Respuesta sustentada en la fuente [1].",
+    expandedAnswer: "Explicación ampliada con referencia [1].",
+    claimEvidence: [
+      { section: "internalReport", claim: "Informe documental con referencia [1].", assessment: "supported", sourceIds: [1] },
+      { section: "visitorAnswer", claim: "Respuesta sustentada en la fuente.", assessment: "uncertain", sourceIds: [1] },
+      { section: "expandedAnswer", claim: "Explicación ampliada con referencia [1].", assessment: "supported", sourceIds: [1] }
+    ]
+  });
+  assert.throws(() => parseResearchOutput(raw, 1), { code: "INVALID_RESEARCH_OUTPUT" });
+});
+
 test("rechaza citas de una sección que no aparecen en su índice de afirmaciones", () => {
   const raw = JSON.stringify({
     internalReport: "Informe documental con referencia [1].",
