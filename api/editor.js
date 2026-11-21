@@ -2,6 +2,7 @@
 
 const { randomUUID } = require("node:crypto");
 const { createArticlePersistence } = require("../src/services/editor/article-persistence");
+const { normalizeSourceMetadata } = require("../src/services/editor/source-metadata");
 const articlePersistence = createArticlePersistence();
 const BASE = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
 const PUBLIC_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || "";
@@ -199,7 +200,7 @@ module.exports = async function editorApi(req, res) {
         sources: Array.isArray(document.sources) ? document.sources.map(s=>({
           title:String(s.title||"").trim(),source_type:s.source_type||s.type||"website",
           source_url:String(s.source_url||s.url||"").trim(),author:s.author||null,
-          published_date:s.published_date||s.date||null,metadata:{}
+          published_date:s.published_date||s.date||null,metadata:normalizeSourceMetadata(s.metadata)
         })) : [],
         assets: Array.isArray(document.assets) ? document.assets : [],
         categories: Array.isArray(document.categories) ? document.categories : [],
