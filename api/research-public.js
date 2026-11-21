@@ -80,41 +80,15 @@ const persistingProvider = {
     }
   }
 };
-const handler = createResearchHttpHandler(persistingProvider);
 const rateLimiter = createPublicRateLimiter();
+const handler = createResearchHttpHandler(persistingProvider, {
+  // La consulta ya fue validada por el handler antes de reservar cuota.
+  beforeResearch: (req) => rateLimiter.reserve(req, "research"),
+  // Solo se devuelve la reserva si el proveedor no pudo completar la investigación.
+  onResearchFailure: (reservation) => rateLimiter.release(reservation.reservationId)
+});
 
 module.exports = async function publicResearchApi(req, res) {
   res.setHeader("Cache-Control", "no-store");
-
-  if (req.method !== "POST") {
-    res.setHeader("Allow", "POST");
-    return res.status(405).json({
-      error: {
-        code: "METHOD_NOT_ALLOWED",
-        message: "Este recurso solo acepta solicitudes POST."
-      }
-    });
-  }
-
-  try {
-    const allowed = await rateLimiter.consume(req, "research");
-    if (!allowed) {
-      return res.status(429).json({
-        error: {
-          code: "PUBLIC_RATE_LIMITED",
-          message: "Se alcanzó el límite temporal de investigaciones. Inténtalo más tarde."
-        }
-      });
-    }
-  } catch (error) {
-    const configurationError = error instanceof PublicRateLimitConfigurationError;
-    return res.status(503).json({
-      error: {
-        code: configurationError ? error.code : "PUBLIC_RATE_LIMIT_UNAVAILABLE",
-        message: "La investigación externa no está disponible temporalmente."
-      }
-    });
-  }
-
   return handler(req, res);
 };
