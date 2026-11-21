@@ -81,7 +81,9 @@ const rateLimiter = createPublicRateLimiter();
 const handler = createResearchHttpHandler(persistingProvider, {
   // La consulta ya fue validada por el handler antes de reservar cuota.
   beforeResearch: (req) => rateLimiter.reserve(req, "research"),
-  // Solo se devuelve la reserva si el proveedor no pudo completar la investigación.
+  // Una investigación completada conserva su cuota y elimina el registro temporal.
+  onResearchSuccess: (reservation) => rateLimiter.complete(reservation.reservationId),
+  // Una investigación fallida devuelve la reserva y restaura ambos contadores.
   onResearchFailure: (reservation) => rateLimiter.release(reservation.reservationId)
 });
 
