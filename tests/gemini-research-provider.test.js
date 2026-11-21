@@ -112,6 +112,50 @@ test("reintenta una respuesta HTTP 503 de Gemini sin repetir Tavily", async () =
   assert.equal(geminiCalls, 2);
 });
 
+test("reintenta un timeout de Gemini sin repetir la búsqueda Tavily", async () => {
+  let searchCalls = 0;
+  let geminiCalls = 0;
+  const delays = [];
+  const provider = createGeminiResearchProvider({
+    apiKey: "test-gemini-key",
+    searchProvider: {
+      async search() {
+        searchCalls += 1;
+        return {
+          provider: "tavily",
+          results: [{ url: "https://example.org", title: "Fuente", content: "Texto" }],
+          usage: { credits: 1 }
+        };
+      }
+    },
+    sleepImpl: async (milliseconds) => { delays.push(milliseconds); },
+    fetchImpl: async () => {
+      geminiCalls += 1;
+      if (geminiCalls === 1) {
+        const error = new Error("Tiempo agotado");
+        error.name = "TimeoutError";
+        throw error;
+      }
+      return {
+        ok: true,
+        async json() {
+          return { candidates: [{ content: { parts: [{ text: JSON.stringify({
+            internalReport: "Informe",
+            visitorAnswer: "Respuesta",
+            expandedAnswer: "Ampliación"
+          }) }] } }] };
+        }
+      };
+    }
+  });
+
+  const result = await provider.research({ query: "Investigación con timeout" });
+  assert.equal(result.visitorAnswer, "Respuesta");
+  assert.equal(searchCalls, 1);
+  assert.equal(geminiCalls, 2);
+  assert.deepEqual(delays, [1000]);
+});
+
 test("no realiza llamadas si falta la clave Gemini", async () => {
   let searchCalled = false;
   const provider = createGeminiResearchProvider({
