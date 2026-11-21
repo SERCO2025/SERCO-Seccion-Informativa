@@ -67,21 +67,21 @@ function buildContextualSearchQuery(query) {
 
 function isGenericVarillasQuery(query) {
   const normalized = String(query || "").normalize("NFD")
-    .replace(/[\\u0300-\\u036f]/g, "").toLowerCase();
-  return /\\bvarillas?\\b/.test(normalized) &&
-    !/\\b(zahori(?:es)?|radiestesia|adivinacion)\\b/.test(normalized);
+    .replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  return /\bvarillas?\b/.test(normalized) &&
+    !/\b(zahori(?:es)?|radiestesia|adivinacion)\b/.test(normalized);
 }
 
 function isClearlyDowsingResult(source) {
   const title = String(source && source.title || "").normalize("NFD")
-    .replace(/[\\u0300-\\u036f]/g, "").toLowerCase();
+    .replace(/[\u0300-\u036f]/g, "").toLowerCase();
   const content = String(source && source.content || "").normalize("NFD")
-    .replace(/[\\u0300-\\u036f]/g, "").toLowerCase();
-  const technicalTitle = /\\b(geotecnia|geotecnico|estudio de suelos|mecanica de suelos|acero de refuerzo|construccion|sondeo|perforacion|geologia)\\b/.test(title);
+    .replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const technicalTitle = /\b(geotecnia|geotecnico|estudio de suelos|mecanica de suelos|acero de refuerzo|construccion|sondeo|perforacion|geologia)\b/.test(title);
   if (technicalTitle) return false;
-  if (/\\b(zahori(?:es)?|radiestesia|adivinacion)\\b/.test(title)) return true;
-  return /\\b(zahori(?:es)?|radiestesia|adivinacion)\\b/.test(content) &&
-    /\\b(agua|pozos?|acuifero)\\b/.test(content);
+  if (/\b(zahori(?:es)?|radiestesia|adivinacion)\b/.test(title)) return true;
+  return /\b(zahori(?:es)?|radiestesia|adivinacion)\b/.test(content) &&
+    /\b(agua|pozos?|acuifero)\b/.test(content);
 }
 
 function selectUsableResearchResults(results, query = "") {
