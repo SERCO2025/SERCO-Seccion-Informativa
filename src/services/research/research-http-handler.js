@@ -94,6 +94,17 @@ function createResearchHttpHandler(provider, options = {}) {
     try {
       console.info("[research:http] request_accepted");
       const result = await provider.research({ query });
+      if (reservation && reservation.reservationId && typeof options.onResearchSuccess === "function") {
+        try {
+          await options.onResearchSuccess(reservation, result);
+          console.info("[research:http] quota_reservation_completed");
+        } catch (completionError) {
+          console.error("[research:http] quota_completion_failed", {
+            name: completionError && completionError.name,
+            code: completionError && completionError.code
+          });
+        }
+      }
       console.info("[research:http] request_completed", { sourceCount: Array.isArray(result.sources) ? result.sources.length : 0, persistence: result.persistence || "unknown" });
       return send(res, 200, {
         status: result.status,
