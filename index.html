@@ -121,7 +121,7 @@ form.addEventListener("submit",async event=>{
 });
 yes.addEventListener("click",async()=>{
  if(!pendingQuery||researchAllowed)return;
- researchAllowed=true;hide(consent);busy(true,"Buscando fuentes en Internet con Tavily y preparando el análisis con Gemini...");
+ researchAllowed=true;hide(consent);busy(true,"Buscando fuentes en Internet con Tavily y preparando el análisis con los motores de IA disponibles...");
  try{
   const result=await post("/api/research-public",{query:pendingQuery});
   if(!result||typeof result.visitorAnswer!=="string"||!result.visitorAnswer.trim()||
@@ -133,7 +133,7 @@ yes.addEventListener("click",async()=>{
   expandedAnswer.textContent=result.expandedAnswer;
   if(result.status==="sources_only"){
    const notice=document.createElement("p");
-   notice.textContent="RESULTADOS EXTERNOS SIN SÍNTESIS DE IA · Tavily recuperó estas fuentes, pero Gemini no pudo elaborar una respuesta. Los extractos y enlaces se muestran directamente; no son contenido oficial de SERCO.";
+   notice.textContent="RESULTADOS EXTERNOS SIN SÍNTESIS DE IA · Tavily recuperó estas fuentes, pero ninguno de los motores de IA disponibles pudo elaborar una respuesta. Los extractos y enlaces se muestran directamente; no son contenido oficial de SERCO.";
    notice.setAttribute("role","status");
    report.prepend(notice);
   }
