@@ -62,6 +62,7 @@ test("busca primero con Tavily y entrega evidencia a Gemini para redactar", asyn
   assert.equal(geminiRequest.body.tools, undefined);
   assert.match(geminiRequest.body.system_instruction.parts[0].text, /referencias \[1\]/);
   assert.match(geminiRequest.body.contents[0].parts[0].text, /Fragmento recuperado de la fuente/);
+  assert.match(geminiRequest.body.contents[0].parts[0].text, /Puntuación de relevancia de Tavily/);
   assert.equal(result.provider, "tavily+gemini");
   assert.equal(result.searchProvider, "tavily");
   assert.equal(result.answerProvider, "gemini");
@@ -196,4 +197,33 @@ test("convierte error 429 de Gemini en límite controlado", async () => {
     })
   });
   await assert.rejects(provider.research({ query: "Investigación de prueba" }), { code: "RESEARCH_RATE_LIMITED" });
+});
+
+
+test("rechaza referencias que no corresponden a ninguna fuente recuperada", async () => {
+  const provider = createGeminiResearchProvider({
+    apiKey: "test-gemini-key",
+    searchProvider: {
+      async search() {
+        return {
+          provider: "tavily",
+          results: [{ url: "https://example.org", title: "Fuente", content: "Fragmento", score: 0.8 }]
+        };
+      }
+    },
+    fetchImpl: async () => ({
+      ok: true,
+      async json() {
+        return { candidates: [{ content: { parts: [{ text: JSON.stringify({
+          internalReport: "Informe con referencia [2].",
+          visitorAnswer: "Respuesta breve.",
+          expandedAnswer: "Ampliación."
+        }) }] } }] };
+      }
+    })
+  });
+  await assert.rejects(
+    provider.research({ query: "Investigación de prueba" }),
+    { code: "INVALID_RESEARCH_CITATION" }
+  );
 });
