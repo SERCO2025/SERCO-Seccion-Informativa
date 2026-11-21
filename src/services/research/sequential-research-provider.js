@@ -45,8 +45,8 @@ function buildResearchPrompt(query, sources) {
     "Incluye referencias [1], [2], etc. únicamente para afirmaciones respaldadas por las fuentes proporcionadas. Cada número debe corresponder exactamente al identificador de una fuente incluida.",
     "Genera TRES piezas independientes en español y devuelve exclusivamente un objeto JSON válido con las propiedades internalReport, visitorAnswer, expandedAnswer y claimEvidence.",
     "internalReport: expediente editorial exhaustivo para el equipo SERCO. Incluye objetivo, resumen ejecutivo, hallazgos, contraste y calidad de fuentes, limitaciones, discrepancias, información faltante y recomendaciones editoriales. No lo redactes como contenido aprobado.",
-    "visitorAnswer: respuesta inicial directa. Contesta primero lo preguntado, normalmente entre 50 y 130 palabras y como máximo 3 párrafos breves. Incluye solo las acepciones pertinentes, un ejemplo si ayuda y referencias [n]. No incluyas metodología interna ni preguntes si desea otra búsqueda.",
-    "expandedAnswer: explicación ampliada para el mismo visitante si solicita más detalles. Desarrolla conceptos pertinentes, ejemplos, distinciones técnicas y precauciones respaldadas. Mantén trazabilidad con referencias [n].",
+    "visitorAnswer: respuesta inicial directa. Contesta primero lo preguntado, normalmente entre 50 y 130 palabras y como máximo 3 párrafos breves. Incluye solo las acepciones pertinentes, un ejemplo si ayuda y referencias [n]. Cada oración que contenga información factual debe llevar una o más referencias [n] que respalden esa oración; no agrupes varias afirmaciones independientes en una sola oración para ocultar afirmaciones sin respaldo. Si un dato no está respaldado, no lo presentes como hecho: explica brevemente que no pudo confirmarse con las fuentes recuperadas. No incluyas metodología interna ni preguntes si desea otra búsqueda.",
+    "expandedAnswer: explicación ampliada para el mismo visitante si solicita más detalles. Desarrolla conceptos pertinentes, ejemplos, distinciones técnicas y precauciones respaldadas. Cada oración que contenga información factual debe llevar una o más referencias [n] que respalden esa oración; no agrupes varias afirmaciones independientes en una sola oración para ocultar afirmaciones sin respaldo. Si un dato no está respaldado, no lo presentes como hecho: explica brevemente que no pudo confirmarse con las fuentes recuperadas. Mantén trazabilidad con referencias [n].",
     "claimEvidence: índice editorial de afirmaciones sustantivas. Cada elemento debe registrar una afirmación por elemento y contener section (internalReport, visitorAnswer o expandedAnswer), claim (fragmento textual literal de 12 a 500 caracteres, copiado de esa sección e incluyendo las referencias [n] de la oración correspondiente), assessment (supported, partial, unsupported o uncertain) y sourceIds (índices exactos de las fuentes citadas en ese fragmento). Registra las afirmaciones fácticas sustantivas y no omitas ninguna oración citada ni ninguna de las tres secciones. Para unsupported usa sourceIds vacío y no añadas referencias [n]; supported o partial requieren al menos una referencia [n] y sus sourceIds deben coincidir exactamente con ellas. No inventes afirmaciones ni fuentes. Es autoevaluación del modelo, no verificación independiente.",
     "No presentes como certeza lo que las fuentes no permiten confirmar. Si la consulta es ambigua, no elijas una interpretación solo porque aparezca primero: explica las acepciones pertinentes y qué contexto permite distinguirlas.",
     "No afirmes que la investigación externa es una publicación oficial de SERCO."
@@ -104,12 +104,17 @@ function normalizeEvidenceText(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
 }
 
-function splitCitedStatements(value) {
+function splitResearchStatements(value) {
   return String(value || "")
     .split(/\r?\n/)
+    .filter((line) => !/^\s{0,3}#{1,6}\s/.test(line))
     .flatMap((line) => line.split(/(?<=[.!?])\s+(?=[A-ZÁÉÍÓÚÑ¿¡0-9#*-])/u))
     .map(normalizeEvidenceText)
-    .filter((statement) => /\[\d+\]/.test(statement));
+    .filter(Boolean);
+}
+
+function splitCitedStatements(value) {
+  return splitResearchStatements(value).filter((statement) => /\[\d+\]/.test(statement));
 }
 
 function validateClaimEvidenceAgainstSections(value, sections, sourceCount) {
@@ -135,6 +140,11 @@ function validateClaimEvidenceAgainstSections(value, sections, sourceCount) {
     }
     if (["supported", "partial"].includes(item.assessment) && claimReferenceSet.size === 0) return false;
     if (item.assessment === "unsupported" && claimReferenceSet.size > 0) return false;
+  }
+
+  for (const sectionName of ["visitorAnswer", "expandedAnswer"]) {
+    const statements = splitResearchStatements(sections && sections[sectionName]);
+    if (statements.some((statement) => !/\[\d+\]/.test(statement))) return false;
   }
 
   for (const sectionName of sectionNames) {
