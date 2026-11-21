@@ -46,7 +46,8 @@ function createGeminiAnswerProvider(options = {}) {
             }
           }
         },
-        "Gemini"
+        "Gemini",
+        options.timeoutMs
       );
 
       const candidate = Array.isArray(payload.candidates) ? payload.candidates[0] : null;

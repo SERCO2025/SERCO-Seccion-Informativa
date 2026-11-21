@@ -41,7 +41,8 @@ function createGroqAnswerProvider(options = {}) {
           response_format: { type: "json_object" },
           stream: false
         },
-        "Groq"
+        "Groq",
+        options.timeoutMs
       );
 
       const choice = Array.isArray(payload.choices) ? payload.choices[0] : null;

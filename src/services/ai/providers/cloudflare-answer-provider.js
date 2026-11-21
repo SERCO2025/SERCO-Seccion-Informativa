@@ -42,7 +42,8 @@ function createCloudflareAnswerProvider(options = {}) {
           response_format: { type: "json_object" },
           stream: false
         },
-        "Cloudflare Workers AI"
+        "Cloudflare Workers AI",
+        options.timeoutMs
       );
 
       const choice = Array.isArray(payload.choices) ? payload.choices[0] : null;

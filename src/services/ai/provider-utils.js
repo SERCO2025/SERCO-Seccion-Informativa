@@ -1,6 +1,8 @@
 "use strict";
 
 const ALLOWED_COVERAGE = new Set(["sufficient", "partial"]);
+const DEFAULT_PROVIDER_TIMEOUT_MS = 15000;
+const MAX_PROVIDER_TIMEOUT_MS = 120000;
 
 class AIProviderConfigurationError extends Error {
   constructor(message, code = "AI_PROVIDER_NOT_CONFIGURED") {
@@ -146,57 +148,81 @@ function parseGeneratedAnswer(value) {
   };
 }
 
-async function postJson(fetchImpl, url, headers, body, providerName) {
+async function postJson(fetchImpl, url, headers, body, providerName, timeoutMs = DEFAULT_PROVIDER_TIMEOUT_MS) {
   if (typeof fetchImpl !== "function") {
     throw new AIProviderConfigurationError("El entorno no dispone de fetch para conectar con " + providerName + ".");
   }
 
-  let response;
+  const effectiveTimeoutMs = Number.isFinite(timeoutMs) && timeoutMs > 0
+    ? Math.min(Math.floor(timeoutMs), MAX_PROVIDER_TIMEOUT_MS)
+    : DEFAULT_PROVIDER_TIMEOUT_MS;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), effectiveTimeoutMs);
+
   try {
-    response = await fetchImpl(url, {
-      method: "POST",
-      headers: Object.assign({ "Content-Type": "application/json" }, headers || {}),
-      body: JSON.stringify(body)
-    });
-  } catch {
-    throw new AIProviderError("No fue posible conectar con " + providerName + ".", "AI_PROVIDER_UNAVAILABLE");
-  }
-
-  let payload;
-  try {
-    payload = await response.json();
-  } catch {
-    throw new AIProviderError("El proveedor devolvió una respuesta que no es JSON válido.", "AI_PROVIDER_INVALID_RESPONSE");
-  }
-
-  if (!response.ok) {
-    if (response.status === 429) {
-      throw new AIProviderError("Se alcanzó el límite gratuito o temporal del proveedor.", "AI_PROVIDER_RATE_LIMITED");
+    let response;
+    try {
+      response = await fetchImpl(url, {
+        method: "POST",
+        headers: Object.assign({ "Content-Type": "application/json" }, headers || {}),
+        body: JSON.stringify(body),
+        signal: controller.signal
+      });
+    } catch {
+      if (controller.signal.aborted) {
+        throw new AIProviderError(
+          "El proveedor excedió el tiempo máximo de respuesta.",
+          "AI_PROVIDER_TIMEOUT"
+        );
+      }
+      throw new AIProviderError("No fue posible conectar con " + providerName + ".", "AI_PROVIDER_UNAVAILABLE");
     }
-    if (response.status === 401 || response.status === 403) {
-      throw new AIProviderConfigurationError("El proveedor rechazó la credencial o el acceso al modelo.", "AI_PROVIDER_ACCESS_DENIED");
-    }
-    if (response.status === 402) {
-      throw new AIProviderConfigurationError("El proveedor solicita habilitar facturación. La solicitud se detuvo sin intentar pagar.", "AI_PROVIDER_BILLING_REQUIRED");
-    }
-    if (response.status >= 500) {
-      throw new AIProviderError("El proveedor no está disponible temporalmente.", "AI_PROVIDER_UPSTREAM_ERROR");
-    }
-    throw new AIProviderError("El proveedor rechazó la solicitud. Revisa el modelo y sus parámetros.", "AI_PROVIDER_REQUEST_REJECTED");
-  }
 
-  if (payload && payload.success === false) {
-    const errors = Array.isArray(payload.errors) ? payload.errors : [];
-    const code = errors.some((item) => item && String(item.code) === "429") ? "AI_PROVIDER_RATE_LIMITED" : "AI_PROVIDER_REQUEST_REJECTED";
-    throw new AIProviderError("Cloudflare no pudo ejecutar el modelo solicitado.", code);
-  }
+    let payload;
+    try {
+      payload = await response.json();
+    } catch {
+      if (controller.signal.aborted) {
+        throw new AIProviderError(
+          "El proveedor excedió el tiempo máximo de respuesta.",
+          "AI_PROVIDER_TIMEOUT"
+        );
+      }
+      throw new AIProviderError("El proveedor devolvió una respuesta que no es JSON válido.", "AI_PROVIDER_INVALID_RESPONSE");
+    }
 
-  return payload;
+    if (!response.ok) {
+      if (response.status === 429) {
+        throw new AIProviderError("Se alcanzó el límite gratuito o temporal del proveedor.", "AI_PROVIDER_RATE_LIMITED");
+      }
+      if (response.status === 401 || response.status === 403) {
+        throw new AIProviderConfigurationError("El proveedor rechazó la credencial o el acceso al modelo.", "AI_PROVIDER_ACCESS_DENIED");
+      }
+      if (response.status === 402) {
+        throw new AIProviderConfigurationError("El proveedor solicita habilitar facturación. La solicitud se detuvo sin intentar pagar.", "AI_PROVIDER_BILLING_REQUIRED");
+      }
+      if (response.status >= 500) {
+        throw new AIProviderError("El proveedor no está disponible temporalmente.", "AI_PROVIDER_UPSTREAM_ERROR");
+      }
+      throw new AIProviderError("El proveedor rechazó la solicitud. Revisa el modelo y sus parámetros.", "AI_PROVIDER_REQUEST_REJECTED");
+    }
+
+    if (payload && payload.success === false) {
+      const errors = Array.isArray(payload.errors) ? payload.errors : [];
+      const code = errors.some((item) => item && String(item.code) === "429") ? "AI_PROVIDER_RATE_LIMITED" : "AI_PROVIDER_REQUEST_REJECTED";
+      throw new AIProviderError("Cloudflare no pudo ejecutar el modelo solicitado.", code);
+    }
+
+    return payload;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 module.exports = {
   AIProviderConfigurationError,
   AIProviderError,
+  DEFAULT_PROVIDER_TIMEOUT_MS,
   validateGenerationInput,
   buildSystemPrompt,
   buildUserPrompt,

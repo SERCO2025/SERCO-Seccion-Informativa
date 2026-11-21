@@ -194,3 +194,22 @@ test("incluye la información faltante en el prompt para respuestas parciales", 
   const prompt = captured.contents[0].parts[0].text;
   assert.match(prompt, /No se especifica la ubicación del proyecto/);
 });
+test("cancela la solicitud y devuelve timeout si el proveedor no responde a tiempo", async () => {
+  const provider = createGroqAnswerProvider({
+    apiKey: "test-key",
+    timeoutMs: 5,
+    fetchImpl: async (url, options) => new Promise((resolve, reject) => {
+      options.signal.addEventListener("abort", () => {
+        const error = new Error("request aborted");
+        error.name = "AbortError";
+        reject(error);
+      }, { once: true });
+    })
+  });
+
+  await assert.rejects(
+    provider.generate(input),
+    (error) => error instanceof AIProviderError && error.code === "AI_PROVIDER_TIMEOUT"
+  );
+});
+
