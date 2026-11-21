@@ -3,6 +3,7 @@
 const { createTavilySearchProvider } = require("../src/services/research/tavily-search-provider");
 const { createGeminiResearchProvider } = require("../src/services/research/gemini-research-provider");
 const { createArticlePersistence } = require("../src/services/editor/article-persistence");
+const { getCitationOrder } = require("../src/services/research/citation-order");
 
 const BASE = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
 const SECRET_KEY = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
@@ -190,10 +191,10 @@ async function generate(topic, index, batchId) {
     "Explica el concepto desde nivel básico y desarrolla una entrada de diccionario técnico en español."
   ].join(" ");
   const result = await RESEARCH.research({ query });
-  const sources = (result.sources || []).filter((s) => s && s.title && /^https?:\/\//i.test(s.url || "")).slice(0, 8).map((s) => ({
+  const sources = (result.sources || []).filter((s) => s && s.title && /^https?:\/\//i.test(s.url || "")).slice(0, 8).map((s, index) => ({
     title: s.title, source_type: "website", source_url: s.url,
     published_date: /^\d{4}-\d{2}-\d{2}$/.test(String(s.publishedDate || "")) ? s.publishedDate : null,
-    metadata: { provider: "Tavily", score: s.score || null }
+    metadata: { provider: "Tavily", score: s.score || null, citation_order: getCitationOrder(s, index) }
   }));
   if (sources.length < 2) throw new Error("La investigación de " + topic[0] + " no reunió al menos dos fuentes verificables.");
   const body = String(result.expandedAnswer || "").trim();

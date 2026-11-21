@@ -5,6 +5,7 @@ const { createGeminiResearchProvider } = require("../src/services/research/gemin
 const { createResearchHttpHandler } = require("../src/services/research/research-http-handler");
 const { createArticlePersistence } = require("../src/services/editor/article-persistence");
 const { createPublicRateLimiter } = require("../src/services/security/public-api-rate-limiter");
+const { getCitationOrder } = require("../src/services/research/citation-order");
 
 const tavilySearchProvider = createTavilySearchProvider();
 const provider = createGeminiResearchProvider({ searchProvider: tavilySearchProvider });
@@ -39,11 +40,12 @@ const persistingProvider = {
     const result = await provider.research(input);
     console.info("[research:persistence] report_ready", { sourceCount: Array.isArray(result.sources) ? result.sources.length : 0 });
     try {
-      const sources = (result.sources || []).filter((source) => source && source.url && source.title).map((source) => ({
+      const sources = (result.sources || []).filter((source) => source && source.url && source.title).map((source, index) => ({
         title: source.title,
         source_type: "website",
         source_url: source.url,
-        published_date: /^\d{4}-\d{2}-\d{2}$/.test(String(source.publishedDate || "")) ? source.publishedDate : null
+        published_date: /^\d{4}-\d{2}-\d{2}$/.test(String(source.publishedDate || "")) ? source.publishedDate : null,
+        metadata: { citation_order: getCitationOrder(source, index) }
       }));
       if (!sources.length) throw new Error("La investigación no devolvió fuentes bibliográficas registrables.");
       console.info("[research:persistence] save_started", { sourceCount: sources.length });
