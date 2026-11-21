@@ -109,3 +109,19 @@ test("rechaza identificadores de reserva inválidos antes de llamar Supabase", a
   await assert.rejects(() => limiter.release("no-es-uuid"), TypeError);
   assert.equal(calls, 0);
 });
+
+test("completa una reserva exitosa sin modificar los contadores", async () => {
+  let request;
+  const limiter = createPublicRateLimiter({
+    url: "https://example.supabase.co",
+    secretKey: "server-secret",
+    fetchImpl: async (url, options) => {
+      request = { url, body: JSON.parse(options.body) };
+      return { ok: true, async json() { return true; } };
+    }
+  });
+  const reservationId = "9d5b4e21-0d7c-4b55-9a8d-4f23e51a4c70";
+  assert.equal(await limiter.complete(reservationId), true);
+  assert.equal(request.url, "https://example.supabase.co/rest/v1/rpc/complete_public_api_quota");
+  assert.deepEqual(request.body, { p_reservation_id: reservationId });
+});
