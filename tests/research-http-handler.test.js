@@ -100,3 +100,75 @@ test("no expone detalles internos del proveedor", async () => {
   assert.equal(res.statusCode, 502);
   assert.equal(res.payload.error.message.includes("credencial"), false);
 });
+
+test("reserva cuota después de validar la consulta", async () => {
+  let reserved = 0;
+  let researched = 0;
+  const handler = createResearchHttpHandler({
+    async research() { researched += 1; return {}; }
+  }, {
+    async beforeResearch() { reserved += 1; return { allowed: true, reservationId: "reservation-1" }; }
+  });
+  const invalid = responseRecorder();
+  await handler({ method: "POST", headers: {}, body: { query: "x" } }, invalid);
+  assert.equal(invalid.statusCode, 400);
+  assert.equal(reserved, 0);
+  assert.equal(researched, 0);
+
+  const valid = responseRecorder();
+  await handler({ method: "POST", headers: {}, body: { query: "Consulta válida" } }, valid);
+  assert.equal(reserved, 1);
+  assert.equal(researched, 1);
+});
+
+test("no inicia investigación cuando la reserva alcanza el límite público", async () => {
+  let researched = 0;
+  const handler = createResearchHttpHandler({
+    async research() { researched += 1; return {}; }
+  }, {
+    async beforeResearch() { return { allowed: false, reservationId: null }; }
+  });
+  const res = responseRecorder();
+  await handler({ method: "POST", headers: {}, body: { query: "Consulta válida" } }, res);
+  assert.equal(res.statusCode, 429);
+  assert.equal(res.payload.error.code, "PUBLIC_RATE_LIMITED");
+  assert.equal(researched, 0);
+});
+
+test("devuelve la reserva cuando el proveedor falla", async () => {
+  let released = null;
+  const { ResearchProviderError } = require("../src/services/research/gemini-research-provider");
+  const handler = createResearchHttpHandler({
+    async research() { throw new ResearchProviderError("Falla temporal", "RESEARCH_UPSTREAM_ERROR"); }
+  }, {
+    async beforeResearch() { return { allowed: true, reservationId: "reservation-2" }; },
+    async onResearchFailure(reservation) { released = reservation.reservationId; }
+  });
+  const res = responseRecorder();
+  await handler({ method: "POST", headers: {}, body: { query: "Consulta válida" } }, res);
+  assert.equal(res.statusCode, 502);
+  assert.equal(released, "reservation-2");
+});
+
+test("no devuelve cuota si la investigación se completó", async () => {
+  let released = 0;
+  const handler = createResearchHttpHandler({
+    async research(input) {
+      return {
+        status: "completed",
+        query: input.query,
+        visitorAnswer: "Respuesta",
+        expandedAnswer: "Ampliación",
+        sources: [],
+        sourceCount: 0
+      };
+    }
+  }, {
+    async beforeResearch() { return { allowed: true, reservationId: "reservation-3" }; },
+    async onResearchFailure() { released += 1; }
+  });
+  const res = responseRecorder();
+  await handler({ method: "POST", headers: {}, body: { query: "Consulta válida" } }, res);
+  assert.equal(res.statusCode, 200);
+  assert.equal(released, 0);
+});
