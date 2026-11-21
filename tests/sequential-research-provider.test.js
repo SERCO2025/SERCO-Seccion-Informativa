@@ -261,7 +261,7 @@ test("clasifica el límite 429 del proveedor para activar el siguiente motor", a
       ok: false,
       status: 429,
       async json() {
-        return { error: { message: "quota exceeded" } };
+        throw new SyntaxError("empty or non-JSON body");
       }
     })
   });
@@ -272,6 +272,22 @@ test("clasifica el límite 429 del proveedor para activar el siguiente motor", a
   );
 });
 
+test("clasifica errores HTTP 5xx aunque el cuerpo del proveedor no sea JSON", async () => {
+  const adapters = createProviderAdapters({
+    env: { CLOUDFLARE_ACCOUNT_ID: "cf-account-test", CLOUDFLARE_API_TOKEN: "cf-token-test" },
+    fetchImpl: async () => ({
+      ok: false,
+      status: 503,
+      async json() { throw new SyntaxError("non-JSON upstream response"); }
+    })
+  });
+
+  await assert.rejects(
+    adapters[2].generate({ system: "Sistema", user: "Consulta" }),
+    { code: "PROVIDER_UPSTREAM_ERROR" }
+  );
+});
+
 test("clasifica credenciales rechazadas sin exponer el detalle remoto", async () => {
   const adapters = createProviderAdapters({
     env: { GROQ_API_KEY: "groq-test-key" },
@@ -279,7 +295,7 @@ test("clasifica credenciales rechazadas sin exponer el detalle remoto", async ()
       ok: false,
       status: 403,
       async json() {
-        return { error: { message: "private credential detail" } };
+        throw new SyntaxError("non-JSON body");
       }
     })
   });
