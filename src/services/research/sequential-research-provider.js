@@ -218,7 +218,6 @@ function createProviderAdapters(options = {}) {
             messages: [{ role: "system", content: prompt.system }, { role: "user", content: prompt.user }],
             temperature: 0.2,
             max_tokens: 5000,
-            response_format: { type: "json_object" },
             stream: false
           },
           timeoutMs
