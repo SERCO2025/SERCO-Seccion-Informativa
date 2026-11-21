@@ -200,4 +200,96 @@ test("rechaza un índice editorial inválido", () => {
     expandedAnswer: "Ampliación",
     claimEvidence: [{ section: "visitorAnswer", claim: "Afirmación respaldada correctamente.", assessment: "supported", sourceIds: [2] }]
   }), 1), { code: "INVALID_RESEARCH_OUTPUT" });
+
+test("envía las solicitudes correctas a Gemini, Groq y Cloudflare Workers AI", async () => {
+  const calls = [];
+  const adapters = createProviderAdapters({
+    env: {
+      GEMINI_API_KEY: "gemini-test-key",
+      GROQ_API_KEY: "groq-test-key",
+      CLOUDFLARE_ACCOUNT_ID: "cf-account-test",
+      CLOUDFLARE_API_TOKEN: "cf-token-test"
+    },
+    fetchImpl: async (url, init) => {
+      calls.push({ url, init, body: JSON.parse(init.body) });
+      if (url.includes("generativelanguage.googleapis.com")) {
+        return {
+          ok: true,
+          status: 200,
+          async json() {
+            return { candidates: [{ content: { parts: [{ text: rawResult }] } }] };
+          }
+        };
+      }
+      return {
+        ok: true,
+        status: 200,
+        async json() {
+          return { choices: [{ message: { content: rawResult } }] };
+        }
+      };
+    }
+  });
+
+  const prompt = { system: "Instrucciones de prueba", user: "Consulta de prueba" };
+  const generated = [];
+  for (const item of adapters) generated.push(await item.generate(prompt));
+
+  assert.equal(generated.every((item) => item.raw === rawResult), true);
+  assert.equal(calls.length, 3);
+
+  assert.match(calls[0].url, /gemini-3\.8-flash:generateContent$/);
+  assert.equal(calls[0].init.headers["x-goog-api-key"], "gemini-test-key");
+  assert.equal(calls[0].body.generationConfig.responseMimeType, "application/json");
+
+  assert.equal(calls[1].url, "https://api.groq.com/openai/v1/chat/completions");
+  assert.equal(calls[1].init.headers.Authorization, "Bearer groq-test-key");
+  assert.equal(calls[1].body.model, DEFAULT_MODELS.groq);
+  assert.deepEqual(calls[1].body.response_format, { type: "json_object" });
+
+  assert.equal(calls[2].url, "https://api.cloudflare.com/client/v4/accounts/cf-account-test/ai/v1/chat/completions");
+  assert.equal(calls[2].init.headers.Authorization, "Bearer cf-token-test");
+  assert.equal(calls[2].body.model, DEFAULT_MODELS["cloudflare-workers-ai"]);
+  assert.deepEqual(calls[2].body.response_format, { type: "json_object" });
 });
+
+test("clasifica el límite 429 del proveedor para activar el siguiente motor", async () => {
+  const adapters = createProviderAdapters({
+    env: { GEMINI_API_KEY: "gemini-test-key" },
+    fetchImpl: async () => ({
+      ok: false,
+      status: 429,
+      async json() {
+        return { error: { message: "quota exceeded" } };
+      }
+    })
+  });
+
+  await assert.rejects(
+    adapters[0].generate({ system: "Sistema", user: "Consulta" }),
+    { code: "PROVIDER_RATE_LIMITED" }
+  );
+});
+
+test("clasifica credenciales rechazadas sin exponer el detalle remoto", async () => {
+  const adapters = createProviderAdapters({
+    env: { GROQ_API_KEY: "groq-test-key" },
+    fetchImpl: async () => ({
+      ok: false,
+      status: 403,
+      async json() {
+        return { error: { message: "private credential detail" } };
+      }
+    })
+  });
+
+  await assert.rejects(
+    adapters[1].generate({ system: "Sistema", user: "Consulta" }),
+    (error) => {
+      assert.equal(error.code, "PROVIDER_ACCESS_DENIED");
+      assert.equal(error.message.includes("private credential detail"), false);
+      return true;
+    }
+  );
+});
+
