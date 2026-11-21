@@ -9,7 +9,12 @@ const SECRET_KEY = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVI
 const CRON_TOKEN = process.env.SERCO_AUTO_PUBLISH_TOKEN || "";
 const AUTOMATION_GEMINI_API_KEY = process.env.GEMINI_AUTOMATION_API_KEY || "";
 const SEARCH = createTavilySearchProvider({ maxResults: 8 });
-const RESEARCH = createGeminiResearchProvider({ searchProvider: SEARCH, apiKey: AUTOMATION_GEMINI_API_KEY });
+const RESEARCH = createGeminiResearchProvider({
+  searchProvider: SEARCH,
+  apiKey: AUTOMATION_GEMINI_API_KEY,
+  requestTimeoutMs: 18000,
+  maxRetryDelayMs: 2000
+});
 const PERSISTENCE = createArticlePersistence();
 
 const TOPICS = [

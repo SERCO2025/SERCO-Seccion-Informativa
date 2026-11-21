@@ -52,6 +52,12 @@ function createGeminiResearchProvider(options = {}) {
   const searchProvider = options.searchProvider || null;
   const sleepImpl = options.sleepImpl || ((milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)));
   const maxTransientRetries = Number.isInteger(options.maxTransientRetries) ? Math.max(0, Math.min(options.maxTransientRetries, 2)) : 1;
+  const requestTimeoutMs = Number.isInteger(options.requestTimeoutMs)
+    ? Math.min(Math.max(options.requestTimeoutMs, 1000), 60000)
+    : 45000;
+  const maxRetryDelayMs = Number.isInteger(options.maxRetryDelayMs)
+    ? Math.min(Math.max(options.maxRetryDelayMs, 250), 10000)
+    : 10000;
 
   return {
     async research(input) {
@@ -113,7 +119,7 @@ function createGeminiResearchProvider(options = {}) {
                 "x-goog-api-key": apiKey,
                 "Content-Type": "application/json"
               },
-              signal: AbortSignal.timeout(45000),
+              signal: AbortSignal.timeout(requestTimeoutMs),
               body: JSON.stringify({
                 system_instruction: { parts: [{ text: instructions }] },
                 contents: [{
@@ -170,7 +176,7 @@ function createGeminiResearchProvider(options = {}) {
           const retryAt = retryAfterHeader ? Date.parse(retryAfterHeader) : NaN;
           retryDelay = Number.isFinite(retryAt) ? retryAt - Date.now() : 1000 * attempt;
         }
-        retryDelay = Math.min(Math.max(retryDelay, 250), 10000);
+        retryDelay = Math.min(Math.max(retryDelay, 250), maxRetryDelayMs);
         console.warn("[research:gemini] transient_upstream_retry", {
           httpStatus: response.status,
           attempt,

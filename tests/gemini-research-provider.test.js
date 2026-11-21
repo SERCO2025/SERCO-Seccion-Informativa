@@ -113,6 +113,45 @@ test("reintenta una respuesta HTTP 503 de Gemini sin repetir Tavily", async () =
   assert.equal(geminiCalls, 2);
 });
 
+test("limita Retry-After cuando la automatización necesita respetar un plazo corto", async () => {
+  const delays = [];
+  let geminiCalls = 0;
+  const provider = createGeminiResearchProvider({
+    apiKey: "test-gemini-key",
+    searchProvider: {
+      async search() {
+        return { provider: "tavily", results: [{ url: "https://example.org", title: "Fuente", content: "Texto" }] };
+      }
+    },
+    maxRetryDelayMs: 2000,
+    sleepImpl: async (milliseconds) => { delays.push(milliseconds); },
+    fetchImpl: async () => {
+      geminiCalls += 1;
+      if (geminiCalls === 1) {
+        return {
+          ok: false,
+          status: 503,
+          headers: { get: () => "10" },
+          async json() { return { error: { message: "Temporalmente no disponible" } }; }
+        };
+      }
+      return {
+        ok: true,
+        async json() {
+          return { candidates: [{ content: { parts: [{ text: JSON.stringify({
+            internalReport: "Informe",
+            visitorAnswer: "Respuesta",
+            expandedAnswer: "Ampliación"
+          }) }] } }] };
+        }
+      };
+    }
+  });
+  await provider.research({ query: "Investigación con plazo controlado" });
+  assert.equal(geminiCalls, 2);
+  assert.deepEqual(delays, [2000]);
+});
+
 test("reintenta un timeout de Gemini sin repetir la búsqueda Tavily", async () => {
   let searchCalls = 0;
   let geminiCalls = 0;
