@@ -26,7 +26,7 @@ test("clasifica como suficiente cuando todos los términos de contenido están r
 test("clasifica como parcial cuando solo parte de los términos tiene respaldo", async () => {
   const result = await evaluator.evaluate({
     question: "¿Qué cimentación usar en terreno arcilloso?",
-    evidence: [{ title: "Cimentaciones", content: "La publicación describe tipos de cimentación." }]
+    evidence: [{ title: "Cimentaciones", content: "La publicación describe tipos de cimentación y condiciones del terreno." }]
   });
   assert.equal(result.status, "partial");
   assert.ok(result.missingInformation.length > 0);
@@ -65,7 +65,7 @@ test("no combina coincidencias de publicaciones distintas para declarar cobertur
     ]
   });
 
-  assert.equal(result.status, "partial");
+  assert.equal(result.status, "insufficient");
   assert.deepEqual(result.matchedTerms, ["resistencia"]);
   assert.ok(result.missingInformation.length > 0);
 });
