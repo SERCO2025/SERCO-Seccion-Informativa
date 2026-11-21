@@ -65,7 +65,7 @@ try{researchProviderLimited=sessionStorage.getItem("sercoResearchProviderLimited
 function show(node){node.classList.remove("hidden")}
 function hide(node){node.classList.add("hidden")}
 function busy(value,message){askButton.disabled=value;yes.disabled=value;no.disabled=value;status.textContent=message||""}
-function reset(){hide(official);hide(consent);hide(research);hide(expandedAnswerPanel);expandedAnswerToggle.textContent="Ver explicación ampliada";yes.textContent="Sí, buscar en Internet";no.textContent="No, gracias";officialSources.replaceChildren();sources.replaceChildren();pendingQuery="";researchAllowed=false}
+function reset(){hide(official);hide(consent);hide(research);hide(expandedAnswerPanel);expandedAnswerToggle.textContent="Ver explicación ampliada";yes.textContent="Sí, buscar en Internet";yes.disabled=false;no.textContent="No, gracias";officialSources.replaceChildren();sources.replaceChildren();pendingQuery="";researchAllowed=false}
 async function post(url,body){
  const response=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),cache:"no-store"});
  let data;try{data=await response.json()}catch{throw new Error("El servidor devolvió una respuesta no válida.")}
@@ -105,14 +105,24 @@ form.addEventListener("submit",async event=>{
   const responseStatus=String(result.status||"").toLowerCase();
   const responseCoverage=String(result.coverage||"").toLowerCase();
   const needsExternalResearch=["insufficient","partial"].includes(responseStatus)||["insufficient","partial"].includes(responseCoverage);
-  if(needsExternalResearch&&!researchProviderLimited){
-   consentText.textContent=responseStatus==="partial"||responseCoverage==="partial"
-    ?"La biblioteca oficial de SERCO solo contiene información parcial. ¿Deseas que busque información complementaria en Internet?"
-    :"No encontré información suficiente en la biblioteca oficial de SERCO. ¿Deseas que busque información adicional en Internet?";
+  if(needsExternalResearch){
+   if(researchProviderLimited){
+    consentText.textContent="La biblioteca oficial de SERCO no contiene información suficiente para esta pregunta. La investigación externa está temporalmente detenida porque Gemini agotó su cuota diaria gratuita. Tus consultas siguen funcionando, pero no se puede generar una respuesta complementaria de Internet hasta que el proveedor restablezca la cuota.";
+    yes.textContent="Investigación no disponible";yes.disabled=true;no.textContent="Cerrar";
+   }else{
+    consentText.textContent=responseStatus==="partial"||responseCoverage==="partial"
+     ?"La biblioteca oficial de SERCO solo contiene información parcial. ¿Deseas que busque información complementaria en Internet?"
+     :"No encontré información suficiente en la biblioteca oficial de SERCO. ¿Deseas que busque información adicional en Internet?";
+   }
    show(consent);
   }
-  busy(false,researchProviderLimited&&needsExternalResearch?"La biblioteca SERCO no contiene información suficiente y la investigación externa permanece detenida porque Gemini alcanzó su cuota diaria gratuita. No se volverá a solicitar autorización para buscar durante esta sesión.":"");
- }catch(error){busy(false,error.message||"No fue posible consultar la biblioteca SERCO.")}
+  busy(false,"");
+ }catch(error){
+  officialMeta.textContent="CONSULTA NO COMPLETADA";
+  officialText.textContent=error&&error.message?error.message:"No fue posible consultar la biblioteca SERCO. Inténtalo nuevamente más tarde.";
+  show(official);
+  busy(false,"La consulta no se completó. El motivo aparece en el resultado.");
+ }
 });
 yes.addEventListener("click",async()=>{
  if(!pendingQuery||researchAllowed)return;
