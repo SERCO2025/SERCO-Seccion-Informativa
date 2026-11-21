@@ -14,7 +14,11 @@ const rawResult = JSON.stringify({
   internalReport: "Informe documental con referencia [1].",
   visitorAnswer: "Respuesta sustentada en la fuente [1].",
   expandedAnswer: "Explicación ampliada con referencia [1].",
-  claimEvidence: []
+  claimEvidence: [
+    { section: "internalReport", claim: "Informe documental con referencia [1].", assessment: "supported", sourceIds: [1] },
+    { section: "visitorAnswer", claim: "Respuesta sustentada en la fuente [1].", assessment: "supported", sourceIds: [1] },
+    { section: "expandedAnswer", claim: "Explicación ampliada con referencia [1].", assessment: "supported", sourceIds: [1] }
+  ]
 });
 
 function adapter(provider, generate, configured = true) {
@@ -200,6 +204,62 @@ test("rechaza un índice editorial inválido", () => {
     expandedAnswer: "Ampliación",
     claimEvidence: [{ section: "visitorAnswer", claim: "Afirmación respaldada correctamente.", assessment: "supported", sourceIds: [2] }]
   }), 1), { code: "INVALID_RESEARCH_OUTPUT" });
+});
+
+test("acepta un índice editorial que coincide literalmente con las tres secciones", () => {
+  const parsed = parseResearchOutput(rawResult, 1);
+  assert.equal(parsed.claimEvidence.length, 3);
+});
+
+test("rechaza un índice vacío cuando las respuestas contienen citas", () => {
+  const raw = JSON.stringify({
+    internalReport: "Informe documental con referencia [1].",
+    visitorAnswer: "Respuesta sustentada en la fuente [1].",
+    expandedAnswer: "Explicación ampliada con referencia [1].",
+    claimEvidence: []
+  });
+  assert.throws(() => parseResearchOutput(raw, 1), { code: "INVALID_RESEARCH_OUTPUT" });
+});
+
+test("rechaza afirmaciones del índice que no aparecen en la sección declarada", () => {
+  const raw = JSON.stringify({
+    internalReport: "Informe documental con referencia [1].",
+    visitorAnswer: "Respuesta sustentada en la fuente [1].",
+    expandedAnswer: "Explicación ampliada con referencia [1].",
+    claimEvidence: [
+      { section: "internalReport", claim: "Afirmación inventada fuera del informe [1].", assessment: "supported", sourceIds: [1] },
+      { section: "visitorAnswer", claim: "Respuesta sustentada en la fuente [1].", assessment: "supported", sourceIds: [1] },
+      { section: "expandedAnswer", claim: "Explicación ampliada con referencia [1].", assessment: "supported", sourceIds: [1] }
+    ]
+  });
+  assert.throws(() => parseResearchOutput(raw, 1), { code: "INVALID_RESEARCH_OUTPUT" });
+});
+
+test("rechaza sourceIds que no coinciden con las referencias del fragmento", () => {
+  const raw = JSON.stringify({
+    internalReport: "Informe documental con referencia [1].",
+    visitorAnswer: "Respuesta sustentada en la fuente [1].",
+    expandedAnswer: "Explicación ampliada con referencia [1].",
+    claimEvidence: [
+      { section: "internalReport", claim: "Informe documental con referencia [1].", assessment: "supported", sourceIds: [1] },
+      { section: "visitorAnswer", claim: "Respuesta sustentada en la fuente [1].", assessment: "supported", sourceIds: [2] },
+      { section: "expandedAnswer", claim: "Explicación ampliada con referencia [1].", assessment: "supported", sourceIds: [1] }
+    ]
+  });
+  assert.throws(() => parseResearchOutput(raw, 2), { code: "INVALID_RESEARCH_OUTPUT" });
+});
+
+test("rechaza citas de una sección que no aparecen en su índice de afirmaciones", () => {
+  const raw = JSON.stringify({
+    internalReport: "Informe documental con referencia [1].",
+    visitorAnswer: "Respuesta sustentada en la fuente [1].",
+    expandedAnswer: "Explicación ampliada con referencia [2].",
+    claimEvidence: [
+      { section: "internalReport", claim: "Informe documental con referencia [1].", assessment: "supported", sourceIds: [1] },
+      { section: "visitorAnswer", claim: "Respuesta sustentada en la fuente [1].", assessment: "supported", sourceIds: [1] }
+    ]
+  });
+  assert.throws(() => parseResearchOutput(raw, 2), { code: "INVALID_RESEARCH_OUTPUT" });
 });
 
 test("envía las solicitudes correctas a Gemini, Groq y Cloudflare Workers AI", async () => {
