@@ -68,7 +68,15 @@ const persistingProvider = {
           featured: false,
           ai_retrieval_enabled: true,
           search_metadata: { title: result.query, description: summaryFromReport(result.internalReport, result.query), query: result.query },
-          editorial_metadata: { provider: result.provider, model: result.model, research_date: new Date().toISOString(), external_research: true }
+          editorial_metadata: {
+            provider: result.provider, model: result.model, research_date: new Date().toISOString(),
+            external_research: true,
+            claim_evidence_index: {
+              method: result.claimEvidenceMethod,
+              independently_verified: false,
+              items: result.claimEvidence
+            }
+          }
         }
       });
       console.info("[research:persistence] save_completed", { indexedChunks: saved.chunk_count });

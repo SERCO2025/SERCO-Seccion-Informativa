@@ -218,7 +218,12 @@ async function generate(topic, index, batchId) {
       external_research: true, automated_dictionary: true, automation_batch: batchId,
       sequence_in_batch: index + 1, source_count: sources.length,
       editorial_note: "Contenido público generado a partir de investigación externa y fuentes registradas. Verificar jurisdicción, vigencia y aplicación específica al revisar.",
-      internal_research_report: internalReport
+      internal_research_report: internalReport,
+      claim_evidence_index: {
+        method: result.claimEvidenceMethod,
+        independently_verified: false,
+        items: result.claimEvidence
+      }
     }
   };
   const saved = await PERSISTENCE.save({ document });

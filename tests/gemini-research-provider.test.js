@@ -7,13 +7,37 @@ const {
   validateResearchRequest,
   collectOutputText,
   buildContextualSearchQuery,
-  selectUsableResearchResults
+  selectUsableResearchResults,
+  validateClaimEvidence
 } = require("../src/services/research/gemini-research-provider");
 
 test("valida longitud y caracteres de la consulta", () => {
   assert.equal(validateResearchRequest({ query: "  ¿Qué es una zapata?  " }), "¿Qué es una zapata?");
   assert.throws(() => validateResearchRequest({ query: "x" }), { code: "INVALID_RESEARCH_QUERY" });
   assert.throws(() => validateResearchRequest({ query: "abc\u0000def" }), { code: "INVALID_RESEARCH_QUERY" });
+});
+
+test("valida el índice editorial de afirmaciones y sus referencias de fuente", () => {
+  assert.equal(validateClaimEvidence([{
+    section: "visitorAnswer",
+    claim: "El material cumple la especificación descrita.",
+    assessment: "supported",
+    sourceIds: [1, 2]
+  }], 2), true);
+  assert.equal(validateClaimEvidence([{
+    section: "visitorAnswer",
+    claim: "El material cumple la especificación descrita.",
+    assessment: "supported",
+    sourceIds: [3]
+  }], 2), false);
+  assert.equal(validateClaimEvidence([{
+    section: "expandedAnswer",
+    claim: "No existe evidencia suficiente para afirmarlo.",
+    assessment: "unsupported",
+    sourceIds: [1]
+  }], 2), false);
+  assert.equal(validateClaimEvidence(undefined, 2), false);
+  assert.equal(validateClaimEvidence([], 2), true);
 });
 
 test("contextualiza deslinde en el marco técnico y jurídico mexicano sin alterar la consulta original", () => {
@@ -126,7 +150,7 @@ test("busca primero con Tavily y entrega evidencia a Gemini para redactar", asyn
       return {
         ok: true,
         async json() {
-          return { candidates: [{ content: { parts: [{ text: JSON.stringify({ internalReport: "Expediente con referencia [1].", visitorAnswer: "Respuesta breve con referencia [1].", expandedAnswer: "Explicación ampliada con referencia [1]." }) }] } }] };
+          return { candidates: [{ content: { parts: [{ text: JSON.stringify({ internalReport: "Expediente con referencia [1].", visitorAnswer: "Respuesta breve con referencia [1].", expandedAnswer: "Explicación ampliada con referencia [1].", claimEvidence: [{ section: "visitorAnswer", claim: "La afirmación está respaldada por la fuente consultada.", assessment: "supported", sourceIds: [1] }] }) }] } }] };
         }
       };
     }
@@ -146,6 +170,9 @@ test("busca primero con Tavily y entrega evidencia a Gemini para redactar", asyn
   assert.equal(result.internalReport, "Expediente con referencia [1].");
   assert.equal(result.visitorAnswer, "Respuesta breve con referencia [1].");
   assert.equal(result.expandedAnswer, "Explicación ampliada con referencia [1].");
+  assert.equal(result.claimEvidence.length, 1);
+  assert.deepEqual(result.claimEvidence[0].sourceIds, [1]);
+  assert.equal(result.claimEvidenceMethod, "model_self_assessment_not_independent_verification");
   assert.equal(result.sources[0].id, 1);
   assert.equal(result.sources[0].url, "https://example.org/norma");
   assert.equal(result.searchUsage.credits, 1);
