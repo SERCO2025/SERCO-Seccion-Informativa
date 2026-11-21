@@ -45,6 +45,60 @@ function collectOutputText(response) {
     .map((part) => part.text).join("\n").trim();
 }
 
+function buildContextualSearchQuery(query) {
+  const normalized = query.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase();
+  if (/\\bdeslind(?:e|es)\\b/.test(normalized)) {
+    return [
+      query,
+      "Contexto técnico y jurídico de México: deslinde de terrenos o predios, determinación de límites y colindancias, topografía, levantamiento, catastro y documentación de propiedad.",
+      "Distingue el procedimiento técnico de medición, los aspectos registrales y los efectos jurídicos; prioriza fuentes oficiales, catastrales, académicas y normativa aplicable."
+    ].join(" ");
+  }
+  if (/\\bvarillas?\\b/.test(normalized) &&
+      !/\\b(zahori|radiestesia|adivinacion|soldadura|electrodo)\\b/.test(normalized)) {
+    return [
+      query,
+      "Consulta técnica comparativa: distingue los usos de varillas en construcción y acero de refuerzo, geotecnia y exploración de suelos, materiales e instrumentos de medición.",
+      "No presupongas una sola acepción ni confundas instrumentos técnicos con varillas zahoríes; identifica el sector de cada uso y prioriza documentación técnica, universidades y organismos oficiales."
+    ].join(" ");
+  }
+  return query;
+}
+
+function selectUsableResearchResults(results) {
+  const candidates = (Array.isArray(results) ? results : [])
+    .map((source, index) => ({ source, index }))
+    .filter(({ source }) =>
+      source &&
+      typeof source.url === "string" &&
+      /^https?:\\/\\//i.test(source.url) &&
+      typeof source.title === "string" && source.title.trim() &&
+      typeof source.content === "string" && source.content.trim()
+    );
+  candidates.sort((a, b) => {
+    const scoreA = typeof a.source.score === "number" && Number.isFinite(a.source.score) ? a.source.score : -1;
+    const scoreB = typeof b.source.score === "number" && Number.isFinite(b.source.score) ? b.source.score : -1;
+    return scoreB - scoreA || a.index - b.index;
+  });
+  const seen = new Set();
+  const selected = [];
+  for (const candidate of candidates) {
+    let canonicalUrl;
+    try {
+      const parsed = new URL(candidate.source.url);
+      parsed.hash = "";
+      canonicalUrl = parsed.toString();
+    } catch {
+      continue;
+    }
+    if (seen.has(canonicalUrl)) continue;
+    seen.add(canonicalUrl);
+    selected.push(candidate.source);
+    if (selected.length >= MAX_SOURCE_COUNT) break;
+  }
+  return selected;
+}
+
 function createGeminiResearchProvider(options = {}) {
   const apiKey = options.apiKey || process.env.GEMINI_API_KEY || "";
   const model = options.model || process.env.GEMINI_RESEARCH_MODEL || DEFAULT_MODEL;
@@ -72,24 +126,36 @@ function createGeminiResearchProvider(options = {}) {
         throw new ResearchConfigurationError("El entorno no dispone de fetch para conectar con Gemini.");
       }
 
-      const searchResult = await searchProvider.search({ query });
-      console.info("[research:gemini] search_completed", { resultCount: searchResult.results.length, searchProvider: searchResult.provider });
-      const sources = searchResult.results.slice(0, MAX_SOURCE_COUNT).map((source, index) => ({
+      const searchQuery = buildContextualSearchQuery(query);
+      const searchResult = await searchProvider.search({ query: searchQuery });
+      const usableResults = selectUsableResearchResults(searchResult.results);
+      console.info("[research:gemini] search_completed", {
+        receivedCount: Array.isArray(searchResult.results) ? searchResult.results.length : 0,
+        usableCount: usableResults.length,
+        searchProvider: searchResult.provider,
+        queryContextualized: searchQuery !== query
+      });
+      if (usableResults.length === 0) {
+        throw new ResearchProviderError(
+          "La búsqueda no devolvió fuentes con título y contenido recuperado suficientes para analizar.",
+          "NO_USABLE_SOURCE_CONTENT"
+        );
+      }
+      const sources = usableResults.map((source, index) => ({
         id: index + 1,
         url: source.url,
-        title: source.title,
+        title: source.title.trim(),
         publishedDate: source.publishedDate,
-        score: typeof source.score === "number" && Number.isFinite(source.score) ? source.score : null,
-        snippet: typeof source.content === "string" ? source.content : ""
+        score: typeof source.score === "number" && Number.isFinite(source.score) ? source.score : null
       }));
-      const sourceContext = searchResult.results.slice(0, MAX_SOURCE_COUNT).map((source, index) => [
+      const sourceContext = usableResults.map((source, index) => [
         "[FUENTE " + (index + 1) + "]",
-        "Título: " + (source.title || "Sin título"),
+        "Título: " + source.title.trim(),
         "URL: " + source.url,
         source.publishedDate ? "Fecha de publicación: " + source.publishedDate : "",
         "Puntuación de relevancia de Tavily (señal auxiliar, no prueba de veracidad): " +
           (typeof source.score === "number" && Number.isFinite(source.score) ? source.score : "no disponible"),
-        "Fragmento recuperado: " + (source.content || "Sin fragmento disponible")
+        "Fragmento recuperado: " + source.content.trim()
       ].filter(Boolean).join("\n")).join("\n\n");
 
       const instructions = [
@@ -103,7 +169,7 @@ function createGeminiResearchProvider(options = {}) {
         "internalReport: expediente editorial exhaustivo para el equipo SERCO. Incluye objetivo, resumen ejecutivo, hallazgos, contraste y calidad de fuentes, limitaciones, discrepancias, información faltante y recomendaciones editoriales. Conserva los detalles útiles para revisión y futuras publicaciones. No lo redactes como contenido aprobado.",
         "visitorAnswer: respuesta inicial directa para quien hizo la pregunta. Debe contestar primero lo preguntado, en lenguaje claro, normalmente entre 50 y 130 palabras y como máximo 3 párrafos breves. Incluye solo las acepciones pertinentes al contexto de la pregunta, un ejemplo breve si ayuda y referencias [n] cuando correspondan. No incluyas notas internas, recomendaciones editoriales, metodología, limitaciones de búsqueda ni información tangencial.",
         "expandedAnswer: explicación ampliada para el mismo visitante, solo si solicita más detalles. Desarrolla los conceptos realmente pertinentes, ejemplos, distinciones técnicas y precauciones respaldadas. En consultas de conceptos técnicos, procura una explicación sustancial de al menos 1200 caracteres, sin relleno y con desarrollo proporcional al tema. No incluyas información interna de webmaster ni temas laterales que no ayuden a comprender la consulta. Mantén trazabilidad con referencias [n].",
-        "No presentes como certeza lo que las fuentes no permiten confirmar. Si la consulta es ambigua, aclara las interpretaciones relevantes sin abrumar. No afirmes que una investigación externa es una publicación oficial de SERCO."
+        "No presentes como certeza lo que las fuentes no permiten confirmar. Si la consulta es ambigua, no elijas una interpretación solo porque aparezca primero en los resultados: explica las acepciones técnicas pertinentes y señala qué contexto permite distinguirlas. Si la evidencia no permite determinar cuál aplica, dilo expresamente. No afirmes que una investigación externa es una publicación oficial de SERCO."
       ].join("\n");
 
       let response;
@@ -294,7 +360,7 @@ function createGeminiResearchProvider(options = {}) {
         expandedAnswer,
         sources,
         sourceCount: sources.length,
-        searchQueries: [query],
+        searchQueries: [searchQuery],
         searchUsage: searchResult.usage,
         searchRequestId: searchResult.requestId,
         searchSuggestionsHtml: null,
@@ -309,6 +375,8 @@ module.exports = {
   createGeminiResearchProvider,
   validateResearchRequest,
   collectOutputText,
+  buildContextualSearchQuery,
+  selectUsableResearchResults,
   ResearchConfigurationError,
   ResearchProviderError
 };

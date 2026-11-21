@@ -5,13 +5,44 @@ const assert = require("node:assert/strict");
 const {
   createGeminiResearchProvider,
   validateResearchRequest,
-  collectOutputText
+  collectOutputText,
+  buildContextualSearchQuery,
+  selectUsableResearchResults
 } = require("../src/services/research/gemini-research-provider");
 
 test("valida longitud y caracteres de la consulta", () => {
   assert.equal(validateResearchRequest({ query: "  ¿Qué es una zapata?  " }), "¿Qué es una zapata?");
   assert.throws(() => validateResearchRequest({ query: "x" }), { code: "INVALID_RESEARCH_QUERY" });
   assert.throws(() => validateResearchRequest({ query: "abc\u0000def" }), { code: "INVALID_RESEARCH_QUERY" });
+});
+
+test("contextualiza deslinde en el marco técnico y jurídico mexicano sin alterar la consulta original", () => {
+  const query = "¿Qué es un deslinde?";
+  const contextual = buildContextualSearchQuery(query);
+  assert.ok(contextual.startsWith(query));
+  assert.match(contextual, /catastro/);
+  assert.match(contextual, /México/);
+});
+
+test("trata varillas como una consulta técnica ambigua y distingue sectores", () => {
+  const contextual = buildContextualSearchQuery("¿Para qué sirven las varillas?");
+  assert.match(contextual, /geotecnia/);
+  assert.match(contextual, /acero de refuerzo/);
+  assert.match(contextual, /No presupongas una sola acepción/);
+  assert.equal(buildContextualSearchQuery("¿Para qué sirven las varillas zahoríes?"), "¿Para qué sirven las varillas zahoríes?");
+});
+
+test("ordena fuentes por score, descarta fragmentos vacíos y deduplica URL", () => {
+  const selected = selectUsableResearchResults([
+    { url: "https://example.org/a", title: "Sin fragmento", content: "", score: 1 },
+    { url: "https://example.org/b", title: "Fuente media", content: "Contenido disponible", score: 0.5 },
+    { url: "https://example.org/b#seccion", title: "Duplicada", content: "Otro contenido", score: 0.9 },
+    { url: "https://example.org/c", title: "Fuente alta", content: "Contenido relevante", score: 0.95 },
+    { url: "https://example.org/d", title: "", content: "Sin título", score: 0.8 }
+  ]);
+  assert.equal(selected.length, 2);
+  assert.equal(selected[0].title, "Fuente alta");
+  assert.equal(selected[1].title, "Fuente media");
 });
 
 test("extrae texto de la respuesta Gemini", () => {
@@ -73,6 +104,55 @@ test("busca primero con Tavily y entrega evidencia a Gemini para redactar", asyn
   assert.equal(result.sources[0].url, "https://example.org/norma");
   assert.equal(result.searchUsage.credits, 1);
   assert.equal(result.searchSuggestionsHtml, null);
+});
+
+test("usa consulta enriquecida para Tavily y conserva la consulta original en el resultado", async () => {
+  let tavilyQuery = "";
+  const provider = createGeminiResearchProvider({
+    apiKey: "test-gemini-key",
+    searchProvider: {
+      async search(input) {
+        tavilyQuery = input.query;
+        return { provider: "tavily", results: [{
+          url: "https://example.org/deslinde",
+          title: "Guía de deslinde",
+          content: "Información técnica sobre topografía, catastro y límites de predios."
+        }] };
+      }
+    },
+    fetchImpl: async () => ({
+      ok: true,
+      async json() {
+        return { candidates: [{ content: { parts: [{ text: JSON.stringify({
+          internalReport: "Informe",
+          visitorAnswer: "Respuesta",
+          expandedAnswer: "Ampliación"
+        }) }] } }] };
+      }
+    })
+  });
+  const result = await provider.research({ query: "¿Qué es un deslinde?" });
+  assert.match(tavilyQuery, /topografía/);
+  assert.equal(result.query, "¿Qué es un deslinde?");
+  assert.equal(result.searchQueries[0], tavilyQuery);
+});
+
+test("no envía a Gemini resultados sin título o contenido", async () => {
+  let geminiCalled = false;
+  const provider = createGeminiResearchProvider({
+    apiKey: "test-gemini-key",
+    searchProvider: {
+      async search() {
+        return { provider: "tavily", results: [{ url: "https://example.org", title: "Fuente", content: "  " }] };
+      }
+    },
+    fetchImpl: async () => { geminiCalled = true; throw new Error("No debe llamar"); }
+  });
+  await assert.rejects(
+    provider.research({ query: "Investigación sin fragmento" }),
+    { code: "NO_USABLE_SOURCE_CONTENT" }
+  );
+  assert.equal(geminiCalled, false);
 });
 
 test("reintenta una respuesta HTTP 503 de Gemini sin repetir Tavily", async () => {
