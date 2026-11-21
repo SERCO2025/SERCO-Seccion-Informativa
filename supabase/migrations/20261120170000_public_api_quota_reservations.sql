@@ -10,6 +10,8 @@ create table if not exists private.public_api_rate_limit_reservations (
   released_at timestamptz
 );
 
+alter table private.public_api_rate_limit_reservations enable row level security;
+
 revoke all on table private.public_api_rate_limit_reservations from public, anon, authenticated;
 grant all on table private.public_api_rate_limit_reservations to service_role;
 
@@ -29,7 +31,8 @@ declare
   v_client_limit integer;
   v_global_limit integer;
 begin
-  if p_scope not in ('ask', 'research')
+  if p_scope is null
+     or p_scope not in ('ask', 'research')
      or p_client_hash is null
      or length(p_client_hash) <> 64
      or p_client_hash !~ '^[0-9a-f]{64}$'
