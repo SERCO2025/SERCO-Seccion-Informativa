@@ -135,18 +135,45 @@ function createGeminiResearchProvider(options = {}) {
             }
           );
         } catch (error) {
-          console.error("[research:gemini] request_failed", { name: error && error.name, code: error && error.code, attempt: attempt + 1 });
+          const isTimeout = error && (error.name === "TimeoutError" || error.name === "AbortError");
+          console.error("[research:gemini] request_failed", {
+            name: error && error.name,
+            code: error && error.code,
+            attempt: attempt + 1,
+            timeout: Boolean(isTimeout)
+          });
+          if (isTimeout && attempt < maxTransientRetries) {
+            attempt += 1;
+            const retryDelay = Math.min(1000 * attempt, 5000);
+            console.warn("[research:gemini] transient_timeout_retry", {
+              attempt,
+              maxAttempts: maxTransientRetries + 1,
+              retryDelayMs: retryDelay
+            });
+            await sleepImpl(retryDelay);
+            continue;
+          }
           throw new ResearchProviderError("No fue posible conectar con el servicio de análisis Gemini.");
         }
 
         if (response.status !== 503 || attempt >= maxTransientRetries) break;
         attempt += 1;
+        const retryAfterHeader = response.headers && typeof response.headers.get === "function"
+          ? response.headers.get("retry-after")
+          : null;
+        let retryDelay = Number(retryAfterHeader) * 1000;
+        if (!Number.isFinite(retryDelay) || retryDelay <= 0) {
+          const retryAt = retryAfterHeader ? Date.parse(retryAfterHeader) : NaN;
+          retryDelay = Number.isFinite(retryAt) ? retryAt - Date.now() : 1000 * attempt;
+        }
+        retryDelay = Math.min(Math.max(retryDelay, 250), 10000);
         console.warn("[research:gemini] transient_upstream_retry", {
           httpStatus: response.status,
           attempt,
-          maxAttempts: maxTransientRetries + 1
+          maxAttempts: maxTransientRetries + 1,
+          retryDelayMs: retryDelay
         });
-        await sleepImpl(1000 * attempt);
+        await sleepImpl(retryDelay);
       }
 
       console.info("[research:gemini] response_received", { status: response.status, ok: response.ok, attempts: attempt + 1 });
