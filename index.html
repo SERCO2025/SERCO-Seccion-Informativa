@@ -151,14 +151,14 @@ yes.addEventListener("click",async()=>{
    sources.appendChild(li);
   });
   show(research);
-  busy(false,result.persistence==="saved_for_review"?"Investigación terminada y registrada para revisión editorial como "+(result.publication?.publicId||"publicación SERCO")+".":"Investigación terminada y disponible arriba, pero no se pudo registrar en la biblioteca editorial.");
+  busy(false,result.status==="sources_only"?"Búsqueda terminada. Se muestran las fuentes externas sin síntesis de IA; no se guardaron como documento editorial.":result.persistence==="saved_for_review"?"Investigación terminada y registrada para revisión editorial como "+(result.publication?.publicId||"publicación SERCO")+".":"Investigación terminada y disponible arriba, pero no se pudo registrar en la biblioteca editorial.");
   research.scrollIntoView({behavior:"smooth",block:"start"});
  }catch(error){
   if(error&&error.code==="RESEARCH_PROVIDER_RATE_LIMITED"){
-   researchAllowed=true;researchProviderLimited=true;
-   try{sessionStorage.setItem("sercoResearchProviderLimited","1")}catch{}
-   hide(consent);
-   busy(false,"Tavily encontró fuentes, pero Gemini alcanzó su cuota diaria gratuita. La investigación no pudo sintetizarse. No vuelvas a autorizar esta misma búsqueda: el servicio externo seguirá detenido durante esta sesión para evitar intentos inútiles.");
+   researchAllowed=false;
+   consentText.textContent="Tavily alcanzó un límite temporal y no pudo completar la búsqueda externa. La consulta original se conserva. Puedes volver a intentarlo cuando el servicio esté disponible.";
+   yes.textContent="Reintentar búsqueda";no.textContent="Cancelar";show(consent);
+   busy(false,"La búsqueda externa no se completó porque Tavily alcanzó un límite temporal. Los motores de IA no recibieron fuentes para sintetizar.");
   }else{
    researchAllowed=false;consentText.textContent="La investigación externa no pudo completarse. La pregunta original se conserva. Puedes volver a intentarlo cuando el servicio esté disponible.";yes.textContent="Reintentar investigación";no.textContent="Cancelar";show(consent);busy(false,error.message||"No fue posible completar la investigación externa.");
   }
