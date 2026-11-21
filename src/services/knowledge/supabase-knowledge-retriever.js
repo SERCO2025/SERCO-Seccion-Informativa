@@ -49,48 +49,71 @@ function createSupabaseKnowledgeRetriever(options = {}) {
         );
       }
 
-      let response;
-      try {
-        response = await fetchImpl(supabaseUrl + "/rest/v1/rpc/search_published_chunks", {
-          method: "POST",
-          headers: {
-            apikey: secretKey,
-            Authorization: "Bearer " + secretKey,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            p_query: input.query.trim(),
-            p_limit: Math.max(1, Math.min(Number.isInteger(input.limit) ? input.limit : 8, 8))
-          })
-        });
-      } catch {
-        throw new SupabaseRetrieverError(
-          "No fue posible conectar con la base de conocimiento de SERCO.",
-          "SUPABASE_RETRIEVER_UNAVAILABLE"
-        );
-      }
-
-      if (!response.ok) {
-        const code = response.status === 401 || response.status === 403
-          ? "SUPABASE_RETRIEVER_ACCESS_DENIED"
-          : response.status >= 500
-            ? "SUPABASE_RETRIEVER_UPSTREAM_ERROR"
-            : "SUPABASE_RETRIEVER_REQUEST_REJECTED";
-
-        throw new SupabaseRetrieverError(
-          "Supabase no pudo completar la búsqueda de conocimiento.",
-          code
-        );
-      }
-
+      const timeoutMs = Number.isFinite(options.timeoutMs) && options.timeoutMs > 0
+        ? Math.min(Math.floor(options.timeoutMs), 120000)
+        : 15000;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), timeoutMs);
       let rows;
+
       try {
-        rows = await response.json();
-      } catch {
-        throw new SupabaseRetrieverError(
-          "Supabase devolvió una respuesta de búsqueda inválida.",
-          "SUPABASE_RETRIEVER_INVALID_RESPONSE"
-        );
+        let response;
+        try {
+          response = await fetchImpl(supabaseUrl + "/rest/v1/rpc/search_published_chunks", {
+            method: "POST",
+            headers: {
+              apikey: secretKey,
+              Authorization: "Bearer " + secretKey,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              p_query: input.query.trim(),
+              p_limit: Math.max(1, Math.min(Number.isInteger(input.limit) ? input.limit : 8, 8))
+            }),
+            signal: controller.signal
+          });
+        } catch {
+          if (controller.signal.aborted) {
+            throw new SupabaseRetrieverError(
+              "La búsqueda de conocimiento excedió el tiempo máximo de respuesta.",
+              "SUPABASE_RETRIEVER_TIMEOUT"
+            );
+          }
+          throw new SupabaseRetrieverError(
+            "No fue posible conectar con la base de conocimiento de SERCO.",
+            "SUPABASE_RETRIEVER_UNAVAILABLE"
+          );
+        }
+
+        if (!response.ok) {
+          const code = response.status === 401 || response.status === 403
+            ? "SUPABASE_RETRIEVER_ACCESS_DENIED"
+            : response.status >= 500
+              ? "SUPABASE_RETRIEVER_UPSTREAM_ERROR"
+              : "SUPABASE_RETRIEVER_REQUEST_REJECTED";
+
+          throw new SupabaseRetrieverError(
+            "Supabase no pudo completar la búsqueda de conocimiento.",
+            code
+          );
+        }
+
+        try {
+          rows = await response.json();
+        } catch {
+          if (controller.signal.aborted) {
+            throw new SupabaseRetrieverError(
+              "La búsqueda de conocimiento excedió el tiempo máximo de respuesta.",
+              "SUPABASE_RETRIEVER_TIMEOUT"
+            );
+          }
+          throw new SupabaseRetrieverError(
+            "Supabase devolvió una respuesta de búsqueda inválida.",
+            "SUPABASE_RETRIEVER_INVALID_RESPONSE"
+          );
+        }
+      } finally {
+        clearTimeout(timeout);
       }
 
       if (!Array.isArray(rows)) {

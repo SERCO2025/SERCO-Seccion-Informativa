@@ -140,3 +140,23 @@ test("devuelve lista vacía cuando no hay coincidencias", async () => {
   });
   assert.deepEqual(result, { items: [] });
 });
+
+test("cancela la búsqueda si Supabase no responde dentro del tiempo máximo", async () => {
+  const retriever = createSupabaseKnowledgeRetriever({
+    url: "https://example.supabase.co",
+    secretKey: "server-secret",
+    timeoutMs: 5,
+    fetchImpl: async (url, options) => new Promise((resolve, reject) => {
+      options.signal.addEventListener("abort", () => {
+        const error = new Error("request aborted");
+        error.name = "AbortError";
+        reject(error);
+      }, { once: true });
+    })
+  });
+
+  await assert.rejects(
+    retriever.search({ query: "consulta válida", publicationStatus: "published" }),
+    (error) => error instanceof SupabaseRetrieverError && error.code === "SUPABASE_RETRIEVER_TIMEOUT"
+  );
+});
