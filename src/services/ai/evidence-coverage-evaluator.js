@@ -25,11 +25,18 @@ function tokenize(value) {
     .filter((token) => token.length >= 3 && !STOP_WORDS.has(token));
 }
 
+function singularizeToken(token) {
+  if (token.length > 5 && token.endsWith("ciones")) {
+    return token.slice(0, -2);
+  }
+  if (token.length > 3 && token.endsWith("s")) {
+    return token.slice(0, -1);
+  }
+  return token;
+}
+
 function tokensMatch(queryToken, evidenceToken) {
-  if (queryToken === evidenceToken) return true;
-  const sharedLength = Math.min(queryToken.length, evidenceToken.length);
-  return sharedLength >= 7 &&
-    (queryToken.startsWith(evidenceToken) || evidenceToken.startsWith(queryToken));
+  return singularizeToken(queryToken) === singularizeToken(evidenceToken);
 }
 
 function createEvidenceCoverageEvaluator() {

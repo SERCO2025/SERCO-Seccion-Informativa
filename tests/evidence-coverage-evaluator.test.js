@@ -60,7 +60,7 @@ test("no combina coincidencias de publicaciones distintas para declarar cobertur
         id: "chunk-inoxidable",
         articleId: "article-inoxidable",
         title: "Material inoxidable",
-        content: "El material inoxidable resiste la corrosión."
+        content: "El material inoxidable presenta durabilidad frente a la corrosión."
       }
     ]
   });
@@ -97,4 +97,8 @@ test("combina fragmentos de una misma publicación para evaluar su cobertura", a
 
   assert.equal(result.status, "sufficient");
   assert.deepEqual(result.missingInformation, []);
+});
+
+test("no confunde palabras que solo comparten un prefijo", () => {
+  assert.equal(tokensMatch("resistencia", "resiste"), false);
 });
