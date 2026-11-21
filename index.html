@@ -64,7 +64,7 @@ let pendingQuery="",researchAllowed=false;
 function show(node){node.classList.remove("hidden")}
 function hide(node){node.classList.add("hidden")}
 function busy(value,message){askButton.disabled=value;yes.disabled=value;no.disabled=value;status.textContent=message||""}
-function reset(){hide(official);hide(consent);hide(research);hide(expandedAnswerPanel);expandedAnswerToggle.textContent="Ver explicación ampliada";officialSources.replaceChildren();sources.replaceChildren();pendingQuery="";researchAllowed=false}
+function reset(){hide(official);hide(consent);hide(research);hide(expandedAnswerPanel);expandedAnswerToggle.textContent="Ver explicación ampliada";yes.textContent="Sí, buscar en Internet";no.textContent="No, gracias";officialSources.replaceChildren();sources.replaceChildren();pendingQuery="";researchAllowed=false}
 async function post(url,body){
  const response=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),cache:"no-store"});
  let data;try{data=await response.json()}catch{throw new Error("El servidor devolvió una respuesta no válida.")}
@@ -137,7 +137,7 @@ yes.addEventListener("click",async()=>{
   show(research);
   busy(false,result.persistence==="saved_for_review"?"Investigación terminada y registrada para revisión editorial como "+(result.publication?.publicId||"publicación SERCO")+".":"Investigación terminada y disponible arriba, pero no se pudo registrar en la biblioteca editorial.");
   research.scrollIntoView({behavior:"smooth",block:"start"});
- }catch(error){researchAllowed=false;show(consent);busy(false,error.message||"No fue posible completar la investigación externa.")}
+ }catch(error){researchAllowed=false;consentText.textContent="La investigación externa no pudo completarse. La pregunta original se conserva. Puedes volver a intentarlo cuando el servicio esté disponible.";yes.textContent="Reintentar investigación";no.textContent="Cancelar";show(consent);busy(false,error.message||"No fue posible completar la investigación externa.")}
 });
 expandedAnswerToggle.addEventListener("click",()=>{
  const opening=expandedAnswerPanel.classList.contains("hidden");

@@ -102,3 +102,34 @@ test("combina fragmentos de una misma publicación para evaluar su cobertura", a
 test("no confunde palabras que solo comparten un prefijo", () => {
   assert.equal(tokensMatch("resistencia", "resiste"), false);
 });
+
+test("no confunde una pregunta sobre varillas con evidencia que solo contiene el verbo sirven", async () => {
+  const result = await evaluator.evaluate({
+    question: "¿Para qué sirven las varillas?",
+    evidence: [{
+      id: "chunk-epp",
+      articleId: "article-epp",
+      title: "Diccionario técnico: equipo de protección personal (EPP)",
+      section: "Entrada de diccionario",
+      content: "El equipo sirve para proteger al trabajador durante sus actividades."
+    }]
+  });
+
+  assert.equal(result.status, "insufficient");
+  assert.deepEqual(result.matchedTerms, []);
+});
+
+test("no atribuye contenido sobre deslindes a una publicación ajena", async () => {
+  const result = await evaluator.evaluate({
+    question: "¿Qué es un deslinde?",
+    evidence: [{
+      id: "chunk-epp",
+      articleId: "article-epp",
+      title: "Diccionario técnico: equipo de protección personal (EPP)",
+      content: "El equipo de protección personal reduce riesgos laborales."
+    }]
+  });
+
+  assert.equal(result.status, "insufficient");
+  assert.deepEqual(result.matchedTerms, []);
+});

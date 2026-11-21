@@ -7,7 +7,7 @@ const STOP_WORDS = new Set([
   "para", "por", "con", "sin", "sobre", "entre", "desde", "hasta",
   "una", "uno", "unos", "unas", "los", "las", "del", "de", "el", "la",
   "y", "o", "u", "es", "son", "ser", "esta", "estan", "este", "esa",
-  "ese", "hay", "se", "mi", "su", "sus", "me", "puede", "pueden"
+  "ese", "hay", "se", "mi", "su", "sus", "me", "puede", "pueden", "sirve", "sirven", "servir", "sirviendo", "sirvio", "existe", "existen"
 ]);
 
 function normalizeToken(value) {
