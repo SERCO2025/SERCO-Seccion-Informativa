@@ -420,8 +420,9 @@ test("rechaza referencias que no corresponden a ninguna fuente recuperada", asyn
       }
     })
   });
-  await assert.rejects(
-    provider.research({ query: "Investigación de prueba" }),
-    { code: "INVALID_RESEARCH_CITATION" }
-  );
+  const result = await provider.research({ query: "Investigación de prueba" });
+  assert.equal(result.status, "sources_only");
+  assert.equal(result.fallbackReason, "gemini_generation_unavailable");
+  assert.equal(result.sources.length, 1);
+  assert.match(result.visitorAnswer, /búsqueda en Internet sí se realizó/);
 });
