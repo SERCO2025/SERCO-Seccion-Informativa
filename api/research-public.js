@@ -38,7 +38,10 @@ function summaryFromReport(report, query) {
 const persistingProvider = {
   async research(input) {
     const result = await provider.research(input);
-    console.info("[research:persistence] report_ready", { sourceCount: Array.isArray(result.sources) ? result.sources.length : 0 });
+    console.info("[research:persistence] report_ready", { sourceCount: Array.isArray(result.sources) ? result.sources.length : 0, status: result.status });
+    if (result.status === "sources_only") {
+      return { ...result, persistence: "sources_only_not_published" };
+    }
     try {
       const sources = (result.sources || []).filter((source) => source && source.url && source.title).map((source, index) => ({
         title: source.title,

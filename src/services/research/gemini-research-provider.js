@@ -188,7 +188,8 @@ function createGeminiResearchProvider(options = {}) {
         url: source.url,
         title: source.title.trim(),
         publishedDate: source.publishedDate,
-        score: typeof source.score === "number" && Number.isFinite(source.score) ? source.score : null
+        score: typeof source.score === "number" && Number.isFinite(source.score) ? source.score : null,
+        excerpt: source.content.trim().slice(0, 1200)
       }));
       const sourceContext = usableResults.map((source, index) => [
         "[FUENTE " + (index + 1) + "]",
@@ -221,6 +222,7 @@ function createGeminiResearchProvider(options = {}) {
       }
       const instructionText = instructions.join("\n");
 
+      try {
       let response;
       let attempt = 0;
       console.info("[research:gemini] generation_started", { model });
@@ -432,6 +434,36 @@ function createGeminiResearchProvider(options = {}) {
         groundingSupports: [],
         persistence: "not_configured"
       };
+      } catch (error) {
+        const limited = error && error.code === "RESEARCH_RATE_LIMITED";
+        console.warn("[research:fallback] sources_only", {
+          reason: limited ? "gemini_quota_exhausted" : (error && error.code) || "gemini_unavailable",
+          sourceCount: sources.length
+        });
+        return {
+          status: "sources_only",
+          provider: "tavily",
+          searchProvider: "tavily",
+          answerProvider: null,
+          query,
+          internalReport: "",
+          visitorAnswer: limited
+            ? "La búsqueda en Internet sí se realizó y encontró las fuentes que aparecen abajo. El servicio de IA alcanzó su cuota disponible y no pudo elaborar una síntesis. Puedes consultar directamente los extractos y abrir cada fuente."
+            : "La búsqueda en Internet sí se realizó y encontró las fuentes que aparecen abajo. El servicio de IA no pudo elaborar una síntesis en este momento. Puedes consultar directamente los extractos y abrir cada fuente.",
+          expandedAnswer: "Estos son resultados de búsqueda externos recuperados por Tavily. Se muestran sus títulos, extractos y enlaces originales. No constituyen una respuesta sintetizada, una verificación independiente ni una publicación oficial de SERCO. Revisa el contenido de cada fuente y su contexto antes de tomar decisiones.",
+          claimEvidence: [],
+          claimEvidenceMethod: null,
+          sources,
+          sourceCount: sources.length,
+          searchQueries: [searchQuery],
+          searchUsage: searchResult.usage,
+          searchRequestId: searchResult.requestId,
+          searchSuggestionsHtml: null,
+          groundingSupports: [],
+          persistence: "sources_only_not_published",
+          fallbackReason: limited ? "gemini_quota_exhausted" : "gemini_generation_unavailable"
+        };
+      }
     }
   };
 }

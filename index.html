@@ -106,14 +106,9 @@ form.addEventListener("submit",async event=>{
   const responseCoverage=String(result.coverage||"").toLowerCase();
   const needsExternalResearch=["insufficient","partial"].includes(responseStatus)||["insufficient","partial"].includes(responseCoverage);
   if(needsExternalResearch){
-   if(researchProviderLimited){
-    consentText.textContent="La biblioteca oficial de SERCO no contiene información suficiente para esta pregunta. La investigación externa está temporalmente detenida porque Gemini agotó su cuota diaria gratuita. Tus consultas siguen funcionando, pero no se puede generar una respuesta complementaria de Internet hasta que el proveedor restablezca la cuota.";
-    yes.textContent="Investigación no disponible";yes.disabled=true;no.textContent="Cerrar";
-   }else{
-    consentText.textContent=responseStatus==="partial"||responseCoverage==="partial"
-     ?"La biblioteca oficial de SERCO solo contiene información parcial. ¿Deseas que busque información complementaria en Internet?"
-     :"No encontré información suficiente en la biblioteca oficial de SERCO. ¿Deseas que busque información adicional en Internet?";
-   }
+   consentText.textContent=responseStatus==="partial"||responseCoverage==="partial"
+    ?"La biblioteca oficial de SERCO solo contiene información parcial. ¿Deseas que busque información complementaria en Internet?"
+    :"No encontré información suficiente en la biblioteca oficial de SERCO. ¿Deseas que busque información adicional en Internet?";
    show(consent);
   }
   busy(false,"");
@@ -130,11 +125,18 @@ yes.addEventListener("click",async()=>{
  try{
   const result=await post("/api/research-public",{query:pendingQuery});
   if(!result||typeof result.visitorAnswer!=="string"||!result.visitorAnswer.trim()||
-     typeof result.expandedAnswer!=="string"||!result.expandedAnswer.trim()){
-   throw new Error("La búsqueda terminó, pero el servidor no entregó la respuesta para el visitante.");
+     typeof result.expandedAnswer!=="string"||!result.expandedAnswer.trim()||
+     !Array.isArray(result.sources)||result.sources.length===0){
+   throw new Error("La búsqueda terminó, pero el servidor no entregó resultados utilizables para el visitante.");
   }
   report.textContent=result.visitorAnswer;
   expandedAnswer.textContent=result.expandedAnswer;
+  if(result.status==="sources_only"){
+   const notice=document.createElement("p");
+   notice.textContent="RESULTADOS EXTERNOS SIN SÍNTESIS DE IA · Tavily recuperó estas fuentes, pero Gemini no pudo elaborar una respuesta. Los extractos y enlaces se muestran directamente; no son contenido oficial de SERCO.";
+   notice.setAttribute("role","status");
+   report.prepend(notice);
+  }
   hide(expandedAnswerPanel);
   expandedAnswerToggle.textContent="Ver explicación ampliada";
   sources.replaceChildren();
@@ -143,6 +145,9 @@ yes.addEventListener("click",async()=>{
    const li=document.createElement("li"),link=document.createElement("a");
    link.href=source.url;link.target="_blank";link.rel="noopener noreferrer";link.textContent=source.title||source.url;li.appendChild(link);
    if(source.publishedDate)li.appendChild(document.createTextNode(" · "+source.publishedDate));
+   if(typeof source.excerpt==="string"&&source.excerpt.trim()){
+    const excerpt=document.createElement("p");excerpt.textContent=source.excerpt.trim();li.appendChild(excerpt);
+   }
    sources.appendChild(li);
   });
   show(research);

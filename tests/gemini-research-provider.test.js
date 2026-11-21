@@ -378,17 +378,23 @@ test("rechaza una búsqueda sin resultados", async () => {
   await assert.rejects(provider.research({ query: "Investigación de prueba" }), { code: "NO_SEARCH_RESULTS" });
 });
 
-test("convierte error 429 de Gemini en límite controlado", async () => {
+test("entrega los resultados Tavily aunque Gemini responda HTTP 429", async () => {
   const provider = createGeminiResearchProvider({
     apiKey: "test-gemini-key",
-    searchProvider: { async search() { return { results: [{ url: "https://example.org", title: "Fuente", content: "Texto" }], usage: { credits: 1 } }; } },
+    searchProvider: { async search() { return { provider: "tavily", results: [{ url: "https://example.org", title: "Fuente", content: "Extracto recuperado de la fuente", score: 0.9 }], usage: { credits: 1 } }; } },
     fetchImpl: async () => ({
       ok: false,
       status: 429,
       async json() { return { error: { status: "RESOURCE_EXHAUSTED" } }; }
     })
   });
-  await assert.rejects(provider.research({ query: "Investigación de prueba" }), { code: "RESEARCH_RATE_LIMITED" });
+  const result = await provider.research({ query: "Investigación de prueba" });
+  assert.equal(result.status, "sources_only");
+  assert.equal(result.fallbackReason, "gemini_quota_exhausted");
+  assert.equal(result.sources.length, 1);
+  assert.equal(result.sources[0].excerpt, "Extracto recuperado de la fuente");
+  assert.match(result.visitorAnswer, /búsqueda en Internet sí se realizó/);
+  assert.equal(result.persistence, "sources_only_not_published");
 });
 
 
