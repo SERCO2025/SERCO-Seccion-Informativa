@@ -129,6 +129,9 @@ function createConstructionResearchDiscovery(provider, options = {}) {
       }
 
       const plan = input.plan || selectSearchPlan(input.now);
+      const existingSourceUrls = input.existingSourceUrls instanceof Set
+        ? new Set([...input.existingSourceUrls].map((url) => String(url).split("#")[0].replace(/\\/$/, "").toLowerCase()))
+        : new Set();
       const searchResult = await provider.search({ query: plan.query });
       const seenUrls = new Set();
       const candidates = (Array.isArray(searchResult.results) ? searchResult.results : [])
