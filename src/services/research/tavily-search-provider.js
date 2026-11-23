@@ -55,7 +55,7 @@ function normalizeTavilyExtractResults(payload) {
   const results = payload && Array.isArray(payload.results) ? payload.results : [];
   const unique = new Map();
   for (const item of results) {
-    if (!item || typeof item.url !== "string" || !/^https?:\\/\\//i.test(item.url)) continue;
+    if (!item || typeof item.url !== "string" || !/^https?:\/\//i.test(item.url)) continue;
     const url = item.url.trim();
     const rawContent = typeof item.raw_content === "string" ? item.raw_content.trim() : "";
     if (!rawContent) continue;
@@ -153,7 +153,7 @@ function createTavilySearchProvider(options = {}) {
 
     async extract(input) {
       const urls = Array.isArray(input && input.urls)
-        ? [...new Set(input.urls.filter((url) => typeof url === "string" && /^https?:\\/\\//i.test(url)).slice(0, MAX_RESULTS))]
+        ? [...new Set(input.urls.filter((url) => typeof url === "string" && /^https?:\/\//i.test(url)).slice(0, MAX_RESULTS))]
         : [];
       const query = typeof (input && input.query) === "string" ? input.query.trim().slice(0, MAX_QUERY_LENGTH) : "";
       if (!urls.length) throw new TavilySearchError("No hay URL válidas para extraer contenido.", "INVALID_EXTRACT_URLS");
