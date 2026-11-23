@@ -67,7 +67,8 @@ test("busca evidencia una vez y sintetiza con OpenRouter usando el contrato edit
   assert.equal(request.url, OPENROUTER_CHAT_URL);
   assert.equal(request.options.headers.Authorization, "Bearer publisher-test-key");
   assert.equal(request.body.model, DEFAULT_MODEL);
-  assert.deepEqual(request.body.response_format, { type: "json_object" });\n  assert.deepEqual(request.body.reasoning, { enabled: false });
+  assert.deepEqual(request.body.response_format, { type: "json_object" });
+  assert.deepEqual(request.body.reasoning, { enabled: false });
   assert.match(request.body.messages[0].content, /PUBLICADOR EDITORIAL DE SERCO/);
   assert.equal(result.status, "completed");
   assert.equal(result.provider, "openrouter");
