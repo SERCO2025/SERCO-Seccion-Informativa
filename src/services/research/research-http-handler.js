@@ -111,7 +111,14 @@ function createResearchHttpHandler(provider, options = {}) {
         query: result.query,
         visitorAnswer: result.visitorAnswer,
         expandedAnswer: result.expandedAnswer,
-        sources: Array.isArray(result.sources) ? result.sources : [],
+        sources: Array.isArray(result.sources) ? result.sources.map((source) => ({
+          id: source.id,
+          url: source.url,
+          title: source.title,
+          publishedDate: source.publishedDate || null,
+          score: typeof source.score === "number" ? source.score : null,
+          excerpt: source.excerpt || ""
+        })) : [],
         sourceCount: result.sourceCount || 0,
         persistence: result.persistence || "unknown",
         publication: result.publication || null,
