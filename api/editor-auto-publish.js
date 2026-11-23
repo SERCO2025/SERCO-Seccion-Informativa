@@ -99,8 +99,7 @@ const TOPICS = [
 
 const LOW_CREDIBILITY_HOSTS = Object.freeze([
   "facebook.com", "instagram.com", "tiktok.com", "pinterest.com",
-  "quora.com", "reddit.com", "x.com", "twitter.com", "threads.net",
-  "medium.com", "blogspot.com", "wordpress.com"
+  "quora.com", "reddit.com", "x.com", "twitter.com", "threads.net"
 ]);
 
 function isSeriousConstructionSourceCandidate(source) {
@@ -204,7 +203,9 @@ async function generate(topic, index, batchId) {
   const query = [
     "Investigación especializada de ingeniería civil, arquitectura y construcción de obras e infraestructura.",
     topic[0] + " definición técnica, fundamentos, clasificación, aplicaciones en edificaciones u obra civil, especificaciones, métodos de ejecución, ensayos, control de calidad, seguridad y normativa aplicable.",
-    "Utiliza únicamente evidencia de universidades, organismos gubernamentales, laboratorios de pruebas acreditados y entidades técnicas o de normalización reconocidas. No uses blogs comerciales, foros, contenido esotérico ni fuentes sin autoridad institucional identificable.",
+    "Evalúa la seriedad de cada fuente por su contenido y respaldo, no por la extensión de su dominio. Puedes utilizar universidades, organismos públicos, normas y entidades técnicas, laboratorios, fabricantes, constructoras, despachos profesionales, ingenieros, arquitectos, especialistas y publicaciones privadas cuando aporten documentación verificable, autoría o responsabilidad identificable, datos, metodología, especificaciones, ensayos, referencias o experiencia técnica demostrable.",
+    "Contrasta las afirmaciones importantes con fuentes independientes cuando sea posible. Distingue hechos medidos, requisitos normativos, recomendaciones del fabricante y opiniones. Comprueba fecha, versión, país y jurisdicción de normas o especificaciones. No inventes autores, ensayos, cifras, normas ni referencias.",
+    "Descarta contenido sin fundamento técnico, afirmaciones promocionales presentadas como hechos, publicaciones anónimas sin evidencia, foros y contenido esotérico. Un dominio .com, un blog o una fuente privada no son motivo suficiente para descartarlos: evalúa su contenido y respaldo real.",
     "Desarrolla una entrada técnica de diccionario en español y distingue normas o requisitos según país y jurisdicción."
   ].join(" ");
   const result = await RESEARCH.research({ query });
