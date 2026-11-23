@@ -49,7 +49,9 @@ function createOpenRouterPublisher(options = {}) {
         throw error;
       }
 
-      const searchResult = await searchProvider.search({ query });
+      const searchResult = Array.isArray(input && input.sources)
+        ? { results: input.sources }
+        : await searchProvider.search({ query });
       const sources = (Array.isArray(searchResult.results) ? searchResult.results : [])
         .filter((source) => source && typeof source.url === "string" && typeof source.title === "string")
         .map((source, index) => ({
