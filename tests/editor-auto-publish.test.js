@@ -2,121 +2,121 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { selectPendingTopic } = require("../api/editor-auto-publish");
-
-test("selectPendingTopic rota entre temas cuando un intento anterior no generó artículo", () => {
-  const topics = [["Tema A"], ["Tema B"], ["Tema C"], ["Tema D"]];
-  const start = new Date("2026-11-23T00:00:00.000Z");
-  const first = selectPendingTopic(topics, new Set(), start);
-  const next = selectPendingTopic(topics, new Set(), new Date(start.getTime() + 30 * 60 * 1000));
-  assert.notEqual(first, next);
-});
-
-test("selectPendingTopic omite artículos ya existentes y conserva el orden circular", () => {
-  const topics = [["Tema A"], ["Tema B"], ["Tema C"]];
-  const titles = new Set(["diccionario técnico: tema b"]);
-  const selected = selectPendingTopic(topics, titles, new Date(0));
-  assert.equal(selected, topics[0]);
-});
-
-test("selectPendingTopic devuelve null cuando todos los temas ya existen", () => {
-  const topics = [["Tema A"], ["Tema B"]];
-  const titles = new Set(topics.map(([topic]) => ("Diccionario técnico: " + topic).toLowerCase()));
-  assert.equal(selectPendingTopic(topics, titles, new Date()), null);
-});
-
-test("selectPendingTopic acepta fechas inválidas sin bloquear la cola", () => {
-  const topics = [["Tema A"], ["Tema B"]];
-  const selected = selectPendingTopic(topics, new Set(), "fecha inválida");
-  assert.ok(topics.includes(selected));
-});
-
-
 const {
-  isSeriousConstructionSourceCandidate,
-  createConstructionSearchProvider,
-  TOPICS
-} = require("../api/editor-auto-publish");
+  SEARCH_PLANS,
+  assessConstructionDocument,
+  selectSearchPlan,
+  createConstructionResearchDiscovery
+} = require("../src/services/publisher/construction-research-discovery");
 
-test("admite fuentes serias de distintos sectores sin exigir dominio universitario o gubernamental", () => {
-  for (const source of [
-    { url: "https://www.fhwa.dot.gov/bridge/", title: "FHWA bridge guidance", content: "Technical guidance with design criteria, methods, specifications and references." },
-    { url: "https://engineering.berkeley.edu/", title: "University engineering study", content: "Research findings, methods, measured data and technical references." },
-    { url: "https://www.astm.org/", title: "ASTM standards", content: "Standards, test methods, scope and technical specifications." },
-    { url: "https://manufacturer.example/technical-data", title: "Concrete product technical data", content: "Published product specifications, test results, application limits and installation instructions." },
-    { url: "https://engineering-firm.example/reports", title: "Geotechnical engineering report", content: "Authored engineering report describing site investigation, sampling, test methods and findings." },
-    { url: "https://specialist.example/blog/concrete", title: "Concrete engineering field notes", content: "Detailed technical explanation with test references, measurements and documented methods." }
-  ]) {
-    assert.equal(isSeriousConstructionSourceCandidate(source), true, source.url);
-  }
+const rawBridge = ("Concrete bridge deck repair technical report. Bridge deck concrete repair includes surface preparation, structural inspection, reinforcement protection, repair mortar specifications, compressive strength testing, curing procedures, quality control and documented field test results. ").repeat(8);
+const rawBuilding = ("Structural steel building connection laboratory test report. The building frame uses steel structural connections, bolted joints, welding procedures, load testing, material specifications, measured deformation and engineering acceptance criteria. ").repeat(8);
+
+function makeProvider() {
+  const extractedUrls = [];
+  const results = [
+    {
+      url: "https://contractor.example/projects/bridge-deck",
+      title: "Concrete bridge deck repair technical report",
+      content: "Bridge deck concrete repair, surface preparation, repair mortar specifications and field testing.",
+      score: 0.92
+    },
+    {
+      url: "https://laboratory.example/reports/steel-joints",
+      title: "Structural steel building connection laboratory test report",
+      content: "Building steel frame connections, bolted joints, welding procedures and measured load test results.",
+      score: 0.88
+    },
+    {
+      url: "https://social.example.invalid/post",
+      title: "Construction is the foundation of a better future",
+      content: "A long discussion about building a better future and constructing stronger relationships in the community."
+    }
+  ];
+  return {
+    extractedUrls,
+    async search({ query }) {
+      return { provider: "tavily", query, results };
+    },
+    async extract({ urls }) {
+      extractedUrls.push(...urls);
+      return {
+        results: [
+          { url: urls[0], rawContent: rawBridge },
+          { url: urls[1], rawContent: rawBuilding }
+        ]
+      };
+    }
+  };
+}
+
+test("la selección de búsqueda rota entre documentación real de obra, fabricantes, laboratorios y normas", () => {
+  assert.equal(SEARCH_PLANS.length, 4);
+  const first = selectSearchPlan(new Date("2026-11-23T00:00:00.000Z"));
+  const next = selectSearchPlan(new Date("2026-11-23T00:30:00.000Z"));
+  assert.notEqual(first.category, next.category);
+  assert.ok(SEARCH_PLANS.every((plan) => /construccion|construcción|obra|tecnico|técnico|laboratorio|norma/i.test(plan.query + plan.focus)));
 });
 
-test("rechaza URLs inseguras, redes sociales y contenido sin sustancia técnica", () => {
-  for (const source of [
-    { url: "http://www.fhwa.dot.gov/bridge/", title: "FHWA guidance", content: "Technical guidance with sufficient detail and references." },
-    { url: "https://reddit.com/r/construction", title: "Construction discussion", content: "A sufficiently long user discussion but not a technical source." },
-    { url: "https://example.com/", title: "Short", content: "Tiny" },
-    { url: "https://user:pass@example.com/report", title: "Technical report", content: "Detailed engineering report with methodology, test results and references." }
-  ]) {
-    assert.equal(isSeriousConstructionSourceCandidate(source), false, source.url);
-  }
+test("el filtro exige contexto de construcción física y contenido técnico", () => {
+  assert.equal(assessConstructionDocument({
+    url: "https://engineering.example/concrete",
+    title: "Concrete bridge deck repair technical report",
+    content: "Bridge deck concrete repair, specifications, test methods and results."
+  }).relevant, true);
+  assert.equal(assessConstructionDocument({
+    url: "https://blog.example/future",
+    title: "Construction of a better future",
+    content: "Building relationships and constructing a better future for families."
+  }).relevant, false);
+  assert.equal(assessConstructionDocument({
+    url: "https://reddit.com/r/construction",
+    title: "Concrete bridge technical test",
+    content: "Bridge deck concrete repair specifications and laboratory test results."
+  }).reason, "UNSAFE_OR_EXCLUDED_HOST");
 });
 
-test("el buscador conserva fuentes técnicas privadas y descarta plataformas de contenido social", async () => {
-  const provider = createConstructionSearchProvider({
+test("extrae documentos originales solo después del filtro preliminar y entrega únicamente documentos técnicos completos", async () => {
+  const provider = makeProvider();
+  const discovery = createConstructionResearchDiscovery(provider);
+  const result = await discovery.discover({ now: new Date("2026-11-23T00:00:00.000Z") });
+  assert.equal(result.status, "ready");
+  assert.equal(result.sources.length, 2);
+  assert.equal(provider.extractedUrls.length, 2);
+  assert.ok(result.sources.every((source) => source.rawContent.length >= 500));
+  assert.ok(result.sources.every((source) => source.relevance.constructionSignals >= 2));
+  assert.ok(result.sources.every((source) => source.relevance.technicalSignals >= 2));
+});
+
+test("no entrega a la IA documentos sin pertinencia técnica suficiente", async () => {
+  let extractCalls = 0;
+  const discovery = createConstructionResearchDiscovery({
     async search() {
       return {
-        provider: "tavily",
-        results: [
-          { url: "https://www.fhwa.dot.gov/bridge/", title: "FHWA", content: "Datos técnicos suficientes para evaluar criterios de diseño y referencias." },
-          { url: "https://manufacturer.example/specs", title: "Fabricante", content: "Ficha técnica con especificaciones, ensayos y límites de aplicación del material." },
-          { url: "https://reddit.com/r/example", title: "Publicación social", content: "Texto suficientemente largo, pero alojado en plataforma excluida." }
-        ],
-        resultCount: 3
+        results: [{
+          url: "https://example.com/future",
+          title: "Building a better future",
+          content: "Building stronger relationships and constructing a better future for families."
+        }]
       };
     },
-    async extract(input) {
-      return { results: [], requested: input.urls.length };
-    }
+    async extract() { extractCalls += 1; return { results: [] }; }
   });
-  const result = await provider.search({ query: "concreto" });
-  assert.equal(result.resultCount, 2);
-  assert.deepEqual(result.results.map((source) => source.title), ["FHWA", "Fabricante"]);
+  const result = await discovery.discover();
+  assert.equal(result.status, "no_relevant_documents");
+  assert.equal(result.sources.length, 0);
+  assert.equal(extractCalls, 0);
 });
 
-test("no permite investigar con menos de dos candidatos técnicos sustanciales", async () => {
-  const provider = createConstructionSearchProvider({
-    async search() {
-      return {
-        results: [
-          { url: "https://reddit.com/r/construction", title: "Foro", content: "Texto suficientemente largo pero sin respaldo técnico identificable." },
-          { url: "https://www.fhwa.dot.gov/", title: "FHWA", content: "Contenido técnico suficiente para evaluar y contrastar." }
-        ],
-        resultCount: 2
-      };
-    }
+test("no vuelve a considerar documentos fuente ya utilizados en publicaciones anteriores", async () => {
+  const provider = makeProvider();
+  const discovery = createConstructionResearchDiscovery(provider);
+  const result = await discovery.discover({
+    existingSourceUrls: new Set([
+      "https://contractor.example/projects/bridge-deck",
+      "https://laboratory.example/reports/steel-joints"
+    ])
   });
-  await assert.rejects(provider.search({ query: "pavimentos" }), {
-    code: "INSUFFICIENT_CONSTRUCTION_SOURCE_CANDIDATES"
-  });
-});
-
-test("la cola editorial contiene exclusivamente temas de construcción civil y edificación", () => {
-  assert.ok(TOPICS.length >= 50);
-  const serialized = JSON.stringify(TOPICS).toLowerCase();
-  for (const excluded of [
-    "audio y producción musical",
-    "traducción certificada",
-    "vinil de corte",
-    "identidad corporativa",
-    "motor de combustión interna",
-    "brujería",
-    "radiestesia"
-  ]) {
-    assert.equal(serialized.includes(excluded), false, excluded);
-  }
-  for (const topic of TOPICS) {
-    assert.equal(topic.length, 3);
-    assert.match(topic[2], /construcción|obra|edificación|infraestructura|ensayos|topografía|presupuesto|transporte|habitabilidad|geotecnia|cimentaciones|materiales|estructural|carreteras|puentes|instalaciones|arquitectura|ejecución|administración/i);
-  }
+  assert.equal(result.status, "no_relevant_documents");
+  assert.equal(provider.extractedUrls.length, 0);
 });
