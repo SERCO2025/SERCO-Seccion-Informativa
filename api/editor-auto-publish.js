@@ -9,6 +9,11 @@ const BASE = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
 const SECRET_KEY = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const CRON_TOKEN = process.env.SERCO_AUTO_PUBLISH_TOKEN || "";
 const AUTOMATION_GEMINI_API_KEY = process.env.GEMINI_AUTOMATION_API_KEY || "";
+const HAS_AI_PROVIDER = Boolean(
+  AUTOMATION_GEMINI_API_KEY ||
+  process.env.GROQ_API_KEY ||
+  (process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CLOUDFLARE_API_TOKEN)
+);
 const SEARCH = createTavilySearchProvider({ maxResults: 8 });
 const RESEARCH = createSequentialResearchProvider({
   searchProvider: SEARCH,
@@ -210,7 +215,9 @@ async function generate(topic, index, batchId) {
   if (result.status !== "completed" || !result.expandedAnswer || !result.internalReport) {
     const attempts = Array.isArray(result.providerAttempts) ? result.providerAttempts : [];
     const failedProviders = attempts.map((item) => item.provider + ":" + item.code).join(",");
-    throw new Error("No hay proveedor de IA disponible para generar " + topic[0] + (failedProviders ? " (" + failedProviders + ")" : "") + ".");
+    const unavailable = new Error("No hay proveedor de IA disponible para generar " + topic[0] + (failedProviders ? " (" + failedProviders + ")" : "") + ".");
+    unavailable.code = "AI_PROVIDERS_UNAVAILABLE";
+    throw unavailable;
   }
   const sources = (result.sources || []).filter((s) => s && s.title && /^https?:\/\//i.test(s.url || "")).slice(0, 8).map((s, index) => ({
     title: s.title, source_type: "website", source_url: s.url,
@@ -252,7 +259,7 @@ async function generate(topic, index, batchId) {
 }
 module.exports = async function automaticEditorialPublisher(req, res) {
   if (req.method !== "POST") { res.setHeader("Allow", "POST"); return send(res, 405, { error: "METHOD_NOT_ALLOWED" }); }
-  if (!BASE || !SECRET_KEY || !AUTOMATION_GEMINI_API_KEY || !process.env.TAVILY_API_KEY || !CRON_TOKEN) {
+  if (!BASE || !SECRET_KEY || !HAS_AI_PROVIDER || !process.env.TAVILY_API_KEY || !CRON_TOKEN) {
     return send(res, 503, { error: "AUTO_PUBLISH_NOT_CONFIGURED" });
   }
   const auth = String(req.headers && req.headers.authorization || "");
@@ -266,7 +273,11 @@ module.exports = async function automaticEditorialPublisher(req, res) {
     const results = [await generate(topic, 0, batchId)];
     return send(res, 200, { success: true, generated: results.length, batch_id: batchId, publications: results });
   } catch (error) {
-    return send(res, 502, { error: "AUTO_PUBLISH_FAILED", message: String(error && error.message || "Error desconocido") });
+    const unavailable = error && error.code === "AI_PROVIDERS_UNAVAILABLE";
+    return send(res, unavailable ? 503 : 502, {
+      error: unavailable ? "AI_PROVIDERS_UNAVAILABLE" : "AUTO_PUBLISH_FAILED",
+      message: String(error && error.message || "Error desconocido")
+    });
   }
 };
 module.exports.config = { maxDuration: 60 };
