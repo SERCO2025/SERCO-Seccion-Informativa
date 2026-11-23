@@ -59,11 +59,14 @@ function makeProvider() {
 }
 
 test("la selección de búsqueda rota entre documentación real de obra, fabricantes, laboratorios y normas", () => {
-  assert.equal(SEARCH_PLANS.length, 4);
+  assert.equal(SEARCH_PLANS.length, 12);
   const first = selectSearchPlan(new Date("2026-11-23T00:00:00.000Z"));
   const next = selectSearchPlan(new Date("2026-11-23T00:30:00.000Z"));
-  assert.notEqual(first.category, next.category);
-  assert.ok(SEARCH_PLANS.every((plan) => /construccion|construcción|obra|tecnico|técnico|laboratorio|norma/i.test(plan.query + plan.focus)));
+  assert.notEqual(first.topic, next.topic);
+  assert.ok(SEARCH_PLANS.every((plan) =>
+    plan.topic && plan.query.includes(plan.topic.split(" ")[0]) &&
+    /concreto|geotecnia|pavimento|acero|mamposteria|impermeabilizacion|mortero/i.test(plan.query + plan.focus)
+  ));
 });
 
 test("el filtro exige contexto de construcción física y contenido técnico", () => {
@@ -127,4 +130,19 @@ test("no vuelve a considerar documentos fuente ya utilizados en publicaciones an
   });
   assert.equal(result.status, "no_relevant_documents");
   assert.equal(provider.extractedUrls.length, 0);
+});
+
+
+test("no realiza búsquedas cuando todos los temas del catálogo ya fueron publicados", async () => {
+  let searchCalls = 0;
+  const discovery = createConstructionResearchDiscovery({
+    async search() { searchCalls += 1; return { results: [] }; },
+    async extract() { throw new Error("No debe extraer"); }
+  });
+  const result = await discovery.discover({
+    existingTopics: SEARCH_PLANS.map((plan) => "Diccionario técnico: " + plan.topic)
+  });
+  assert.equal(result.status, "no_topics_available");
+  assert.equal(result.searched, false);
+  assert.equal(searchCalls, 0);
 });
