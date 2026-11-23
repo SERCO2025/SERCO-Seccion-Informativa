@@ -143,7 +143,7 @@ module.exports = async function automaticEditorialPublisher(req, res) {
   const auth = String(req.headers && req.headers.authorization || "");
   if (auth !== "Bearer " + CRON_TOKEN) return send(res, 401, { error: "UNAUTHORIZED" });
   try {
-    const existingArticles = await supabaseRest("/rest/v1/articles?select=id,title&origin=eq.ai_research&content_type=eq.dictionary_entry&limit=1000");
+    const existingArticles = await supabaseRest("/rest/v1/articles?select=id,title,created_at&origin=eq.ai_research&content_type=eq.dictionary_entry&order=created_at.desc&limit=1000");
     const existingArticleIds = (existingArticles || [])
       .map((article) => String(article && article.id || ""))
       .filter((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id));
