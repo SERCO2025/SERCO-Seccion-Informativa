@@ -105,8 +105,8 @@ test("no descarta una fuente técnica por un snippet breve: valida el documento 
   const provider = {
     async search() {
       return { results: [
-        { url: "https://fabricator.example/wps", title: "WPS-17 Welding Procedure Specification", content: "Procedure WPS-17, revision 3." },
-        { url: "https://laboratory.example/steel-inspection", title: "Inspection report for welded steel connections", content: "Report 2026-114. See full technical report." }
+        { url: "https://fabricator.example/wps", title: "Structural steel welding procedure specification WPS-17", content: "Procedure WPS-17, revision 3." },
+        { url: "https://laboratory.example/steel-inspection", title: "Structural steel welding inspection report 2026-114", content: "Report 2026-114. See full technical report." }
       ] };
     },
     async extract({ urls }) {
