@@ -2,28 +2,88 @@
 
 const SEARCH_PLANS = Object.freeze([
   {
-    category: "Proyectos y ejecución de obra",
-    specialty: "Ingeniería civil, arquitectura e infraestructura",
-    query: "casos de estudio documentación técnica de constructoras obras de edificación infraestructura civil metodología materiales especificaciones resultados contractor construction case studies civil engineering projects",
-    focus: "proyectos documentados por constructoras y despachos de ingeniería"
+    topic: "Resistencia a compresión del concreto",
+    category: "Materiales y ensayos",
+    specialty: "Tecnología del concreto y control de calidad",
+    query: "ensayo resistencia a compresión concreto cilindros probetas ASTM C39 NMX método preparación curado velocidad carga resultados laboratorio concrete compressive strength test cylinders laboratory procedure",
+    focus: "métodos de ensayo, preparación de probetas, curado, medición y criterios de aceptación de resistencia a compresión del concreto"
   },
   {
-    category: "Materiales y especificaciones",
-    specialty: "Materiales, ensayos y tecnología de construcción",
-    query: "fichas técnicas manuales especificaciones ensayos materiales de construcción concreto acero cemento agregados fabricantes manufacturer technical datasheets building materials concrete steel cement aggregate tests",
-    focus: "fichas técnicas y documentación de fabricantes de materiales"
+    topic: "Curado del concreto hidráulico",
+    category: "Materiales y ejecución de obra",
+    specialty: "Tecnología del concreto",
+    query: "curado concreto hidráulico métodos membrana humedad temperatura duración resistencia durabilidad especificación técnica concrete curing methods moisture temperature duration strength durability",
+    focus: "procedimientos de curado, control de humedad y temperatura, duración y efectos medibles sobre resistencia y durabilidad"
   },
   {
-    category: "Laboratorio y control de calidad",
-    specialty: "Geotecnia, laboratorio y control de calidad de obra",
-    query: "informes de laboratorio ensayos geotécnicos concreto pavimentos suelos construcción método resultados técnicos construction materials testing laboratory geotechnical concrete pavement soil test report",
-    focus: "informes de laboratorios y resultados de ensayos de construcción"
+    topic: "Granulometría de agregados para concreto",
+    category: "Materiales y ensayos",
+    specialty: "Materiales de construcción y laboratorio",
+    query: "granulometría agregados arena grava concreto análisis tamices módulo finura ASTM C136 ensayo laboratorio gradation fine coarse aggregates sieve analysis concrete",
+    focus: "procedimiento de análisis por tamices, curvas granulométricas, módulo de finura y requisitos de agregados"
   },
   {
-    category: "Normativa y métodos constructivos",
-    specialty: "Normativa, diseño y procedimientos de construcción",
-    query: "manual técnico especificaciones norma método diseño construcción edificios puentes carreteras infraestructura civil building codes standards technical manuals bridge road infrastructure structural design",
-    focus: "manuales, normas y procedimientos técnicos de obra"
+    topic: "Corrosión del acero de refuerzo en concreto",
+    category: "Patología y durabilidad",
+    specialty: "Estructuras de concreto reforzado y materiales",
+    query: "corrosión acero refuerzo concreto carbonatación cloruros potencial media celda evaluación reparación durabilidad reinforced concrete rebar corrosion chloride carbonation assessment",
+    focus: "mecanismos de corrosión, métodos de diagnóstico, evaluación de cloruros y medidas de protección o reparación"
+  },
+  {
+    topic: "Capacidad de carga de cimentaciones superficiales",
+    category: "Cimentaciones y geotecnia",
+    specialty: "Ingeniería geotécnica y cimentaciones",
+    query: "capacidad carga cimentaciones superficiales zapatas cálculo asentamiento suelo parámetros geotécnicos método Terzaghi Meyerhof shallow foundation bearing capacity settlement design",
+    focus: "parámetros geotécnicos, métodos de cálculo, factores de seguridad y estimación de asentamientos en zapatas"
+  },
+  {
+    topic: "Ensayo de penetración estándar SPT",
+    category: "Geotecnia y exploración del subsuelo",
+    specialty: "Mecánica de suelos y geotecnia",
+    query: "ensayo penetración estándar SPT procedimiento campo corrección energía N60 muestreador interpretación informe geotécnico standard penetration test field procedure corrections",
+    focus: "equipo, procedimiento de campo, registro de golpes, correcciones e interpretación de resultados SPT"
+  },
+  {
+    topic: "Diseño de mezclas asfálticas para pavimentos",
+    category: "Pavimentos e infraestructura",
+    specialty: "Ingeniería de pavimentos y materiales viales",
+    query: "diseño mezcla asfáltica pavimento método Marshall granulometría estabilidad flujo vacíos contenido asfalto ensayo laboratorio asphalt mix design Marshall stability flow",
+    focus: "dosificación, ensayos Marshall, estabilidad, flujo, vacíos y control de calidad de mezclas asfálticas"
+  },
+  {
+    topic: "Compactación de suelos mediante Proctor",
+    category: "Geotecnia y terracerías",
+    specialty: "Mecánica de suelos y control de obra",
+    query: "ensayo Proctor estándar modificado compactación suelos humedad óptima peso volumétrico seco ASTM D698 D1557 procedimiento laboratorio soil compaction test",
+    focus: "energía de compactación, humedad óptima, peso volumétrico seco máximo y control de compactación en campo"
+  },
+  {
+    topic: "Impermeabilización de cubiertas y azoteas",
+    category: "Edificación y sistemas constructivos",
+    specialty: "Arquitectura y tecnología de la construcción",
+    query: "impermeabilización cubiertas azoteas sistemas membranas prefabricadas aplicación preparación sustrato pruebas estanqueidad especificación técnica roof waterproofing membrane installation testing",
+    focus: "sistemas de impermeabilización, preparación de sustratos, detalles constructivos y pruebas de estanqueidad"
+  },
+  {
+    topic: "Morteros para mampostería de bloques",
+    category: "Materiales y sistemas constructivos",
+    specialty: "Albañilería y materiales de construcción",
+    query: "mortero mampostería bloques concreto dosificación propiedades adherencia resistencia compresión ASTM C270 ensayo especificación masonry mortar proportion properties bond strength",
+    focus: "dosificación, propiedades, clasificación, adherencia, resistencia y control de calidad de morteros para mampostería"
+  },
+  {
+    topic: "Procedimientos de soldadura en acero estructural",
+    category: "Estructuras metálicas",
+    specialty: "Ingeniería estructural y fabricación de acero",
+    query: "soldadura acero estructural procedimiento WPS calificación soldador inspección visual ensayos no destructivos AWS D1.1 structural steel welding procedure inspection",
+    focus: "especificaciones WPS, calificación, inspección, discontinuidades y ensayos aplicables a uniones soldadas estructurales"
+  },
+  {
+    topic: "Prueba de revenimiento del concreto fresco",
+    category: "Control de calidad en obra",
+    specialty: "Tecnología del concreto y supervisión de obra",
+    query: "prueba revenimiento concreto fresco cono Abrams procedimiento ASTM C143 asentamiento consistencia muestreo aceptación fresh concrete slump test procedure",
+    focus: "muestreo, procedimiento del cono de Abrams, medición del asentamiento, límites y criterios de aceptación"
   }
 ]);
 
@@ -133,11 +193,16 @@ function countSharedTopicTerms(first, second) {
   return shared;
 }
 
-function selectSearchPlan(now = new Date()) {
+function selectSearchPlan(now = new Date(), existingTopics = []) {
   const timestamp = now instanceof Date ? now.getTime() : new Date(now).getTime();
   const safeTimestamp = Number.isFinite(timestamp) ? timestamp : Date.now();
   const slot = Math.floor(safeTimestamp / (30 * 60 * 1000));
-  return SEARCH_PLANS[((slot % SEARCH_PLANS.length) + SEARCH_PLANS.length) % SEARCH_PLANS.length];
+  const used = new Set((Array.isArray(existingTopics) ? existingTopics : [])
+    .map((topic) => normalize(topic))
+    .filter(Boolean));
+  const available = SEARCH_PLANS.filter((plan) => !used.has(normalize(plan.topic)));
+  const pool = available.length ? available : SEARCH_PLANS;
+  return pool[((slot % pool.length) + pool.length) % pool.length];
 }
 
 function createConstructionResearchDiscovery(provider, options = {}) {
@@ -152,7 +217,7 @@ function createConstructionResearchDiscovery(provider, options = {}) {
         throw error;
       }
 
-      const plan = input.plan || selectSearchPlan(input.now);
+      const plan = input.plan || selectSearchPlan(input.now, input.existingTopics);
       const existingSourceUrls = input.existingSourceUrls instanceof Set
         ? new Set([...input.existingSourceUrls].map((url) => String(url).split("#")[0].replace(/\/$/, "").toLowerCase()))
         : new Set();
@@ -228,7 +293,7 @@ function createConstructionResearchDiscovery(provider, options = {}) {
         plan: plan.category,
         specialty: plan.specialty,
         focus: plan.focus,
-        topic: String(lead.title).trim().slice(0, 180),
+        topic: plan.topic,
         query: plan.query,
         sources: selected.map(({ source, assessment }) => Object.assign({}, source, {
           relevance: {
