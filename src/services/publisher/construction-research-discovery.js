@@ -4,25 +4,25 @@ const SEARCH_PLANS = Object.freeze([
   {
     category: "Proyectos y ejecución de obra",
     specialty: "Ingeniería civil, arquitectura e infraestructura",
-    query: "casos de estudio documentación técnica de constructoras obras de edificación infraestructura civil metodología materiales especificaciones resultados",
+    query: "casos de estudio documentación técnica de constructoras obras de edificación infraestructura civil metodología materiales especificaciones resultados contractor construction case studies civil engineering projects",
     focus: "proyectos documentados por constructoras y despachos de ingeniería"
   },
   {
     category: "Materiales y especificaciones",
     specialty: "Materiales, ensayos y tecnología de construcción",
-    query: "fichas técnicas manuales especificaciones ensayos materiales de construcción concreto acero cemento agregados fabricantes",
+    query: "fichas técnicas manuales especificaciones ensayos materiales de construcción concreto acero cemento agregados fabricantes manufacturer technical datasheets building materials concrete steel cement aggregate tests",
     focus: "fichas técnicas y documentación de fabricantes de materiales"
   },
   {
     category: "Laboratorio y control de calidad",
     specialty: "Geotecnia, laboratorio y control de calidad de obra",
-    query: "informes de laboratorio ensayos geotécnicos concreto pavimentos suelos construcción método resultados técnicos",
+    query: "informes de laboratorio ensayos geotécnicos concreto pavimentos suelos construcción método resultados técnicos construction materials testing laboratory geotechnical concrete pavement soil test report",
     focus: "informes de laboratorios y resultados de ensayos de construcción"
   },
   {
     category: "Normativa y métodos constructivos",
     specialty: "Normativa, diseño y procedimientos de construcción",
-    query: "manual técnico especificaciones norma método diseño construcción edificios puentes carreteras infraestructura civil",
+    query: "manual técnico especificaciones norma método diseño construcción edificios puentes carreteras infraestructura civil building codes standards technical manuals bridge road infrastructure structural design",
     focus: "manuales, normas y procedimientos técnicos de obra"
   }
 ]);
