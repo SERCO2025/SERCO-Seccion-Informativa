@@ -437,7 +437,7 @@ test("envía las solicitudes correctas a Gemini, Groq y Cloudflare Workers AI", 
         ok: true,
         status: 200,
         async json() {
-          return { choices: [{ message: { content: rawResult } }] };
+          return { choices: [{ message: { content: rawResult }, finish_reason: "stop" }] };
         }
       };
     }
@@ -457,7 +457,15 @@ test("envía las solicitudes correctas a Gemini, Groq y Cloudflare Workers AI", 
   assert.equal(calls[1].url, "https://api.groq.com/openai/v1/chat/completions");
   assert.equal(calls[1].init.headers.Authorization, "Bearer groq-test-key");
   assert.equal(calls[1].body.model, DEFAULT_MODELS.groq);
-  assert.deepEqual(calls[1].body.response_format, { type: "json_object" });
+  assert.equal(calls[1].body.response_format.type, "json_schema");
+  assert.equal(calls[1].body.response_format.json_schema.strict, true);
+  assert.equal(calls[1].body.response_format.json_schema.schema.additionalProperties, false);
+  assert.deepEqual(calls[1].body.response_format.json_schema.schema.required, [
+    "internalReport", "visitorAnswer", "expandedAnswer", "claimEvidence"
+  ]);
+  assert.equal(calls[1].body.max_completion_tokens, 12000);
+  assert.equal(calls[1].body.reasoning_effort, "low");
+  assert.equal(generated[1].finishReason, "stop");
 
   assert.equal(calls[2].url, "https://api.cloudflare.com/client/v4/accounts/cf-account-test/ai/v1/chat/completions");
   assert.equal(calls[2].init.headers.Authorization, "Bearer cf-token-test");
@@ -519,5 +527,59 @@ test("clasifica credenciales rechazadas sin exponer el detalle remoto", async ()
       return true;
     }
   );
+});
+
+test("clasifica de forma específica el JSON malformado y las secciones faltantes", () => {
+  assert.throws(
+    () => parseResearchOutput("{no-json", 1),
+    { code: "INVALID_RESEARCH_OUTPUT", subcode: "JSON_PARSE_FAILED" }
+  );
+  assert.throws(
+    () => parseResearchOutput(JSON.stringify({ internalReport: "Informe", visitorAnswer: "Respuesta" }), 1),
+    { code: "INVALID_RESEARCH_OUTPUT", subcode: "MISSING_REQUIRED_SECTION" }
+  );
+});
+
+test("clasifica por separado el índice de evidencias que no cubre una sección", () => {
+  const raw = JSON.stringify({
+    internalReport: "Informe documental con referencia [1].",
+    visitorAnswer: "Respuesta sustentada en la fuente [1].",
+    expandedAnswer: "Explicación ampliada con referencia [1].",
+    claimEvidence: [
+      { section: "internalReport", claim: "Informe documental con referencia [1].", assessment: "supported", sourceIds: [1] },
+      { section: "visitorAnswer", claim: "Respuesta sustentada en la fuente [1].", assessment: "supported", sourceIds: [1] }
+    ]
+  });
+  assert.throws(
+    () => parseResearchOutput(raw, 1),
+    { code: "INVALID_RESEARCH_OUTPUT", subcode: "MISSING_EVIDENCE_SECTION" }
+  );
+});
+
+test("continúa al siguiente proveedor cuando Groq informa salida truncada", async () => {
+  const calls = [];
+  const provider = createSequentialResearchProvider({
+    searchProvider: searchProvider({ count: 0 }),
+    providers: [
+      adapter("gemini", async () => {
+        calls.push("gemini");
+        throw Object.assign(new Error("quota"), { code: "PROVIDER_RATE_LIMITED" });
+      }),
+      adapter("groq", async () => {
+        calls.push("groq");
+        return { raw: "{", finishReason: "length", usage: { completion_tokens: 12000 } };
+      }),
+      adapter("cloudflare-workers-ai", async () => {
+        calls.push("cloudflare");
+        return { raw: rawResult };
+      })
+    ]
+  });
+  const result = await provider.research({ query: "Investigación técnica" });
+  assert.deepEqual(calls, ["gemini", "groq", "cloudflare"]);
+  assert.equal(result.answerProvider, "cloudflare-workers-ai");
+  assert.equal(result.providerAttempts[1].code, "PROVIDER_OUTPUT_TRUNCATED");
+  assert.equal(result.providerAttempts[1].subcode, "FINISH_REASON_LENGTH");
+  assert.equal(result.providerAttempts[1].finishReason, "length");
 });
 
