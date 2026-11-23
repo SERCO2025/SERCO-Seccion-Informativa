@@ -38,40 +38,39 @@ const {
   TOPICS
 } = require("../api/editor-auto-publish");
 
-test("admite fuentes HTTPS gubernamentales, universitarias y técnicas reconocidas", () => {
-  for (const url of [
-    "https://www.fhwa.dot.gov/bridge/",
-    "https://www.gob.mx/sct",
-    "https://engineering.berkeley.edu/",
-    "https://www.astm.org/",
-    "https://www.concrete.org/",
-    "https://www.unam.mx/",
-    "https://www.ema.org.mx/"
+test("admite fuentes serias de distintos sectores sin exigir dominio universitario o gubernamental", () => {
+  for (const source of [
+    { url: "https://www.fhwa.dot.gov/bridge/", title: "FHWA bridge guidance", content: "Technical guidance with design criteria, methods, specifications and references." },
+    { url: "https://engineering.berkeley.edu/", title: "University engineering study", content: "Research findings, methods, measured data and technical references." },
+    { url: "https://www.astm.org/", title: "ASTM standards", content: "Standards, test methods, scope and technical specifications." },
+    { url: "https://manufacturer.example/technical-data", title: "Concrete product technical data", content: "Published product specifications, test results, application limits and installation instructions." },
+    { url: "https://engineering-firm.example/reports", title: "Geotechnical engineering report", content: "Authored engineering report describing site investigation, sampling, test methods and findings." },
+    { url: "https://specialist.example/blog/concrete", title: "Concrete engineering field notes", content: "Detailed technical explanation with test references, measurements and documented methods." }
   ]) {
-    assert.equal(isTrustedConstructionSource({ url }), true, url);
+    assert.equal(isSeriousConstructionSourceCandidate(source), true, source.url);
   }
 });
 
-test("rechaza blogs, dominios comerciales genéricos y conexiones HTTP", () => {
-  for (const url of [
-    "https://example.com/construccion",
-    "https://blog.example.org/concreto",
-    "http://www.fhwa.dot.gov/bridge/",
-    "https://fakegov.example.com/"
+test("rechaza URLs inseguras, redes sociales y contenido sin sustancia técnica", () => {
+  for (const source of [
+    { url: "http://www.fhwa.dot.gov/bridge/", title: "FHWA guidance", content: "Technical guidance with sufficient detail and references." },
+    { url: "https://reddit.com/r/construction", title: "Construction discussion", content: "A sufficiently long user discussion but not a technical source." },
+    { url: "https://example.com/", title: "Short", content: "Tiny" },
+    { url: "https://user:pass@example.com/report", title: "Technical report", content: "Detailed engineering report with methodology, test results and references." }
   ]) {
-    assert.equal(isTrustedConstructionSource({ url }), false, url);
+    assert.equal(isSeriousConstructionSourceCandidate(source), false, source.url);
   }
 });
 
-test("el buscador de SERCO entrega al sintetizador solo fuentes institucionales admitidas", async () => {
+test("el buscador conserva fuentes técnicas privadas y descarta plataformas de contenido social", async () => {
   const provider = createConstructionSearchProvider({
     async search() {
       return {
         provider: "tavily",
         results: [
-          { url: "https://www.fhwa.dot.gov/bridge/", title: "FHWA", content: "Datos técnicos" },
-          { url: "https://engineering.berkeley.edu/", title: "Universidad", content: "Investigación" },
-          { url: "https://example.com/", title: "Blog comercial", content: "Texto" }
+          { url: "https://www.fhwa.dot.gov/bridge/", title: "FHWA", content: "Datos técnicos suficientes para evaluar criterios de diseño y referencias." },
+          { url: "https://manufacturer.example/specs", title: "Fabricante", content: "Ficha técnica con especificaciones, ensayos y límites de aplicación del material." },
+          { url: "https://example.com/", title: "Publicación social", content: "Texto suficientemente largo, pero alojado en plataforma excluida." }
         ],
         resultCount: 3
       };
@@ -80,25 +79,25 @@ test("el buscador de SERCO entrega al sintetizador solo fuentes institucionales 
       return { results: [], requested: input.urls.length };
     }
   });
-  const result = await provider.search({ query: "puentes" });
+  const result = await provider.search({ query: "concreto" });
   assert.equal(result.resultCount, 2);
-  assert.deepEqual(result.results.map((source) => source.title), ["FHWA", "Universidad"]);
+  assert.deepEqual(result.results.map((source) => source.title), ["FHWA", "Fabricante"]);
 });
 
-test("no permite sintetizar ni publicar con menos de dos fuentes institucionales", async () => {
+test("no permite investigar con menos de dos candidatos técnicos sustanciales", async () => {
   const provider = createConstructionSearchProvider({
     async search() {
       return {
         results: [
-          { url: "https://example.com/", title: "Blog", content: "Texto" },
-          { url: "https://www.fhwa.dot.gov/", title: "FHWA", content: "Texto" }
+          { url: "https://reddit.com/r/construction", title: "Foro", content: "Texto suficientemente largo pero sin respaldo técnico identificable." },
+          { url: "https://www.fhwa.dot.gov/", title: "FHWA", content: "Contenido técnico suficiente para evaluar y contrastar." }
         ],
         resultCount: 2
       };
     }
   });
   await assert.rejects(provider.search({ query: "pavimentos" }), {
-    code: "INSUFFICIENT_TRUSTED_CONSTRUCTION_SOURCES"
+    code: "INSUFFICIENT_CONSTRUCTION_SOURCE_CANDIDATES"
   });
 });
 
