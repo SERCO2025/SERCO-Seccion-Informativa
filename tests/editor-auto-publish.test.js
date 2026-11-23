@@ -44,7 +44,9 @@ test("admite fuentes HTTPS gubernamentales, universitarias y técnicas reconocid
     "https://www.gob.mx/sct",
     "https://engineering.berkeley.edu/",
     "https://www.astm.org/",
-    "https://www.concrete.org/"
+    "https://www.concrete.org/",
+    "https://www.unam.mx/",
+    "https://www.ema.org.mx/"
   ]) {
     assert.equal(isTrustedConstructionSource({ url }), true, url);
   }
