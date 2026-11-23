@@ -15,8 +15,9 @@ const HAS_AI_PROVIDER = Boolean(
   (process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CLOUDFLARE_API_TOKEN)
 );
 const SEARCH = createTavilySearchProvider({ maxResults: 8 });
+const CONSTRUCTION_SEARCH = createConstructionSearchProvider(SEARCH);
 const RESEARCH = createSequentialResearchProvider({
-  searchProvider: SEARCH,
+  searchProvider: CONSTRUCTION_SEARCH,
   geminiApiKey: AUTOMATION_GEMINI_API_KEY,
   geminiModel: process.env.GEMINI_AUTOMATION_MODEL || process.env.GEMINI_RESEARCH_MODEL || undefined,
   timeoutMs: 12000
@@ -24,132 +25,130 @@ const RESEARCH = createSequentialResearchProvider({
 const PERSISTENCE = createArticlePersistence();
 
 const TOPICS = [
-  ["Material de trabajo","Materiales e insumos","Conceptos generales de materiales"],
-  ["Materia prima","Materiales e insumos","Conceptos generales de materiales"],
-  ["Insumo","Materiales e insumos","Conceptos generales de materiales"],
-  ["Consumible","Materiales e insumos","Conceptos generales de materiales"],
-  ["Equipo de trabajo","Herramientas y equipos","Herramientas, equipos y seguridad en el trabajo"],
-  ["Máquina herramienta","Herramientas y equipos","Herramientas, equipos y seguridad en el trabajo"],
-  ["Instrumento de medición","Metrología y control","Metrología y control de calidad"],
-  ["Calibración","Metrología y control","Metrología y control de calidad"],
-  ["Tolerancia dimensional","Metrología y control","Metrología y control de calidad"],
-  ["Precisión y exactitud","Metrología y control","Metrología y control de calidad"],
-  ["Mantenimiento preventivo","Mantenimiento","Mantenimiento y operación"],
-  ["Mantenimiento correctivo","Mantenimiento","Mantenimiento y operación"],
-  ["Orden y limpieza en el trabajo","Seguridad y salud en el trabajo","Seguridad y salud en el trabajo"],
-  ["Evaluación de riesgos laborales","Seguridad y salud en el trabajo","Seguridad y salud en el trabajo"],
-  ["Hoja de datos de seguridad","Materiales e insumos","Materiales e insumos"],
-  ["Ficha técnica de producto","Materiales e insumos","Materiales e insumos"],
-  ["Adhesivo industrial","Materiales e insumos","Materiales e insumos"],
-  ["Solvente","Materiales e insumos","Materiales e insumos"],
-  ["Pintura y recubrimiento","Acabados y recubrimientos","Acabados y recubrimientos"],
-  ["Abrasivo","Materiales e insumos","Materiales e insumos"],
-  ["Disco abrasivo","Herramientas y equipos","Herramientas, equipos y seguridad en el trabajo"],
-  ["Electrodo revestido","Soldadura","Soldadura y procesos metalmecánicos"],
-  ["Alambre para soldadura MIG/MAG","Soldadura","Soldadura y procesos metalmecánicos"],
-  ["Gas de protección para soldadura","Soldadura","Soldadura y procesos metalmecánicos"],
-  ["Proceso SMAW","Soldadura","Soldadura y procesos metalmecánicos"],
-  ["Proceso GMAW","Soldadura","Soldadura y procesos metalmecánicos"],
-  ["Proceso GTAW","Soldadura","Soldadura y procesos metalmecánicos"],
-  ["Cordón de soldadura","Soldadura","Soldadura y procesos metalmecánicos"],
-  ["Zona afectada por el calor","Soldadura","Soldadura y procesos metalmecánicos"],
-  ["Metal base y metal de aporte","Soldadura","Soldadura y procesos metalmecánicos"],
-  ["Vinil de corte","Rotulación y gráficos","Diseño gráfico, impresión y rotulación"],
-  ["Vinil de rotulación","Rotulación y gráficos","Diseño gráfico, impresión y rotulación"],
-  ["Cinta de transferencia","Rotulación y gráficos","Diseño gráfico, impresión y rotulación"],
-  ["Sustrato para impresión","Rotulación y gráficos","Diseño gráfico, impresión y rotulación"],
-  ["Laminado de protección","Rotulación y gráficos","Diseño gráfico, impresión y rotulación"],
-  ["Adhesión y adherencia","Materiales e insumos","Materiales e insumos"],
-  ["Desengrase de superficies","Preparación de superficies","Acabados y recubrimientos"],
-  ["Pulido","Preparación de superficies","Acabados y recubrimientos"],
-  ["Lijado","Preparación de superficies","Acabados y recubrimientos"],
-  ["Imprimación o primer","Acabados y recubrimientos","Acabados y recubrimientos"],
-  ["Barniz","Acabados y recubrimientos","Acabados y recubrimientos"],
-  ["Masilla de carrocería","Acabados y recubrimientos","Acabados y recubrimientos"],
-  ["Pistola de pintura","Herramientas y equipos","Herramientas, equipos y seguridad en el trabajo"],
-  ["Compresor de aire","Herramientas y equipos","Herramientas, equipos y seguridad en el trabajo"],
-  ["Presión y caudal","Conceptos técnicos","Conceptos generales de materiales"],
-  ["Circuito eléctrico","Electricidad y electrónica","Electricidad y electrónica"],
-  ["Tensión o voltaje","Electricidad y electrónica","Electricidad y electrónica"],
-  ["Corriente eléctrica","Electricidad y electrónica","Electricidad y electrónica"],
-  ["Resistencia eléctrica","Electricidad y electrónica","Electricidad y electrónica"],
-  ["Potencia eléctrica","Electricidad y electrónica","Electricidad y electrónica"],
-  ["Continuidad eléctrica","Electricidad y electrónica","Electricidad y electrónica"],
-  ["Multímetro","Electricidad y electrónica","Electricidad y electrónica"],
-  ["Conductor eléctrico","Electricidad y electrónica","Electricidad y electrónica"],
-  ["Aislamiento eléctrico","Electricidad y electrónica","Electricidad y electrónica"],
-  ["Puesta a tierra","Electricidad y electrónica","Electricidad y electrónica"],
-  ["Fusible y protección contra sobrecorriente","Electricidad y electrónica","Electricidad y electrónica"],
-  ["Relé electromecánico","Electricidad y electrónica","Electricidad y electrónica"],
-  ["Sensor y actuador","Electricidad y electrónica","Electricidad y electrónica"],
-  ["Motor eléctrico","Electricidad y electrónica","Electricidad y electrónica"],
-  ["Transformador eléctrico","Electricidad y electrónica","Electricidad y electrónica"],
-  ["Batería recargable","Electricidad y electrónica","Electricidad y electrónica"],
-  ["Calibre de conductor","Electricidad y electrónica","Electricidad y electrónica"],
-  ["Frecuencia de audio","Audio y producción musical","Audio y producción musical"],
-  ["Decibelio","Audio y producción musical","Audio y producción musical"],
-  ["Ganancia de audio","Audio y producción musical","Audio y producción musical"],
-  ["Ecualización","Audio y producción musical","Audio y producción musical"],
-  ["Compresión de audio","Audio y producción musical","Audio y producción musical"],
-  ["Interfaz de audio","Audio y producción musical","Audio y producción musical"],
-  ["Micrófono","Audio y producción musical","Audio y producción musical"],
-  ["Impedancia","Audio y producción musical","Audio y producción musical"],
-  ["Acústica","Audio y producción musical","Audio y producción musical"],
-  ["Reverberación","Audio y producción musical","Audio y producción musical"],
-  ["Mezcla de audio","Audio y producción musical","Audio y producción musical"],
-  ["Masterización","Audio y producción musical","Audio y producción musical"],
-  ["Formato vectorial","Diseño gráfico","Diseño gráfico, impresión y rotulación"],
-  ["Resolución de imagen","Diseño gráfico","Diseño gráfico, impresión y rotulación"],
-  ["DPI y PPI","Diseño gráfico","Diseño gráfico, impresión y rotulación"],
-  ["Modelos de color RGB y CMYK","Diseño gráfico","Diseño gráfico, impresión y rotulación"],
-  ["Tipografía","Diseño gráfico","Diseño gráfico, impresión y rotulación"],
-  ["Identidad corporativa","Diseño gráfico","Diseño gráfico, impresión y rotulación"],
-  ["Logotipo","Diseño gráfico","Diseño gráfico, impresión y rotulación"],
-  ["Retícula de diseño","Diseño gráfico","Diseño gráfico, impresión y rotulación"],
-  ["Sangrado de impresión","Diseño gráfico","Diseño gráfico, impresión y rotulación"],
-  ["Plotter de corte","Rotulación y gráficos","Diseño gráfico, impresión y rotulación"],
-  ["Cuchilla para plotter","Rotulación y gráficos","Diseño gráfico, impresión y rotulación"],
-  ["Aplicación de vinil en seco y en húmedo","Rotulación y gráficos","Diseño gráfico, impresión y rotulación"],
-  ["Traducción certificada","Traducción y documentación","Traducción y documentación"],
-  ["Traducción literal y traducción funcional","Traducción y documentación","Traducción y documentación"],
-  ["Fidelidad documental","Traducción y documentación","Traducción y documentación"],
-  ["Transcripción documental","Traducción y documentación","Traducción y documentación"],
-  ["Terminología jurídica","Traducción y documentación","Traducción y documentación"],
-  ["Notario y función notarial","Traducción y documentación","Traducción y documentación"],
-  ["Apostilla","Traducción y documentación","Traducción y documentación"],
-  ["Acta de nacimiento","Traducción y documentación","Traducción y documentación"],
-  ["Título de propiedad vehicular","Automoción y documentación","Automoción y documentación"],
-  ["Número de identificación vehicular VIN","Automoción y documentación","Automoción y documentación"],
-  ["Inspección precompra de automóvil","Automoción","Automoción y mantenimiento vehicular"],
-  ["Kilometraje vehicular","Automoción","Automoción y mantenimiento vehicular"],
-  ["Diagnóstico automotriz","Automoción","Automoción y mantenimiento vehicular"],
-  ["Motor de combustión interna","Automoción","Automoción y mantenimiento vehicular"],
-  ["Sistema de frenos","Automoción","Automoción y mantenimiento vehicular"],
-  ["Neumático","Automoción","Automoción y mantenimiento vehicular"],
-  ["Alineación y balanceo","Automoción","Automoción y mantenimiento vehicular"],
-  ["Detalle automotriz","Cuidado y estética vehicular","Automoción y mantenimiento vehicular"],
-  ["Descontaminación de pintura automotriz","Cuidado y estética vehicular","Automoción y mantenimiento vehicular"],
-  ["Lavado exterior de vehículos","Cuidado y estética vehicular","Automoción y mantenimiento vehicular"],
-  ["Pulido de carrocería","Cuidado y estética vehicular","Automoción y mantenimiento vehicular"],
-  ["Gestión de residuos de taller","Seguridad y medio ambiente","Seguridad y salud en el trabajo"],
-  ["Ergonomía laboral","Seguridad y salud en el trabajo","Seguridad y salud en el trabajo"],
-  ["Calidad","Calidad y procesos","Calidad y procesos"],
-  ["Control de calidad","Calidad y procesos","Calidad y procesos"],
-  ["Procedimiento operativo estándar","Calidad y procesos","Calidad y procesos"],
-  ["Orden de trabajo","Gestión de servicios","Gestión de servicios y operaciones"],
-  ["Cotización y presupuesto","Gestión de servicios","Gestión de servicios y operaciones"],
-  ["Inventario","Gestión de servicios","Gestión de servicios y operaciones"],
-  ["Cadena de custodia documental","Traducción y documentación","Traducción y documentación"],
-  ["Metadatos","Información y documentación","Información y documentación"],
-  ["Derechos de autor","Información y documentación","Información y documentación"],
-  ["Licencia de uso de imagen","Información y documentación","Información y documentación"],
-  ["Fuente primaria","Información y documentación","Información y documentación"],
-  ["Verificación de fuentes","Información y documentación","Información y documentación"],
-  ["Búsqueda documental","Información y documentación","Información y documentación"],
-  ["Base de conocimiento","Información y documentación","Información y documentación"],
-  ["Fragmento de búsqueda","Información y documentación","Información y documentación"],
-  ["Taxonomía documental","Información y documentación","Información y documentación"]
+  ["Cemento Portland", "Materiales de construcción", "Materiales, ensayos y tecnología de construcción"],
+  ["Tipos de cemento y sus aplicaciones", "Materiales de construcción", "Materiales, ensayos y tecnología de construcción"],
+  ["Concreto u hormigón hidráulico", "Materiales de construcción", "Materiales, ensayos y tecnología de construcción"],
+  ["Relación agua-cemento", "Materiales de construcción", "Materiales, ensayos y tecnología de construcción"],
+  ["Agregados para concreto", "Materiales de construcción", "Materiales, ensayos y tecnología de construcción"],
+  ["Granulometría de arena y grava", "Materiales de construcción", "Materiales, ensayos y tecnología de construcción"],
+  ["Aditivos para concreto", "Materiales de construcción", "Materiales, ensayos y tecnología de construcción"],
+  ["Mortero de albañilería", "Materiales de construcción", "Materiales, ensayos y tecnología de construcción"],
+  ["Cal hidratada en construcción", "Materiales de construcción", "Materiales, ensayos y tecnología de construcción"],
+  ["Yeso para construcción", "Materiales de construcción", "Materiales, ensayos y tecnología de construcción"],
+  ["Acero de refuerzo para concreto", "Materiales de construcción", "Materiales, ensayos y tecnología de construcción"],
+  ["Acero estructural", "Materiales de construcción", "Materiales, ensayos y tecnología de construcción"],
+  ["Mampostería de ladrillo y bloque", "Sistemas constructivos", "Sistemas constructivos y ejecución de obra"],
+  ["Impermeabilización de cimentaciones y cubiertas", "Materiales de construcción", "Materiales, ensayos y tecnología de construcción"],
+  ["Aislamiento térmico en edificaciones", "Materiales de construcción", "Materiales, ensayos y tecnología de construcción"],
+  ["Aislamiento acústico en edificaciones", "Materiales de construcción", "Materiales, ensayos y tecnología de construcción"],
+  ["Materiales geosintéticos en obra civil", "Materiales de construcción", "Materiales, ensayos y tecnología de construcción"],
+  ["Mezclas asfálticas para pavimentos", "Infraestructura vial", "Carreteras, pavimentos y transporte"],
+  ["Estudio geotécnico del terreno", "Geotecnia y cimentaciones", "Mecánica de suelos, geotecnia y cimentaciones"],
+  ["Mecánica de suelos", "Geotecnia y cimentaciones", "Mecánica de suelos, geotecnia y cimentaciones"],
+  ["Capacidad portante del suelo", "Geotecnia y cimentaciones", "Mecánica de suelos, geotecnia y cimentaciones"],
+  ["Compactación de suelos", "Geotecnia y cimentaciones", "Mecánica de suelos, geotecnia y cimentaciones"],
+  ["Ensayo Proctor de compactación", "Laboratorio y control de calidad", "Ensayos, normas y control de calidad"],
+  ["Valor relativo de soporte CBR", "Laboratorio y control de calidad", "Ensayos, normas y control de calidad"],
+  ["Nivel freático y excavaciones", "Geotecnia y cimentaciones", "Mecánica de suelos, geotecnia y cimentaciones"],
+  ["Cimentaciones superficiales", "Geotecnia y cimentaciones", "Mecánica de suelos, geotecnia y cimentaciones"],
+  ["Cimentaciones profundas y pilotes", "Geotecnia y cimentaciones", "Mecánica de suelos, geotecnia y cimentaciones"],
+  ["Levantamiento topográfico de terrenos", "Topografía y cartografía", "Topografía, medición y replanteo"],
+  ["Deslinde y delimitación topográfica de predios", "Topografía y cartografía", "Topografía, medición y replanteo"],
+  ["Curvas de nivel y configuración del terreno", "Topografía y cartografía", "Topografía, medición y replanteo"],
+  ["Replanteo topográfico de obras", "Topografía y cartografía", "Topografía, medición y replanteo"],
+  ["Estación total en levantamientos de obra", "Topografía y cartografía", "Topografía, medición y replanteo"],
+  ["Cargas y acciones en estructuras", "Ingeniería estructural", "Diseño, análisis y construcción estructural"],
+  ["Análisis estructural de edificaciones", "Ingeniería estructural", "Diseño, análisis y construcción estructural"],
+  ["Concreto reforzado en estructuras", "Ingeniería estructural", "Diseño, análisis y construcción estructural"],
+  ["Diseño de elementos de concreto armado", "Ingeniería estructural", "Diseño, análisis y construcción estructural"],
+  ["Conexiones en estructuras de acero", "Ingeniería estructural", "Diseño, análisis y construcción estructural"],
+  ["Soldadura en estructuras metálicas de construcción", "Ingeniería estructural", "Diseño, análisis y construcción estructural"],
+  ["Muros de contención", "Ingeniería estructural", "Diseño, análisis y construcción estructural"],
+  ["Losas de entrepiso y azotea", "Sistemas constructivos", "Sistemas constructivos y ejecución de obra"],
+  ["Escaleras de concreto en edificaciones", "Sistemas constructivos", "Sistemas constructivos y ejecución de obra"],
+  ["Pavimento flexible", "Infraestructura vial", "Carreteras, pavimentos y transporte"],
+  ["Pavimento rígido de concreto", "Infraestructura vial", "Carreteras, pavimentos y transporte"],
+  ["Subbase y base hidráulica de pavimentos", "Infraestructura vial", "Carreteras, pavimentos y transporte"],
+  ["Drenaje pluvial en carreteras", "Infraestructura vial", "Carreteras, pavimentos y transporte"],
+  ["Diseño y componentes de puentes", "Puentes y estructuras especiales", "Puentes, túneles y obras especiales"],
+  ["Juntas de expansión en puentes", "Puentes y estructuras especiales", "Puentes, túneles y obras especiales"],
+  ["Cimentación y pilas de puentes", "Puentes y estructuras especiales", "Puentes, túneles y obras especiales"],
+  ["Pasos a desnivel e intersecciones a distinto nivel", "Infraestructura vial", "Carreteras, pavimentos y transporte"],
+  ["Túneles y sostenimiento de excavaciones", "Puentes y estructuras especiales", "Puentes, túneles y obras especiales"],
+  ["Instalaciones hidrosanitarias en edificaciones", "Instalaciones de edificios", "Instalaciones y desempeño de edificaciones"],
+  ["Instalaciones eléctricas en edificaciones", "Instalaciones de edificios", "Instalaciones y desempeño de edificaciones"],
+  ["Ventilación y climatización de edificios", "Instalaciones de edificios", "Instalaciones y desempeño de edificaciones"],
+  ["Protección contra incendios en edificaciones", "Instalaciones de edificios", "Instalaciones y desempeño de edificaciones"],
+  ["Accesibilidad y diseño universal en edificios", "Arquitectura y edificación", "Arquitectura, habitabilidad y edificación"],
+  ["Aislamiento y eficiencia energética de edificios", "Arquitectura y edificación", "Arquitectura, habitabilidad y edificación"],
+  ["Códigos y reglamentos de construcción", "Normativa y seguridad de obra", "Normativa, seguridad y gestión de obra"],
+  ["Seguridad en excavaciones y zanjas", "Normativa y seguridad de obra", "Normativa, seguridad y gestión de obra"],
+  ["Seguridad en trabajos en altura en construcción", "Normativa y seguridad de obra", "Normativa, seguridad y gestión de obra"],
+  ["Control de calidad del concreto en obra", "Laboratorio y control de calidad", "Ensayos, normas y control de calidad"],
+  ["Ensayo de revenimiento del concreto", "Laboratorio y control de calidad", "Ensayos, normas y control de calidad"],
+  ["Resistencia a compresión del concreto", "Laboratorio y control de calidad", "Ensayos, normas y control de calidad"],
+  ["Pruebas de compactación en campo", "Laboratorio y control de calidad", "Ensayos, normas y control de calidad"],
+  ["Cuantificación de volúmenes de obra", "Costos y presupuestos", "Medición, costos y administración de obra"],
+  ["Análisis de precios unitarios de construcción", "Costos y presupuestos", "Medición, costos y administración de obra"],
+  ["Presupuesto de obra y catálogo de conceptos", "Costos y presupuestos", "Medición, costos y administración de obra"],
+  ["Estimación de costos directos e indirectos", "Costos y presupuestos", "Medición, costos y administración de obra"],
+  ["Programación y ruta crítica de obra", "Planeación y administración de obra", "Medición, costos y administración de obra"],
+  ["Movimiento de tierras y cálculo de volúmenes", "Ejecución de obra", "Sistemas constructivos y ejecución de obra"]
 ];
+
+
+const TRUSTED_CONSTRUCTION_HOSTS = Object.freeze([
+  "asce.org", "astm.org", "aashto.org", "concrete.org", "iccsafe.org",
+  "iso.org", "trl.co.uk", "usgbc.org"
+]);
+
+function isTrustedConstructionSource(source) {
+  if (!source || typeof source.url !== "string") return false;
+  let hostname;
+  try {
+    const parsed = new URL(source.url);
+    if (parsed.protocol !== "https:") return false;
+    hostname = parsed.hostname.toLowerCase().replace(/^www\\./, "");
+  } catch {
+    return false;
+  }
+  const institutionalSuffix =
+    /(^|\\.)gov(\\.[a-z]{2,})?$/.test(hostname) ||
+    /(^|\\.)gob\\.[a-z]{2,}$/.test(hostname) ||
+    /(^|\\.)edu(\\.[a-z]{2,})?$/.test(hostname) ||
+    /(^|\\.)ac\\.[a-z]{2,}$/.test(hostname) ||
+    /(^|\\.)gc\\.ca$/.test(hostname) ||
+    /(^|\\.)govt\\.nz$/.test(hostname);
+  const recognizedTechnicalInstitution = TRUSTED_CONSTRUCTION_HOSTS.some(
+    (domain) => hostname === domain || hostname.endsWith("." + domain)
+  );
+  return institutionalSuffix || recognizedTechnicalInstitution;
+}
+
+function createConstructionSearchProvider(provider) {
+  return {
+    async search(input) {
+      const result = await provider.search(input);
+      const trustedResults = (Array.isArray(result.results) ? result.results : [])
+        .filter(isTrustedConstructionSource);
+      if (trustedResults.length < 2) {
+        const error = new Error("La investigación de construcción no reunió al menos dos fuentes institucionales o técnicas admitidas.");
+        error.code = "INSUFFICIENT_TRUSTED_CONSTRUCTION_SOURCES";
+        throw error;
+      }
+      return Object.assign({}, result, {
+        results: trustedResults,
+        resultCount: trustedResults.length
+      });
+    },
+    async extract(input) {
+      if (typeof provider.extract !== "function") {
+        return { provider: "tavily", results: [], resultCount: 0, enabled: false };
+      }
+      return provider.extract(input);
+    }
+  };
+}
 
 function selectPendingTopic(topics, existingTitles, now = new Date()) {
   const available = Array.isArray(topics) ? topics : [];
@@ -207,9 +206,10 @@ async function supabaseRest(path) {
 }
 async function generate(topic, index, batchId) {
   const query = [
-    topic[0] + " definición técnica, características, clasificación, usos, materiales o componentes, selección, operación, mantenimiento, riesgos y prevención.",
-    "Prioriza normas, organismos oficiales, universidades y documentación técnica primaria.",
-    "Explica el concepto desde nivel básico y desarrolla una entrada de diccionario técnico en español."
+    "Investigación especializada de ingeniería civil, arquitectura y construcción de obras e infraestructura.",
+    topic[0] + " definición técnica, fundamentos, clasificación, aplicaciones en edificaciones u obra civil, especificaciones, métodos de ejecución, ensayos, control de calidad, seguridad y normativa aplicable.",
+    "Utiliza únicamente evidencia de universidades, organismos gubernamentales, laboratorios de pruebas acreditados y entidades técnicas o de normalización reconocidas. No uses blogs comerciales, foros, contenido esotérico ni fuentes sin autoridad institucional identificable.",
+    "Desarrolla una entrada técnica de diccionario en español y distingue normas o requisitos según país y jurisdicción."
   ].join(" ");
   const result = await RESEARCH.research({ query });
   if (result.status !== "completed" || !result.expandedAnswer || !result.internalReport) {
@@ -282,3 +282,5 @@ module.exports = async function automaticEditorialPublisher(req, res) {
 };
 module.exports.config = { maxDuration: 60 };
 module.exports.selectPendingTopic = selectPendingTopic;
+module.exports.isTrustedConstructionSource = isTrustedConstructionSource;
+module.exports.createConstructionSearchProvider = createConstructionSearchProvider;
