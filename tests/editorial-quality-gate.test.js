@@ -37,7 +37,15 @@ function fixture(overrides = {}) {
     "Las especificaciones deben identificar criterios de aceptación y responsabilidades [2].",
     "## Limitaciones",
     "La dosificación no debe definirse sin considerar exposición, requisitos estructurales y materiales disponibles [1].",
-    "La selección de procedimientos depende de las condiciones reales de la obra [2]."
+    "La selección de procedimientos depende de las condiciones reales de la obra [2].",
+    "La pasta formada por cemento y agua envuelve los agregados y desarrolla propiedades que dependen de la relación agua-cemento y de la hidratación [1].",
+    "Una relación agua-cemento adecuada contribuye a equilibrar resistencia, trabajabilidad y durabilidad, siempre dentro de las especificaciones del proyecto [1].",
+    "En elementos de concreto reforzado, el acero de refuerzo trabaja en conjunto con el concreto y requiere colocación y recubrimiento compatibles con el diseño [2].",
+    "El muestreo y las pruebas de resistencia permiten documentar el comportamiento del concreto y revisar los resultados frente a los criterios de calidad [2].",
+    "Las operaciones de colocación, vibración y curado deben coordinarse para conservar la uniformidad del concreto y reducir defectos durante la ejecución [2].",
+    "El curado mantiene humedad disponible para la hidratación del cemento, proceso que influye en la resistencia y la durabilidad del concreto endurecido [1].",
+    "La calidad de los agregados y su combinación con cemento y agua afectan la trabajabilidad de la mezcla y las propiedades del concreto producido [1].",
+    "Los registros de control de calidad deben relacionar muestreo, ensayos, colocación y resultados para facilitar la trazabilidad de los elementos estructurales [2]."
   ].join("\n\n");
   const claimEvidence = body.split("\n\n").filter((line) => /\[\d+\]/.test(line)).map((claim) => ({
     section: "expandedAnswer",
