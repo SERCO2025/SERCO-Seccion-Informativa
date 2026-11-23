@@ -26,6 +26,11 @@ function createOpenRouterPublisher(options = {}) {
         error.code = "PUBLISHER_PROVIDER_NOT_CONFIGURED";
         throw error;
       }
+      if (!model.endsWith(":free")) {
+        const error = new Error("El publicador solo permite modelos gratuitos de OpenRouter.");
+        error.code = "PUBLISHER_MODEL_NOT_FREE";
+        throw error;
+      }
       if (!searchProvider || typeof searchProvider.search !== "function") {
         const error = new Error("El publicador no tiene un proveedor de búsqueda configurado.");
         error.code = "PUBLISHER_SEARCH_NOT_CONFIGURED";
@@ -128,6 +133,12 @@ function createOpenRouterPublisher(options = {}) {
       } catch {
         const error = new Error("OpenRouter devolvió una respuesta que no es JSON válido.");
         error.code = "PUBLISHER_INVALID_RESPONSE";
+        throw error;
+      }
+
+      if (payload && payload.error) {
+        const error = new Error("El proveedor de modelos rechazó la solicitud de publicación.");
+        error.code = "AI_PROVIDERS_UNAVAILABLE";
         throw error;
       }
 
