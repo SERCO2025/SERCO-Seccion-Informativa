@@ -99,6 +99,30 @@ test("extrae documentos originales solo después del filtro preliminar y entrega
   assert.ok(result.sources.every((source) => source.relevance.technicalSignals >= 2));
 });
 
+test("no descarta una fuente técnica por un snippet breve: valida el documento después de extraerlo", async () => {
+  const extractedUrls = [];
+  const fullSteel = ("Structural steel welding procedure WPS qualification and inspection report. The structural steel building frame uses welded connections, AWS D1.1 welding procedure specifications, welder qualification, visual inspection, nondestructive testing, acceptance criteria and documented test results. ").repeat(8);
+  const provider = {
+    async search() {
+      return { results: [
+        { url: "https://fabricator.example/wps", title: "WPS-17 Welding Procedure Specification", content: "Procedure WPS-17, revision 3." },
+        { url: "https://laboratory.example/steel-inspection", title: "Inspection report for welded steel connections", content: "Report 2026-114. See full technical report." }
+      ] };
+    },
+    async extract({ urls }) {
+      extractedUrls.push(...urls);
+      return { results: urls.map((url) => ({ url, rawContent: fullSteel })) };
+    }
+  };
+  const discovery = createConstructionResearchDiscovery(provider);
+  const result = await discovery.discover({
+    plan: SEARCH_PLANS.find((item) => item.topic === "Procedimientos de soldadura en acero estructural")
+  });
+  assert.equal(extractedUrls.length, 2);
+  assert.equal(result.status, "ready");
+  assert.equal(result.sources.length, 2);
+});
+
 test("no entrega a la IA documentos sin pertinencia técnica suficiente", async () => {
   let extractCalls = 0;
   const discovery = createConstructionResearchDiscovery({
