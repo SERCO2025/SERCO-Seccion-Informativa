@@ -200,10 +200,19 @@ function selectSearchPlan(now = new Date(), existingTopics = []) {
   const used = (Array.isArray(existingTopics) ? existingTopics : [])
     .map((topic) => normalize(topic))
     .filter(Boolean);
-  const available = SEARCH_PLANS.filter((plan) =>
-    !used.some((title) => title.includes(normalize(plan.topic)))
+  const topicCounts = SEARCH_PLANS.map((plan) => ({
+    plan,
+    count: used.filter((title) => title.includes(normalize(plan.topic))).length
+  }));
+  const minimumCount = Math.min(...topicCounts.map((item) => item.count));
+  const leastUsed = topicCounts
+    .filter((item) => item.count === minimumCount)
+    .map((item) => item.plan);
+  const mostRecentTitle = used[0] || "";
+  const withoutImmediateRepeat = leastUsed.filter((plan) =>
+    !mostRecentTitle.includes(normalize(plan.topic))
   );
-  if (!available.length) return null;
+  const available = withoutImmediateRepeat.length ? withoutImmediateRepeat : leastUsed;
   return available[((slot % available.length) + available.length) % available.length];
 }
 
