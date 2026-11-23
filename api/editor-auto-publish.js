@@ -20,7 +20,9 @@ const RESEARCH = createSequentialResearchProvider({
   searchProvider: CONSTRUCTION_SEARCH,
   geminiApiKey: AUTOMATION_GEMINI_API_KEY,
   geminiModel: process.env.GEMINI_AUTOMATION_MODEL || process.env.GEMINI_RESEARCH_MODEL || undefined,
-  timeoutMs: 12000
+  timeoutMs: 12000,
+  groqTimeoutMs: 18000,
+  cloudflareTimeoutMs: 15000
 });
 const PERSISTENCE = createArticlePersistence();
 
