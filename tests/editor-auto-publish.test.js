@@ -33,7 +33,7 @@ test("selectPendingTopic acepta fechas inválidas sin bloquear la cola", () => {
 
 
 const {
-  isTrustedConstructionSource,
+  isSeriousConstructionSourceCandidate,
   createConstructionSearchProvider,
   TOPICS
 } = require("../api/editor-auto-publish");
@@ -70,7 +70,7 @@ test("el buscador conserva fuentes técnicas privadas y descarta plataformas de 
         results: [
           { url: "https://www.fhwa.dot.gov/bridge/", title: "FHWA", content: "Datos técnicos suficientes para evaluar criterios de diseño y referencias." },
           { url: "https://manufacturer.example/specs", title: "Fabricante", content: "Ficha técnica con especificaciones, ensayos y límites de aplicación del material." },
-          { url: "https://example.com/", title: "Publicación social", content: "Texto suficientemente largo, pero alojado en plataforma excluida." }
+          { url: "https://reddit.com/r/example", title: "Publicación social", content: "Texto suficientemente largo, pero alojado en plataforma excluida." }
         ],
         resultCount: 3
       };
