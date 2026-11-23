@@ -63,6 +63,38 @@ test("envía consulta al proveedor y devuelve las respuestas pública y ampliada
   assert.equal(res.headers["Cache-Control"], "no-store");
 });
 
+test("no expone el contenido extraído interno de las páginas en la respuesta pública", async () => {
+  const handler = createResearchHttpHandler({
+    async research(input) {
+      return {
+        status: "completed",
+        query: input.query,
+        visitorAnswer: "Respuesta breve",
+        expandedAnswer: "Respuesta ampliada",
+        sources: [{
+          id: 1,
+          url: "https://example.org/source",
+          title: "Fuente",
+          publishedDate: "2026-11-01",
+          score: 0.9,
+          excerpt: "Extracto público",
+          extractedContent: "Contenido interno extraído de la página",
+          evidenceText: "Texto interno de evidencia",
+          evidenceOrigin: "tavily_extract"
+        }],
+        sourceCount: 1
+      };
+    }
+  });
+  const res = responseRecorder();
+  await handler({ method: "POST", headers: {}, body: { query: "Consulta válida" } }, res);
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.payload.sources[0].excerpt, "Extracto público");
+  assert.equal(Object.hasOwn(res.payload.sources[0], "extractedContent"), false);
+  assert.equal(Object.hasOwn(res.payload.sources[0], "evidenceText"), false);
+  assert.equal(Object.hasOwn(res.payload.sources[0], "evidenceOrigin"), false);
+});
+
 test("reserva HTTP 429 para el límite público y devuelve 503 si Gemini está limitado", async () => {
   const { ResearchProviderError } = require("../src/services/research/gemini-research-provider");
   const handler = createResearchHttpHandler({
