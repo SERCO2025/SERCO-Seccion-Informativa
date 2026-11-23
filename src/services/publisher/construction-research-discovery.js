@@ -238,6 +238,7 @@ function createConstructionResearchDiscovery(provider, options = {}) {
       const searchResult = await provider.search({ query: plan.query });
       const seenUrls = new Set();
       const searchResults = Array.isArray(searchResult.results) ? searchResult.results : [];
+      const searchResultCount = searchResults.length;
       // Los títulos y snippets de búsqueda no son el documento: no descartar aquí
       // fuentes técnicas por no repetir palabras clave en el fragmento breve.
       // La pertinencia estricta se evalúa después de extraer el contenido completo.
@@ -253,7 +254,7 @@ function createConstructionResearchDiscovery(provider, options = {}) {
         .slice(0, maxCandidates);
 
       if (candidates.length < 2) {
-        return { status: "no_relevant_documents", plan: plan.category, searched: true, candidateCount: candidates.length, sources: [] };
+        return { status: "no_relevant_documents", plan: plan.category, searched: true, candidateCount: candidates.length, searchResultCount, sources: [] };
       }
 
       const extracted = await provider.extract({
@@ -279,6 +280,7 @@ function createConstructionResearchDiscovery(provider, options = {}) {
           plan: plan.category,
           searched: true,
           candidateCount: candidates.length,
+          searchResultCount,
           extractedCount: extractedByUrl.size,
           acceptedCount: verifiedCandidates.length,
           sources: []
@@ -317,6 +319,8 @@ function createConstructionResearchDiscovery(provider, options = {}) {
           }
         })),
         candidateCount: candidates.length,
+        searchResultCount,
+        extractedCount: extractedByUrl.size,
         acceptedCount: selected.length
       };
     }
