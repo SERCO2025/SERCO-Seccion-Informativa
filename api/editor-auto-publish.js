@@ -147,7 +147,7 @@ module.exports = async function automaticEditorialPublisher(req, res) {
     for (const article of (existing || [])) {
       for (const source of (Array.isArray(article.sources) ? article.sources : [])) {
         if (source && typeof source.source_url === "string") {
-          existingSourceUrls.add(source.source_url.split("#")[0].replace(/\\/$/, "").toLowerCase());
+          existingSourceUrls.add(source.source_url.split("#")[0].replace(/\/$/, "").toLowerCase());
         }
       }
     }
