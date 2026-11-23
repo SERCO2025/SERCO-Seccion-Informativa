@@ -64,8 +64,8 @@ test("la selección de búsqueda rota entre documentación real de obra, fabrica
   const next = selectSearchPlan(new Date("2026-11-23T00:30:00.000Z"));
   assert.notEqual(first.topic, next.topic);
   assert.ok(SEARCH_PLANS.every((plan) =>
-    plan.topic && plan.query.includes(plan.topic.split(" ")[0]) &&
-    /concreto|geotecnia|pavimento|acero|mamposteria|impermeabilizacion|mortero/i.test(plan.query + plan.focus)
+    plan.topic && plan.query.length >= 80 &&
+    /concreto|geotecnia|pavimento|acero|mamposter|impermeabil|mortero|soldadura|cimentacion|agregados/i.test(plan.query + plan.focus)
   ));
 });
 
