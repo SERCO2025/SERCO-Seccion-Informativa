@@ -121,7 +121,7 @@ const TOPIC_STOP_WORDS = new Set([
 ]);
 
 function getTopicTerms(source) {
-  const text = normalize([source && source.title, source && source.rawContent, source && source.content].join(" "));
+  const text = normalize(source && source.title);
   return new Set(text.split(" ").filter((word) => word.length >= 5 && !TOPIC_STOP_WORDS.has(word)));
 }
 
