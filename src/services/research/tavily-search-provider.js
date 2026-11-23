@@ -1,6 +1,7 @@
 "use strict";
 
 const TAVILY_SEARCH_URL = "https://api.tavily.com/search";
+const TAVILY_EXTRACT_URL = "https://api.tavily.com/extract";
 const MAX_QUERY_LENGTH = 2000;
 const MAX_RESULTS = 8;
 
@@ -48,6 +49,25 @@ function normalizeTavilyResults(payload) {
     }
   }
   return [...unique.values()].slice(0, MAX_RESULTS);
+}
+
+function normalizeTavilyExtractResults(payload) {
+  const results = payload && Array.isArray(payload.results) ? payload.results : [];
+  const unique = new Map();
+  for (const item of results) {
+    if (!item || typeof item.url !== "string" || !/^https?:\\/\\//i.test(item.url)) continue;
+    const url = item.url.trim();
+    const rawContent = typeof item.raw_content === "string" ? item.raw_content.trim() : "";
+    if (!rawContent) continue;
+    let canonicalUrl;
+    try {
+      const parsed = new URL(url);
+      parsed.hash = "";
+      canonicalUrl = parsed.toString();
+    } catch { continue; }
+    if (!unique.has(canonicalUrl)) unique.set(canonicalUrl, { url, rawContent });
+  }
+  return [...unique.values()];
 }
 
 function createTavilySearchProvider(options = {}) {
@@ -129,6 +149,58 @@ function createTavilySearchProvider(options = {}) {
         usage: payload.usage && typeof payload.usage === "object" ? payload.usage : null,
         requestId: typeof payload.request_id === "string" ? payload.request_id : null
       };
+    },
+
+    async extract(input) {
+      const urls = Array.isArray(input && input.urls)
+        ? [...new Set(input.urls.filter((url) => typeof url === "string" && /^https?:\\/\\//i.test(url)).slice(0, MAX_RESULTS))]
+        : [];
+      const query = typeof (input && input.query) === "string" ? input.query.trim().slice(0, MAX_QUERY_LENGTH) : "";
+      if (!urls.length) throw new TavilySearchError("No hay URL válidas para extraer contenido.", "INVALID_EXTRACT_URLS");
+      if (!apiKey) throw new TavilyConfigurationError("Falta configurar TAVILY_API_KEY en el entorno del servidor.");
+      if (typeof fetchImpl !== "function") throw new TavilyConfigurationError("El entorno no dispone de fetch para conectar con Tavily.");
+
+      let response;
+      console.info("[research:tavily] extract_started", { urlCount: urls.length });
+      try {
+        response = await fetchImpl(TAVILY_EXTRACT_URL, {
+          method: "POST",
+          headers: { Authorization: "Bearer " + apiKey, "Content-Type": "application/json" },
+          signal: AbortSignal.timeout(25000),
+          body: JSON.stringify({
+            urls, query, chunks_per_source: 3, extract_depth: "basic",
+            format: "markdown", timeout: 20, include_usage: true
+          })
+        });
+      } catch (error) {
+        const timeout = error && (error.name === "TimeoutError" || error.name === "AbortError");
+        throw new TavilySearchError(
+          timeout ? "La extracción de contenido excedió el tiempo máximo." : "No fue posible conectar con Tavily Extract.",
+          timeout ? "TAVILY_EXTRACT_TIMEOUT" : "TAVILY_EXTRACT_CONNECTION_ERROR"
+        );
+      }
+
+      if (!response.ok) {
+        if ([401, 403].includes(response.status)) throw new TavilyConfigurationError("La credencial de Tavily no fue aceptada.", "TAVILY_CREDENTIAL_INVALID");
+        if ([429, 432, 433].includes(response.status)) throw new TavilySearchError("Tavily alcanzó un límite de solicitudes o créditos.", "RESEARCH_RATE_LIMITED");
+        throw new TavilySearchError("Tavily no pudo extraer el contenido de las fuentes.", "TAVILY_EXTRACT_UPSTREAM_ERROR");
+      }
+
+      let payload;
+      try { payload = await response.json(); }
+      catch { throw new TavilySearchError("Tavily Extract devolvió una respuesta no válida.", "TAVILY_EXTRACT_INVALID_RESPONSE"); }
+
+      const extracted = normalizeTavilyExtractResults(payload);
+      console.info("[research:tavily] extract_completed", {
+        requestedCount: urls.length,
+        extractedCount: extracted.length,
+        failedCount: Array.isArray(payload.failed_results) ? payload.failed_results.length : 0
+      });
+      return {
+        provider: "tavily", results: extracted, resultCount: extracted.length,
+        usage: payload.usage && typeof payload.usage === "object" ? payload.usage : null,
+        requestId: typeof payload.request_id === "string" ? payload.request_id : null
+      };
     }
   };
 }
@@ -137,6 +209,7 @@ module.exports = {
   createTavilySearchProvider,
   validateTavilyQuery,
   normalizeTavilyResults,
+  normalizeTavilyExtractResults,
   TavilyConfigurationError,
   TavilySearchError,
   TAVILY_SEARCH_URL
