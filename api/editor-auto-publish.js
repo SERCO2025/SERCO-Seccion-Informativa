@@ -117,7 +117,7 @@ function isSeriousConstructionSourceCandidate(source) {
   }
   const title = source.title.trim();
   const evidenceText = String(source.content || source.rawContent || source.snippet || source.excerpt || "").trim();
-  return title.length >= 8 && evidenceText.length >= 40;
+  return title.length >= 3 && evidenceText.length >= 40;
 }
 
 function createConstructionSearchProvider(provider) {
