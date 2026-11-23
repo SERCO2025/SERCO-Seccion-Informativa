@@ -197,12 +197,14 @@ function selectSearchPlan(now = new Date(), existingTopics = []) {
   const timestamp = now instanceof Date ? now.getTime() : new Date(now).getTime();
   const safeTimestamp = Number.isFinite(timestamp) ? timestamp : Date.now();
   const slot = Math.floor(safeTimestamp / (30 * 60 * 1000));
-  const used = new Set((Array.isArray(existingTopics) ? existingTopics : [])
+  const used = (Array.isArray(existingTopics) ? existingTopics : [])
     .map((topic) => normalize(topic))
-    .filter(Boolean));
-  const available = SEARCH_PLANS.filter((plan) => !used.has(normalize(plan.topic)));
-  const pool = available.length ? available : SEARCH_PLANS;
-  return pool[((slot % pool.length) + pool.length) % pool.length];
+    .filter(Boolean);
+  const available = SEARCH_PLANS.filter((plan) =>
+    !used.some((title) => title.includes(normalize(plan.topic)))
+  );
+  if (!available.length) return null;
+  return available[((slot % available.length) + available.length) % available.length];
 }
 
 function createConstructionResearchDiscovery(provider, options = {}) {
@@ -218,6 +220,9 @@ function createConstructionResearchDiscovery(provider, options = {}) {
       }
 
       const plan = input.plan || selectSearchPlan(input.now, input.existingTopics);
+      if (!plan) {
+        return { status: "no_topics_available", searched: false, candidateCount: 0, sources: [] };
+      }
       const existingSourceUrls = input.existingSourceUrls instanceof Set
         ? new Set([...input.existingSourceUrls].map((url) => String(url).split("#")[0].replace(/\/$/, "").toLowerCase()))
         : new Set();
