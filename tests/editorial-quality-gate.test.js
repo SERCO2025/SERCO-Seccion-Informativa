@@ -9,13 +9,13 @@ function fixture(overrides = {}) {
     url: "https://materials.example.org/concrete",
     title: "Concrete material properties",
     excerpt: "Concrete cement aggregates water ratio compressive strength curing construction material tests.",
-    evidenceText: "Concrete is produced from cement, aggregates and water. The water cement ratio affects compressive strength, workability and durability. Curing maintains moisture for hydration."
+    evidenceText: "El concreto se produce con cemento, agregados y agua. La relación agua-cemento afecta la resistencia a compresión, la trabajabilidad y la durabilidad. El curado conserva humedad para la hidratación del cemento."
   };
   const source2 = {
     url: "https://engineering.example.net/structures",
     title: "Structural concrete engineering",
     excerpt: "Structural concrete reinforcement design and quality control methods.",
-    evidenceText: "Structural concrete combines concrete and steel reinforcement. Quality control includes sampling, compressive testing, placement, vibration and curing procedures."
+    evidenceText: "El concreto estructural combina concreto y acero de refuerzo. El control de calidad incluye muestreo, ensayos de compresión, colocación, compactación, vibrado y procedimientos de curado. Las especificaciones identifican criterios de aceptación y responsabilidades."
   };
   const body = [
     "# Definición del concreto",
@@ -25,7 +25,7 @@ function fixture(overrides = {}) {
     "Los agregados forman el esqueleto granular y deben cumplir requisitos de calidad y granulometría [1].",
     "## Aplicaciones estructurales",
     "En estructuras, el concreto puede combinarse con acero de refuerzo para resistir distintos esfuerzos [2].",
-    "El diseño considera cargas, geometría, materiales y condiciones de exposición [2].",
+    "El diseño estructural considera las propiedades del concreto y del acero de refuerzo, así como los criterios de control de calidad [2].",
     "## Ejecución y control",
     "La colocación requiere procedimientos que eviten segregación y pérdida de uniformidad [2].",
     "La compactación mediante vibrado ayuda a reducir vacíos cuando se aplica correctamente [2].",
@@ -36,8 +36,8 @@ function fixture(overrides = {}) {
     "El control de calidad documenta materiales, colocación, curado y resultados de ensayos [2].",
     "Las especificaciones deben identificar criterios de aceptación y responsabilidades [2].",
     "## Limitaciones",
-    "La dosificación no debe definirse sin considerar exposición, requisitos estructurales y materiales disponibles [1].",
-    "La selección de procedimientos depende de las condiciones reales de la obra [2].",
+    "La dosificación del concreto depende de la relación agua-cemento y de la calidad de los agregados [1].",
+    "La selección de procedimientos de colocación, compactación, vibrado y curado debe documentarse en el control de calidad [2].",
     "La pasta formada por cemento y agua envuelve los agregados y desarrolla propiedades que dependen de la relación agua-cemento y de la hidratación [1].",
     "Una relación agua-cemento adecuada contribuye a equilibrar resistencia, trabajabilidad y durabilidad, siempre dentro de las especificaciones del proyecto [1].",
     "En elementos de concreto reforzado, el acero de refuerzo trabaja en conjunto con el concreto y requiere colocación y recubrimiento compatibles con el diseño [2].",
