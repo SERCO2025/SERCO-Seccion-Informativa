@@ -1,7 +1,7 @@
 "use strict";
 
 const { createTavilySearchProvider } = require("../src/services/research/tavily-search-provider");
-const { createGeminiResearchProvider } = require("../src/services/research/gemini-research-provider");
+const { createSequentialResearchProvider } = require("../src/services/research/sequential-research-provider");
 const { createArticlePersistence } = require("../src/services/editor/article-persistence");
 const { getCitationOrder } = require("../src/services/research/citation-order");
 
@@ -10,11 +10,11 @@ const SECRET_KEY = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVI
 const CRON_TOKEN = process.env.SERCO_AUTO_PUBLISH_TOKEN || "";
 const AUTOMATION_GEMINI_API_KEY = process.env.GEMINI_AUTOMATION_API_KEY || "";
 const SEARCH = createTavilySearchProvider({ maxResults: 8 });
-const RESEARCH = createGeminiResearchProvider({
+const RESEARCH = createSequentialResearchProvider({
   searchProvider: SEARCH,
-  apiKey: AUTOMATION_GEMINI_API_KEY,
-  requestTimeoutMs: 18000,
-  maxRetryDelayMs: 2000
+  geminiApiKey: AUTOMATION_GEMINI_API_KEY,
+  geminiModel: process.env.GEMINI_AUTOMATION_MODEL || process.env.GEMINI_RESEARCH_MODEL || undefined,
+  timeoutMs: 12000
 });
 const PERSISTENCE = createArticlePersistence();
 
@@ -146,6 +146,22 @@ const TOPICS = [
   ["Taxonomía documental","Información y documentación","Información y documentación"]
 ];
 
+function selectPendingTopic(topics, existingTitles, now = new Date()) {
+  const available = Array.isArray(topics) ? topics : [];
+  const titles = existingTitles instanceof Set ? existingTitles : new Set();
+  if (!available.length) return null;
+  const timestamp = now instanceof Date ? now.getTime() : new Date(now).getTime();
+  const safeTimestamp = Number.isFinite(timestamp) ? timestamp : Date.now();
+  const slot = Math.floor(safeTimestamp / (20 * 60 * 1000));
+  const start = ((slot % available.length) + available.length) % available.length;
+  for (let offset = 0; offset < available.length; offset += 1) {
+    const topic = available[(start + offset) % available.length];
+    const title = ("Diccionario técnico: " + topic[0]).toLowerCase();
+    if (!titles.has(title)) return topic;
+  }
+  return null;
+}
+
 function send(res, status, payload) {
   res.setHeader("Cache-Control", "no-store");
   res.setHeader("Content-Type", "application/json; charset=utf-8");
@@ -191,6 +207,11 @@ async function generate(topic, index, batchId) {
     "Explica el concepto desde nivel básico y desarrolla una entrada de diccionario técnico en español."
   ].join(" ");
   const result = await RESEARCH.research({ query });
+  if (result.status !== "completed" || !result.expandedAnswer || !result.internalReport) {
+    const attempts = Array.isArray(result.providerAttempts) ? result.providerAttempts : [];
+    const failedProviders = attempts.map((item) => item.provider + ":" + item.code).join(",");
+    throw new Error("No hay proveedor de IA disponible para generar " + topic[0] + (failedProviders ? " (" + failedProviders + ")" : "") + ".");
+  }
   const sources = (result.sources || []).filter((s) => s && s.title && /^https?:\/\//i.test(s.url || "")).slice(0, 8).map((s, index) => ({
     title: s.title, source_type: "website", source_url: s.url,
     published_date: /^\d{4}-\d{2}-\d{2}$/.test(String(s.publishedDate || "")) ? s.publishedDate : null,
@@ -239,13 +260,14 @@ module.exports = async function automaticEditorialPublisher(req, res) {
   try {
     const existing = await supabaseRest("/rest/v1/articles?select=title&origin=eq.ai_research&content_type=eq.dictionary_entry&limit=1000");
     const titles = new Set((existing || []).map((a) => String(a.title || "").toLowerCase()));
-    const pending = TOPICS.filter((t) => !titles.has(("Diccionario técnico: " + t[0]).toLowerCase())).slice(0, 1);
-    if (pending.length < 1) return send(res, 409, { error: "TOPIC_QUEUE_EXHAUSTED", remaining: pending.length });
+    const topic = selectPendingTopic(TOPICS, titles, new Date());
+    if (!topic) return send(res, 409, { error: "TOPIC_QUEUE_EXHAUSTED", remaining: 0 });
     const batchId = new Date().toISOString().replace(/[:.]/g, "-");
-    const results = [await generate(pending[0], 0, batchId)];
+    const results = [await generate(topic, 0, batchId)];
     return send(res, 200, { success: true, generated: results.length, batch_id: batchId, publications: results });
   } catch (error) {
     return send(res, 502, { error: "AUTO_PUBLISH_FAILED", message: String(error && error.message || "Error desconocido") });
   }
 };
 module.exports.config = { maxDuration: 60 };
+module.exports.selectPendingTopic = selectPendingTopic;
