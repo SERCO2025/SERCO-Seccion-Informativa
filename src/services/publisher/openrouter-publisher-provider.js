@@ -95,6 +95,7 @@ function createOpenRouterPublisher(options = {}) {
             ],
             response_format: { type: "json_object" },
             temperature: 0.2,
+            reasoning: { enabled: false },
             max_tokens: 12000,
             stream: false
           })
