@@ -6,6 +6,7 @@ const { createArticlePersistence } = require("../src/services/editor/article-per
 const { getCitationOrder } = require("../src/services/research/citation-order");
 const { createConstructionResearchDiscovery } = require("../src/services/publisher/construction-research-discovery");
 const { validateEditorialArticle } = require("../src/services/publisher/editorial-quality-gate");
+const { normalizePublishedDate, createArticleSlug } = require("../src/services/publisher/document-metadata");
 
 const BASE = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
 const SECRET_KEY = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
@@ -80,7 +81,7 @@ async function generate(discovery, index, batchId) {
   }
   const sources = (result.sources || []).filter((s) => s && s.title && s.rawContent && s.rawContent.length >= 500).slice(0, 8).map((s, sourceIndex) => ({
     title: s.title, source_type: "technical_document", source_url: s.url,
-    published_date: /^\\d{4}-\\d{2}-\\d{2}$/.test(String(s.publishedDate || "")) ? s.publishedDate : null,
+    published_date: normalizePublishedDate(s.publishedDate),
     metadata: {
       provider: "Tavily",
       score: s.score || null,
@@ -104,7 +105,7 @@ async function generate(discovery, index, batchId) {
   const title = "Diccionario técnico: " + topic;
   const summaryText = summary(body);
   if (summaryText.length < 30) throw new Error("No se pudo generar un resumen suficiente para el documento técnico.");
-  const slugBase = topic.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 120);
+  const slugBase = createArticleSlug(topic);
   const document = {
     title, slug: "diccionario-" + slugBase,
     summary: summaryText, content_type: "dictionary_entry", status: "published",
