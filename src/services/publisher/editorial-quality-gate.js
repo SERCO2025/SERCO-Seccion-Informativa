@@ -156,7 +156,7 @@ function validateEditorialArticle({ topic, body, internalReport, sources, claimE
     }
 
     const claimTerms = meaningfulWords(String(claim.claim || "").replace(/\[\d+\]/g, ""));
-    const claimNumbers = (String(claim.claim || "").match(/\b\d+(?:[.,]\d+)?\s*(?:%|°c|mpa|gpa|kn|mm|cm|m|kg|t|hz)?\b/gi) || [])
+    const claimNumbers = (String(claim.claim || "").replace(/\[\d+\]/g, "").match(/\b\d+(?:[.,]\d+)?\s*(?:%|°c|mpa|gpa|kn|mm|cm|m|kg|t|hz)?\b/gi) || [])
       .map((value) => value.replace(/\s+/g, "").toLowerCase());
     let supportedByEvidence = false;
 
