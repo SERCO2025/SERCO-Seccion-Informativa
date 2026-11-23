@@ -133,16 +133,27 @@ test("no vuelve a considerar documentos fuente ya utilizados en publicaciones an
 });
 
 
-test("no realiza búsquedas cuando todos los temas del catálogo ya fueron publicados", async () => {
-  let searchCalls = 0;
-  const discovery = createConstructionResearchDiscovery({
-    async search() { searchCalls += 1; return { results: [] }; },
-    async extract() { throw new Error("No debe extraer"); }
-  });
-  const result = await discovery.discover({
-    existingTopics: SEARCH_PLANS.map((plan) => "Diccionario técnico: " + plan.topic)
-  });
-  assert.equal(result.status, "no_topics_available");
-  assert.equal(result.searched, false);
-  assert.equal(searchCalls, 0);
+test("continúa rotando el catálogo cuando todos los temas ya tienen una publicación", async () => {
+  const existingTopics = SEARCH_PLANS.map((plan) => "Diccionario técnico: " + plan.topic);
+  const next = selectSearchPlan(new Date("2026-11-23T00:00:00.000Z"), existingTopics);
+  assert.ok(next);
+  assert.ok(SEARCH_PLANS.some((plan) => plan.topic === next.topic));
+  assert.equal(
+    selectSearchPlan(new Date("2026-11-23T00:00:00.000Z"), [
+      "Diccionario técnico: " + next.topic,
+      ...existingTopics
+    ]).topic === next.topic,
+    false
+  );
+});
+
+test("el tema menos utilizado tiene prioridad sobre los temas repetidos", () => {
+  const existingTopics = SEARCH_PLANS.flatMap((plan) => [
+    "Diccionario técnico: " + plan.topic,
+    "Diccionario técnico: " + plan.topic
+  ]);
+  const leastUsed = SEARCH_PLANS[3];
+  existingTopics.push("Diccionario técnico: " + leastUsed.topic);
+  const next = selectSearchPlan(new Date("2026-11-23T00:00:00.000Z"), existingTopics);
+  assert.equal(next.topic, leastUsed.topic);
 });
