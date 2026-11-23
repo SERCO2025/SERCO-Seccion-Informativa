@@ -164,7 +164,9 @@ module.exports = async function automaticEditorialPublisher(req, res) {
     console.info("[publisher:discovery] completed", {
       status: discovery.status,
       category: discovery.plan,
+      searchResultCount: discovery.searchResultCount || 0,
       candidateCount: discovery.candidateCount || 0,
+      extractedCount: discovery.extractedCount || 0,
       acceptedCount: discovery.acceptedCount || 0
     });
     if (discovery.status !== "ready") {
@@ -173,7 +175,9 @@ module.exports = async function automaticEditorialPublisher(req, res) {
         generated: 0,
         reason: "NO_RELEVANT_CONSTRUCTION_DOCUMENTS",
         search_category: discovery.plan,
+        search_results_returned: discovery.searchResultCount || 0,
         candidates_reviewed: discovery.candidateCount || 0,
+        documents_extracted: discovery.extractedCount || 0,
         documents_accepted: discovery.acceptedCount || 0
       });
     }
