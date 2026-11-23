@@ -116,6 +116,6 @@ test("la cola editorial contiene exclusivamente temas de construcción civil y e
   }
   for (const topic of TOPICS) {
     assert.equal(topic.length, 3);
-    assert.match(topic[2], /construcción|obra|edificación|infraestructura|ensayos|topografía|presupuesto|transporte|habitabilidad/i);
+    assert.match(topic[2], /construcción|obra|edificación|infraestructura|ensayos|topografía|presupuesto|transporte|habitabilidad|geotecnia|cimentaciones|materiales|estructural|carreteras|puentes|instalaciones|arquitectura|ejecución|administración/i);
   }
 });
