@@ -114,3 +114,32 @@ test("clasifica el límite gratuito como indisponibilidad sin activar otros prov
     code: "AI_PROVIDERS_UNAVAILABLE"
   });
 });
+
+test("usa los documentos ya filtrados y no vuelve a lanzar una búsqueda general", async () => {
+  let searches = 0;
+  const provider = createOpenRouterPublisher({
+    apiKey: "publisher-test-key",
+    searchProvider: {
+      async search() { searches += 1; throw new Error("No debe buscar otra vez"); }
+    },
+    fetchImpl: async () => ({
+      ok: true,
+      status: 200,
+      async json() {
+        return {
+          model: DEFAULT_MODEL,
+          choices: [{ message: { content: rawOutput }, finish_reason: "stop" }],
+          usage: { total_tokens: 100 }
+        };
+      }
+    })
+  });
+  const sources = [
+    { url: "https://contractor.example/bridge", title: "Concrete bridge technical report", content: "Technical excerpt.", rawContent: "Full technical construction document ".repeat(30) },
+    { url: "https://lab.example/concrete", title: "Concrete laboratory test report", content: "Test excerpt.", rawContent: "Full laboratory construction test document ".repeat(30) }
+  ];
+  const result = await provider.research({ query: "Concrete bridge repair based on source documents", sources });
+  assert.equal(searches, 0);
+  assert.equal(result.sources.length, 2);
+  assert.equal(result.sources[0].evidenceOrigin, "tavily_extract");
+});
