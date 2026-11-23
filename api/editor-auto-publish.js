@@ -108,17 +108,17 @@ function isTrustedConstructionSource(source) {
   try {
     const parsed = new URL(source.url);
     if (parsed.protocol !== "https:") return false;
-    hostname = parsed.hostname.toLowerCase().replace(/^www\\./, "");
+    hostname = parsed.hostname.toLowerCase().replace(/^www\./, "");
   } catch {
     return false;
   }
   const institutionalSuffix =
-    /(^|\\.)gov(\\.[a-z]{2,})?$/.test(hostname) ||
-    /(^|\\.)gob\\.[a-z]{2,}$/.test(hostname) ||
-    /(^|\\.)edu(\\.[a-z]{2,})?$/.test(hostname) ||
-    /(^|\\.)ac\\.[a-z]{2,}$/.test(hostname) ||
-    /(^|\\.)gc\\.ca$/.test(hostname) ||
-    /(^|\\.)govt\\.nz$/.test(hostname);
+    /(^|\.)gov(\.[a-z]{2,})?$/.test(hostname) ||
+    /(^|\.)gob\.[a-z]{2,}$/.test(hostname) ||
+    /(^|\.)edu(\.[a-z]{2,})?$/.test(hostname) ||
+    /(^|\.)ac\.[a-z]{2,}$/.test(hostname) ||
+    /(^|\.)gc\.ca$/.test(hostname) ||
+    /(^|\.)govt\.nz$/.test(hostname);
   const recognizedTechnicalInstitution = TRUSTED_CONSTRUCTION_HOSTS.some(
     (domain) => hostname === domain || hostname.endsWith("." + domain)
   );
@@ -219,7 +219,7 @@ async function generate(topic, index, batchId) {
     unavailable.code = "AI_PROVIDERS_UNAVAILABLE";
     throw unavailable;
   }
-  const sources = (result.sources || []).filter((s) => s && s.title && /^https?:\/\//i.test(s.url || "")).slice(0, 8).map((s, index) => ({
+  const sources = (result.sources || []).filter((s) => s && s.title && isTrustedConstructionSource(s)).slice(0, 8).map((s, index) => ({
     title: s.title, source_type: "website", source_url: s.url,
     published_date: /^\d{4}-\d{2}-\d{2}$/.test(String(s.publishedDate || "")) ? s.publishedDate : null,
     metadata: { provider: "Tavily", score: s.score || null, citation_order: getCitationOrder(s, index) }
@@ -284,3 +284,4 @@ module.exports.config = { maxDuration: 60 };
 module.exports.selectPendingTopic = selectPendingTopic;
 module.exports.isTrustedConstructionSource = isTrustedConstructionSource;
 module.exports.createConstructionSearchProvider = createConstructionSearchProvider;
+module.exports.TOPICS = TOPICS;
