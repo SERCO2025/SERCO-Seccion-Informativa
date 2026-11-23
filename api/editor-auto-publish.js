@@ -97,51 +97,44 @@ const TOPICS = [
 ];
 
 
-const TRUSTED_CONSTRUCTION_HOSTS = Object.freeze([
-  "asce.org", "astm.org", "aashto.org", "concrete.org", "iccsafe.org",
-  "iso.org", "trl.co.uk", "usgbc.org",
-  "unam.mx", "ipn.mx", "uam.mx", "uanl.mx", "udg.mx", "buap.mx",
-  "uaslp.mx", "tec.mx", "cinvestav.mx", "cicese.mx", "inaoe.mx",
-  "ema.org.mx", "a2la.org", "iasonline.org", "anab.ansi.org"
+const LOW_CREDIBILITY_HOSTS = Object.freeze([
+  "facebook.com", "instagram.com", "tiktok.com", "pinterest.com",
+  "quora.com", "reddit.com", "x.com", "twitter.com", "threads.net",
+  "medium.com", "blogspot.com", "wordpress.com"
 ]);
 
-function isTrustedConstructionSource(source) {
-  if (!source || typeof source.url !== "string") return false;
+function isSeriousConstructionSourceCandidate(source) {
+  if (!source || typeof source.url !== "string" || typeof source.title !== "string") return false;
   let hostname;
   try {
     const parsed = new URL(source.url);
-    if (parsed.protocol !== "https:") return false;
+    if (parsed.protocol !== "https:" || parsed.username || parsed.password) return false;
     hostname = parsed.hostname.toLowerCase().replace(/^www\./, "");
   } catch {
     return false;
   }
-  const institutionalSuffix =
-    /(^|\.)gov(\.[a-z]{2,})?$/.test(hostname) ||
-    /(^|\.)gob\.[a-z]{2,}$/.test(hostname) ||
-    /(^|\.)edu(\.[a-z]{2,})?$/.test(hostname) ||
-    /(^|\.)ac\.[a-z]{2,}$/.test(hostname) ||
-    /(^|\.)gc\.ca$/.test(hostname) ||
-    /(^|\.)govt\.nz$/.test(hostname);
-  const recognizedTechnicalInstitution = TRUSTED_CONSTRUCTION_HOSTS.some(
-    (domain) => hostname === domain || hostname.endsWith("." + domain)
-  );
-  return institutionalSuffix || recognizedTechnicalInstitution;
+  if (LOW_CREDIBILITY_HOSTS.some((domain) => hostname === domain || hostname.endsWith("." + domain))) {
+    return false;
+  }
+  const title = source.title.trim();
+  const evidenceText = String(source.content || source.rawContent || source.snippet || source.excerpt || "").trim();
+  return title.length >= 8 && evidenceText.length >= 40;
 }
 
 function createConstructionSearchProvider(provider) {
   return {
     async search(input) {
       const result = await provider.search(input);
-      const trustedResults = (Array.isArray(result.results) ? result.results : [])
-        .filter(isTrustedConstructionSource);
-      if (trustedResults.length < 2) {
-        const error = new Error("La investigación de construcción no reunió al menos dos fuentes institucionales o técnicas admitidas.");
-        error.code = "INSUFFICIENT_TRUSTED_CONSTRUCTION_SOURCES";
+      const candidateResults = (Array.isArray(result.results) ? result.results : [])
+        .filter(isSeriousConstructionSourceCandidate);
+      if (candidateResults.length < 2) {
+        const error = new Error("La investigación de construcción no reunió al menos dos fuentes HTTPS con contenido técnico suficiente para evaluar.");
+        error.code = "INSUFFICIENT_CONSTRUCTION_SOURCE_CANDIDATES";
         throw error;
       }
       return Object.assign({}, result, {
-        results: trustedResults,
-        resultCount: trustedResults.length
+        results: candidateResults,
+        resultCount: candidateResults.length
       });
     },
     async extract(input) {
@@ -222,7 +215,7 @@ async function generate(topic, index, batchId) {
     unavailable.code = "AI_PROVIDERS_UNAVAILABLE";
     throw unavailable;
   }
-  const sources = (result.sources || []).filter((s) => s && s.title && isTrustedConstructionSource(s)).slice(0, 8).map((s, index) => ({
+  const sources = (result.sources || []).filter((s) => s && s.title && isSeriousConstructionSourceCandidate(s)).slice(0, 8).map((s, index) => ({
     title: s.title, source_type: "website", source_url: s.url,
     published_date: /^\d{4}-\d{2}-\d{2}$/.test(String(s.publishedDate || "")) ? s.publishedDate : null,
     metadata: { provider: "Tavily", score: s.score || null, citation_order: getCitationOrder(s, index) }
@@ -285,6 +278,6 @@ module.exports = async function automaticEditorialPublisher(req, res) {
 };
 module.exports.config = { maxDuration: 60 };
 module.exports.selectPendingTopic = selectPendingTopic;
-module.exports.isTrustedConstructionSource = isTrustedConstructionSource;
+module.exports.isSeriousConstructionSourceCandidate = isSeriousConstructionSourceCandidate;
 module.exports.createConstructionSearchProvider = createConstructionSearchProvider;
 module.exports.TOPICS = TOPICS;
