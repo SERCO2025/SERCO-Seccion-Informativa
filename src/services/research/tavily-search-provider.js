@@ -43,6 +43,7 @@ function normalizeTavilyResults(payload) {
         url,
         title: typeof item.title === "string" ? item.title.trim() : "",
         content: typeof item.content === "string" ? item.content.trim() : "",
+        rawContent: typeof item.raw_content === "string" ? item.raw_content.trim() : "",
         score: typeof item.score === "number" && Number.isFinite(item.score) ? item.score : null,
         publishedDate: typeof item.published_date === "string" ? item.published_date : null
       });
