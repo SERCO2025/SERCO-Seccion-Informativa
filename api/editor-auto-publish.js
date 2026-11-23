@@ -5,6 +5,7 @@ const { createOpenRouterPublisher } = require("../src/services/publisher/openrou
 const { createArticlePersistence } = require("../src/services/editor/article-persistence");
 const { getCitationOrder } = require("../src/services/research/citation-order");
 const { createConstructionResearchDiscovery } = require("../src/services/publisher/construction-research-discovery");
+const { validateEditorialArticle } = require("../src/services/publisher/editorial-quality-gate");
 
 const BASE = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
 const SECRET_KEY = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
@@ -93,6 +94,13 @@ async function generate(discovery, index, batchId) {
   const internalReport = String(result.internalReport || "").trim();
   if (body.length < 1200) throw new Error("La explicación pública no alcanzó la extensión mínima de calidad.");
   if (internalReport.length < 1200) throw new Error("El expediente interno no alcanzó la extensión mínima de calidad.");
+  const editorialQuality = validateEditorialArticle({
+    topic,
+    body,
+    internalReport,
+    sources: result.sources,
+    claimEvidence: result.claimEvidence
+  });
   const title = "Diccionario técnico: " + topic;
   const summaryText = summary(body);
   if (summaryText.length < 30) throw new Error("No se pudo generar un resumen suficiente para el documento técnico.");
@@ -111,6 +119,7 @@ async function generate(discovery, index, batchId) {
       provider: result.provider, model: result.model, research_date: new Date().toISOString(),
       external_research: true, automated_dictionary: true, automation_batch: batchId,
       sequence_in_batch: index + 1, source_count: sources.length,
+      editorial_quality_gate: editorialQuality,
       discovery_method: "source_first_full_document_review",
       discovery_category: discovery.category,
       editorial_note: "Documento redactado a partir de documentos técnicos originales extraídos y filtrados por pertinencia directa con construcción física, ingeniería civil, arquitectura u obra.",
