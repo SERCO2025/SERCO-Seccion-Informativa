@@ -220,5 +220,6 @@ module.exports = {
   normalizeTavilyExtractResults,
   TavilyConfigurationError,
   TavilySearchError,
-  TAVILY_SEARCH_URL
+  TAVILY_SEARCH_URL,
+  TAVILY_EXTRACT_URL
 };
