@@ -39,7 +39,7 @@ const OBJECT_TERMS = [
   "mamposteria", "albanileria", "estructura", "estructural", "viga", "columna",
   "losa", "muro de contencion", "excavacion", "geotecnia", "mecanica de suelos",
   "topografia", "mezcla asfaltica", "drenaje pluvial", "materiales de construccion",
-  "building", "buildings", "bridge", "bridges", "road", "pavement",
+  "building", "buildings", "structural steel", "steel building", "building frame", "bridge", "bridges", "road", "pavement",
   "civil engineering", "structural engineering", "foundation", "foundations",
   "concrete", "reinforced concrete", "asphalt", "geotechnical", "soil mechanics",
   "construction site", "building materials", "steel structure", "masonry"
