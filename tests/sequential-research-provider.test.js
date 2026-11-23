@@ -53,6 +53,73 @@ test("conserva el orden y los modelos aprobados de los tres proveedores", () => 
   assert.equal(DEFAULT_MODELS["cloudflare-workers-ai"], "@cf/zai-org/glm-4.7-flash");
 });
 
+test("usa contenido extraído conservando los identificadores y el extracto original", async () => {
+  const searchCalls = { count: 0, extractCount: 0 };
+  let promptSeen;
+  let sourcesSeen;
+  const provider = createSequentialResearchProvider({
+    searchProvider: {
+      ...searchProvider(searchCalls),
+      async extract({ urls, query }) {
+        searchCalls.extractCount += 1;
+        assert.deepEqual(urls, ["https://example.org/source"]);
+        assert.equal(query, "Investigación técnica");
+        return {
+          results: [{
+            url: "https://example.org/source#section",
+            rawContent: "Texto extraído de la página con evidencia ampliada."
+          }]
+        };
+      }
+    },
+    providers: [
+      adapter("gemini", async (prompt, query, sources) => {
+        promptSeen = prompt.user;
+        sourcesSeen = sources;
+        return { raw: rawResult };
+      })
+    ]
+  });
+
+  const result = await provider.research({ query: "Investigación técnica" });
+  assert.equal(searchCalls.count, 1);
+  assert.equal(searchCalls.extractCount, 1);
+  assert.equal(sourcesSeen[0].id, 1);
+  assert.equal(sourcesSeen[0].excerpt, "Contenido recuperado por Tavily.");
+  assert.equal(sourcesSeen[0].extractedContent, "Texto extraído de la página con evidencia ampliada.");
+  assert.equal(sourcesSeen[0].evidenceText, "Texto extraído de la página con evidencia ampliada.");
+  assert.equal(sourcesSeen[0].evidenceOrigin, "tavily_extract");
+  assert.match(promptSeen, /Texto extraído de la página con evidencia ampliada/);
+  assert.equal(result.sources[0].id, 1);
+});
+
+test("mantiene el extracto de búsqueda cuando Tavily Extract falla", async () => {
+  const searchCalls = { count: 0, extractCount: 0 };
+  let sourcesSeen;
+  const provider = createSequentialResearchProvider({
+    searchProvider: {
+      ...searchProvider(searchCalls),
+      async extract() {
+        searchCalls.extractCount += 1;
+        throw Object.assign(new Error("extract unavailable"), { code: "TAVILY_EXTRACT_TIMEOUT" });
+      }
+    },
+    providers: [
+      adapter("gemini", async (prompt, query, sources) => {
+        sourcesSeen = sources;
+        return { raw: rawResult };
+      })
+    ]
+  });
+
+  const result = await provider.research({ query: "Investigación técnica" });
+  assert.equal(searchCalls.count, 1);
+  assert.equal(searchCalls.extractCount, 1);
+  assert.equal(sourcesSeen[0].evidenceText, "Contenido recuperado por Tavily.");
+  assert.equal(sourcesSeen[0].evidenceOrigin, "tavily_search_excerpt");
+  assert.equal(result.status, "completed");
+});
+
 test("pasa de Gemini a Groq y reutiliza la única búsqueda Tavily", async () => {
   const searchCalls = { count: 0 };
   const calls = [];
