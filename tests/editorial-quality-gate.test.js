@@ -9,7 +9,7 @@ function fixture(overrides = {}) {
     url: "https://materials.example.org/concrete",
     title: "Concrete material properties",
     excerpt: "Concrete cement aggregates water ratio compressive strength curing construction material tests.",
-    evidenceText: "El concreto se produce con cemento, agregados y agua. La relación agua-cemento afecta la resistencia a compresión, la trabajabilidad y la durabilidad. El curado conserva humedad para la hidratación del cemento."
+    evidenceText: "El concreto se produce con cemento, agregados y agua. La relación agua-cemento afecta la resistencia a compresión, la trabajabilidad y la durabilidad. El curado conserva humedad para la hidratación del cemento. Los agregados deben cumplir requisitos de calidad y granulometría."
   };
   const source2 = {
     url: "https://engineering.example.net/structures",
