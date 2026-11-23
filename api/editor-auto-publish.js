@@ -143,10 +143,17 @@ module.exports = async function automaticEditorialPublisher(req, res) {
   const auth = String(req.headers && req.headers.authorization || "");
   if (auth !== "Bearer " + CRON_TOKEN) return send(res, 401, { error: "UNAUTHORIZED" });
   try {
-    const existing = await supabaseRest("/rest/v1/articles?select=title,sources&origin=eq.ai_research&content_type=eq.dictionary_entry&limit=1000");
+    const existingArticles = await supabaseRest("/rest/v1/articles?select=id&origin=eq.ai_research&content_type=eq.dictionary_entry&limit=1000");
+    const existingArticleIds = (existingArticles || [])
+      .map((article) => String(article && article.id || ""))
+      .filter((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id));
     const existingSourceUrls = new Set();
-    for (const article of (existing || [])) {
-      for (const source of (Array.isArray(article.sources) ? article.sources : [])) {
+    if (existingArticleIds.length) {
+      const articleIdFilter = existingArticleIds.join(",");
+      const existingSources = await supabaseRest(
+        "/rest/v1/article_sources?select=source_url&article_id=in.(" + articleIdFilter + ")&limit=10000"
+      );
+      for (const source of (existingSources || [])) {
         if (source && typeof source.source_url === "string") {
           existingSourceUrls.add(source.source_url.split("#")[0].replace(/\/$/, "").toLowerCase());
         }
