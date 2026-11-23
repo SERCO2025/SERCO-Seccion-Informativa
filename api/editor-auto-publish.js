@@ -1,28 +1,22 @@
 "use strict";
 
 const { createTavilySearchProvider } = require("../src/services/research/tavily-search-provider");
-const { createSequentialResearchProvider } = require("../src/services/research/sequential-research-provider");
+const { createOpenRouterPublisher } = require("../src/services/publisher/openrouter-publisher-provider");
 const { createArticlePersistence } = require("../src/services/editor/article-persistence");
 const { getCitationOrder } = require("../src/services/research/citation-order");
 
 const BASE = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
 const SECRET_KEY = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const CRON_TOKEN = process.env.SERCO_AUTO_PUBLISH_TOKEN || "";
-const AUTOMATION_GEMINI_API_KEY = process.env.GEMINI_AUTOMATION_API_KEY || "";
-const HAS_AI_PROVIDER = Boolean(
-  AUTOMATION_GEMINI_API_KEY ||
-  process.env.GROQ_API_KEY ||
-  (process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CLOUDFLARE_API_TOKEN)
-);
+const PUBLISHER_API_KEY = process.env.OPENROUTER_PUBLISHER_API_KEY || "";
+const HAS_PUBLISHER_PROVIDER = Boolean(PUBLISHER_API_KEY);
 const SEARCH = createTavilySearchProvider({ maxResults: 8 });
 const CONSTRUCTION_SEARCH = createConstructionSearchProvider(SEARCH);
-const RESEARCH = createSequentialResearchProvider({
+const RESEARCH = createOpenRouterPublisher({
   searchProvider: CONSTRUCTION_SEARCH,
-  geminiApiKey: AUTOMATION_GEMINI_API_KEY,
-  geminiModel: process.env.GEMINI_AUTOMATION_MODEL || process.env.GEMINI_RESEARCH_MODEL || undefined,
-  timeoutMs: 12000,
-  groqTimeoutMs: 18000,
-  cloudflareTimeoutMs: 15000
+  apiKey: PUBLISHER_API_KEY,
+  model: process.env.OPENROUTER_PUBLISHER_MODEL || undefined,
+  timeoutMs: 45000
 });
 const PERSISTENCE = createArticlePersistence();
 
@@ -153,7 +147,7 @@ function selectPendingTopic(topics, existingTitles, now = new Date()) {
   if (!available.length) return null;
   const timestamp = now instanceof Date ? now.getTime() : new Date(now).getTime();
   const safeTimestamp = Number.isFinite(timestamp) ? timestamp : Date.now();
-  const slot = Math.floor(safeTimestamp / (20 * 60 * 1000));
+  const slot = Math.floor(safeTimestamp / (30 * 60 * 1000));
   const start = ((slot % available.length) + available.length) % available.length;
   for (let offset = 0; offset < available.length; offset += 1) {
     const topic = available[(start + offset) % available.length];
@@ -258,7 +252,7 @@ async function generate(topic, index, batchId) {
 }
 module.exports = async function automaticEditorialPublisher(req, res) {
   if (req.method !== "POST") { res.setHeader("Allow", "POST"); return send(res, 405, { error: "METHOD_NOT_ALLOWED" }); }
-  if (!BASE || !SECRET_KEY || !HAS_AI_PROVIDER || !process.env.TAVILY_API_KEY || !CRON_TOKEN) {
+  if (!BASE || !SECRET_KEY || !HAS_PUBLISHER_PROVIDER || !process.env.TAVILY_API_KEY || !CRON_TOKEN) {
     return send(res, 503, { error: "AUTO_PUBLISH_NOT_CONFIGURED" });
   }
   const auth = String(req.headers && req.headers.authorization || "");
