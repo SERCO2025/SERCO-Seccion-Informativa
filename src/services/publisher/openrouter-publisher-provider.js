@@ -6,10 +6,10 @@ const {
 } = require("../research/sequential-research-provider");
 
 const OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
-const DEFAULT_MODEL = "google/gemma-4-31b-it:free";
+const DEFAULT_MODEL = "inclusionai/ling-3.2-flash:free";
 
 function createOpenRouterPublisher(options = {}) {
-  const apiKey = options.apiKey || process.env.OPENROUTER_PUBLISHER_API_KEY || "";
+  const apiKey = options.apiKey !== undefined ? options.apiKey : (process.env.OPENROUTER_PUBLISHER_API_KEY || "");
   const model = options.model || process.env.OPENROUTER_PUBLISHER_MODEL || DEFAULT_MODEL;
   const searchProvider = options.searchProvider;
   const fetchImpl = options.fetchImpl || globalThis.fetch;
