@@ -33,7 +33,8 @@ function buildResearchPrompt(query, sources) {
     "URL: " + source.url,
     source.publishedDate ? "Fecha: " + source.publishedDate : "",
     "Puntuación Tavily (solo señal auxiliar): " + (source.score === null ? "no disponible" : source.score),
-    "Extracto: " + source.excerpt
+    "Extracto de búsqueda: " + source.excerpt,
+    source.extractedContent ? "Contenido extraído de la página: " + source.extractedContent : "Contenido completo de la página no disponible; utiliza únicamente el extracto de búsqueda."
   ].filter(Boolean).join("\n")).join("\n\n");
 
   let system = [
@@ -356,14 +357,51 @@ function createSequentialResearchProvider(options = {}) {
       if (!usableResults.length) {
         throw new ResearchSynthesisError("La búsqueda no devolvió fuentes web utilizables.", "NO_USABLE_SOURCE_CONTENT");
       }
-      const sources = usableResults.map((source, index) => ({
-        id: index + 1,
-        url: source.url,
-        title: source.title.trim(),
-        publishedDate: source.publishedDate || null,
-        score: typeof source.score === "number" && Number.isFinite(source.score) ? source.score : null,
-        excerpt: source.content.trim().slice(0, 1200)
-      }));
+
+      // Extraer una sola vez las URL seleccionadas; si falla, conservar el extracto de búsqueda.
+      const extractedByUrl = new Map();
+      if (typeof searchProvider.extract === "function") {
+        try {
+          const extracted = await searchProvider.extract({
+            urls: usableResults.map((source) => source.url),
+            query
+          });
+          for (const item of extracted && Array.isArray(extracted.results) ? extracted.results : []) {
+            if (!item || typeof item.url !== "string" || typeof item.rawContent !== "string" || !item.rawContent.trim()) continue;
+            try {
+              const parsedUrl = new URL(item.url);
+              parsedUrl.hash = "";
+              extractedByUrl.set(parsedUrl.toString(), item.rawContent.trim());
+            } catch { /* Ignorar URL que no pueda asociarse a una fuente seleccionada. */ }
+          }
+        } catch (error) {
+          console.warn("[research:tavily] extract_fallback_to_search_excerpt", {
+            code: error && typeof error.code === "string" ? error.code : "TAVILY_EXTRACT_ERROR"
+          });
+        }
+      }
+
+      const sources = usableResults.map((source, index) => {
+        let canonicalUrl = source.url;
+        try {
+          const parsedUrl = new URL(source.url);
+          parsedUrl.hash = "";
+          canonicalUrl = parsedUrl.toString();
+        } catch { /* La selección previa ya filtra URL no válidas. */ }
+        const searchExcerpt = source.content.trim().slice(0, 1200);
+        const extractedContent = extractedByUrl.get(canonicalUrl) || "";
+        return {
+          id: index + 1,
+          url: source.url,
+          title: source.title.trim(),
+          publishedDate: source.publishedDate || null,
+          score: typeof source.score === "number" && Number.isFinite(source.score) ? source.score : null,
+          excerpt: searchExcerpt,
+          extractedContent: extractedContent.slice(0, 12000),
+          evidenceText: (extractedContent || searchExcerpt).slice(0, 12000),
+          evidenceOrigin: extractedContent ? "tavily_extract" : "tavily_search_excerpt"
+        };
+      });
       const prompt = buildResearchPrompt(query, sources);
       const attempts = [];
 
