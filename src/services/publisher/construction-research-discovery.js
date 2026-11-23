@@ -130,7 +130,7 @@ function createConstructionResearchDiscovery(provider, options = {}) {
 
       const plan = input.plan || selectSearchPlan(input.now);
       const existingSourceUrls = input.existingSourceUrls instanceof Set
-        ? new Set([...input.existingSourceUrls].map((url) => String(url).split("#")[0].replace(/\\/$/, "").toLowerCase()))
+        ? new Set([...input.existingSourceUrls].map((url) => String(url).split("#")[0].replace(/\/$/, "").toLowerCase()))
         : new Set();
       const searchResult = await provider.search({ query: plan.query });
       const seenUrls = new Set();
@@ -142,7 +142,7 @@ function createConstructionResearchDiscovery(provider, options = {}) {
         .filter(({ source, assessment }) => {
           if (!assessment.relevant) return false;
           const key = String(source.url).split("#")[0].replace(/\/$/, "").toLowerCase();
-          if (seenUrls.has(key)) return false;
+          if (seenUrls.has(key) || existingSourceUrls.has(key)) return false;
           seenUrls.add(key);
           return true;
         })
