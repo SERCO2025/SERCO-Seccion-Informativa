@@ -109,6 +109,30 @@ function assessConstructionDocument(source, options = {}) {
   return { relevant: true, reason: "CONSTRUCTION_TECHNICAL_DOCUMENT", host, score, objectMatches, technicalMatches };
 }
 
+const TOPIC_STOP_WORDS = new Set([
+  "about", "after", "also", "among", "based", "case", "control", "data", "design",
+  "document", "engineering", "field", "general", "guide", "industry", "manual",
+  "method", "methods", "project", "quality", "report", "research", "result",
+  "results", "standard", "study", "technical", "testing", "using", "with",
+  "construction", "constructive", "civil", "building", "material", "materials",
+  "obra", "tecnico", "tecnica", "tecnicos", "tecnicas", "informe", "estudio",
+  "metodo", "metodos", "control", "calidad", "proyecto", "proyectos", "resultados",
+  "ingenieria", "construccion", "construcciones"
+]);
+
+function getTopicTerms(source) {
+  const text = normalize([source && source.title, source && source.rawContent, source && source.content].join(" "));
+  return new Set(text.split(" ").filter((word) => word.length >= 5 && !TOPIC_STOP_WORDS.has(word)));
+}
+
+function countSharedTopicTerms(first, second) {
+  const firstTerms = getTopicTerms(first);
+  const secondTerms = getTopicTerms(second);
+  let shared = 0;
+  for (const term of firstTerms) if (secondTerms.has(term)) shared += 1;
+  return shared;
+}
+
 function selectSearchPlan(now = new Date()) {
   const timestamp = now instanceof Date ? now.getTime() : new Date(now).getTime();
   const safeTimestamp = Number.isFinite(timestamp) ? timestamp : Date.now();
@@ -183,8 +207,22 @@ function createConstructionResearchDiscovery(provider, options = {}) {
       }
 
       const ranked = verifiedCandidates.sort((a, b) => b.assessment.score - a.assessment.score);
-      const selected = ranked.slice(0, 4);
-      const lead = selected[0].source;
+      const lead = ranked[0].source;
+      const related = ranked.filter(({ source }) => countSharedTopicTerms(lead, source) >= 2);
+      const relatedHosts = new Set(related.map(({ assessment }) => assessment.host));
+      if (related.length < 2 || relatedHosts.size < 2) {
+        return {
+          status: "no_relevant_documents",
+          plan: plan.category,
+          searched: true,
+          candidateCount: candidates.length,
+          extractedCount: extractedByUrl.size,
+          acceptedCount: verifiedCandidates.length,
+          relatedDocumentCount: related.length,
+          sources: []
+        };
+      }
+      const selected = related.slice(0, 4);
       return {
         status: "ready",
         plan: plan.category,
@@ -211,6 +249,7 @@ module.exports = {
   OBJECT_TERMS,
   TECHNICAL_TERMS,
   assessConstructionDocument,
+  countSharedTopicTerms,
   selectSearchPlan,
   createConstructionResearchDiscovery
 };
