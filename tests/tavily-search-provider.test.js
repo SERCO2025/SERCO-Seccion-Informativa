@@ -106,6 +106,7 @@ test("extrae contenido de varias URL y normaliza resultados por URL", async () =
   let request;
   const provider = createTavilySearchProvider({
     apiKey: "test-tavily-key",
+    extractEnabled: true,
     fetchImpl: async (url, options) => {
       request = { url, body: JSON.parse(options.body), headers: options.headers };
       return {
