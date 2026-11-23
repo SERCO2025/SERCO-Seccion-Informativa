@@ -83,7 +83,7 @@ function diagnoseClaimEvidenceAgainstSections(value, sections, sourceCount) {
     const claimText = normalizeEvidenceText(item.claim);
     if (!sectionText || !claimText || !sectionText.includes(claimText)) return "EVIDENCE_CLAIM_NOT_FOUND";
 
-    const claimReferenceSet = new Set([...claimText.matchAll(/\\[(\\d+)\\]/g)].map((match) => Number(match[1])));
+    const claimReferenceSet = new Set([...claimText.matchAll(/\[(\d+)\]/g)].map((match) => Number(match[1])));
     const sourceIdSet = new Set(item.sourceIds);
     if (claimReferenceSet.size !== sourceIdSet.size || [...sourceIdSet].some((id) => !claimReferenceSet.has(id))) {
       return "EVIDENCE_SOURCE_IDS_MISMATCH";
@@ -98,7 +98,7 @@ function diagnoseClaimEvidenceAgainstSections(value, sections, sourceCount) {
 
   for (const sectionName of ["visitorAnswer", "expandedAnswer"]) {
     const statements = splitResearchStatements(sections && sections[sectionName]);
-    if (statements.some((statement) => !/\\[\\d+\\]/.test(statement))) {
+    if (statements.some((statement) => !/\[\d+\]/.test(statement))) {
       return sectionName === "visitorAnswer" ? "UNCITED_VISITOR_STATEMENT" : "UNCITED_EXPANDED_STATEMENT";
     }
   }
@@ -106,12 +106,12 @@ function diagnoseClaimEvidenceAgainstSections(value, sections, sourceCount) {
   for (const sectionName of sectionNames) {
     const statements = splitCitedStatements(sections && sections[sectionName]);
     for (const statement of statements) {
-      const statementReferences = new Set([...statement.matchAll(/\\[(\\d+)\\]/g)].map((match) => Number(match[1])));
+      const statementReferences = new Set([...statement.matchAll(/\[(\d+)\]/g)].map((match) => Number(match[1])));
       const covered = value.some((item) => {
         if (item.section !== sectionName) return false;
         const claimText = normalizeEvidenceText(item.claim);
         if (!statement.includes(claimText)) return false;
-        const claimReferences = new Set([...claimText.matchAll(/\\[(\\d+)\\]/g)].map((match) => Number(match[1])));
+        const claimReferences = new Set([...claimText.matchAll(/\[(\d+)\]/g)].map((match) => Number(match[1])));
         return claimReferences.size === statementReferences.size &&
           [...statementReferences].every((id) => claimReferences.has(id));
       });
@@ -127,7 +127,7 @@ function parseResearchOutput(raw, sourceCount) {
   }
   let parsed;
   try {
-    const cleaned = raw.trim().replace(/^\\uFEFF/, "").replace(/^\\s*\`\`\`(?:json)?\\s*/i, "").replace(/\\s*\`\`\`\\s*$/, "");
+    const cleaned = raw.trim().replace(/^\uFEFF/, "").replace(/^\s*```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "");
     parsed = JSON.parse(cleaned);
   } catch {
     throw new ResearchSynthesisError("El proveedor no devolvió JSON válido.", "INVALID_RESEARCH_OUTPUT", "JSON_PARSE_FAILED");
@@ -158,7 +158,7 @@ function parseResearchOutput(raw, sourceCount) {
   }
 
   const invalidCitation = [internalReport, visitorAnswer, expandedAnswer].some((section) =>
-    [...section.matchAll(/\\[(\\d+)\\]/g)].some((match) => {
+    [...section.matchAll(/\[(\d+)\]/g)].some((match) => {
       const id = Number(match[1]);
       return !Number.isInteger(id) || id < 1 || id > sourceCount;
     })
@@ -361,6 +361,7 @@ function createProviderAdapters(options = {}) {
         const parts = candidate && candidate.content && Array.isArray(candidate.content.parts) ? candidate.content.parts : [];
         return {
           raw: parts.filter((part) => typeof part.text === "string").map((part) => part.text).join("\n"),
+          finishReason: candidate && candidate.finishReason || null,
           usage: payload.usageMetadata || null
         };
       }
