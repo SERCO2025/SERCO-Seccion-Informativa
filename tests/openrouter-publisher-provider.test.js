@@ -52,7 +52,7 @@ test("busca evidencia una vez y sintetiza con OpenRouter usando el contrato edit
         status: 200,
         async json() {
           return {
-            model: "google/gemma-4-31b-it:free",
+            model: "inclusionai/ling-3.2-flash:free",
             choices: [{ message: { content: rawOutput }, finish_reason: "stop" }],
             usage: { total_tokens: 100 }
           };
