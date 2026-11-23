@@ -148,12 +148,12 @@ test("continúa rotando el catálogo cuando todos los temas ya tienen una public
 });
 
 test("el tema menos utilizado tiene prioridad sobre los temas repetidos", () => {
-  const existingTopics = SEARCH_PLANS.flatMap((plan) => [
-    "Diccionario técnico: " + plan.topic,
-    "Diccionario técnico: " + plan.topic
-  ]);
   const leastUsed = SEARCH_PLANS[3];
-  existingTopics.push("Diccionario técnico: " + leastUsed.topic);
+  const existingTopics = SEARCH_PLANS.flatMap((plan) =>
+    plan.topic === leastUsed.topic
+      ? ["Diccionario técnico: " + plan.topic]
+      : ["Diccionario técnico: " + plan.topic, "Diccionario técnico: " + plan.topic]
+  );
   const next = selectSearchPlan(new Date("2026-11-23T00:00:00.000Z"), existingTopics);
   assert.equal(next.topic, leastUsed.topic);
 });
