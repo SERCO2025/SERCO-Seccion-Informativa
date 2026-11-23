@@ -237,19 +237,19 @@ function createConstructionResearchDiscovery(provider, options = {}) {
         : new Set();
       const searchResult = await provider.search({ query: plan.query });
       const seenUrls = new Set();
-      const candidates = (Array.isArray(searchResult.results) ? searchResult.results : [])
-        .map((source) => {
-          const assessment = assessConstructionDocument(source);
-          return { source, assessment };
-        })
-        .filter(({ source, assessment }) => {
-          if (!assessment.relevant) return false;
+      const searchResults = Array.isArray(searchResult.results) ? searchResult.results : [];
+      // Los títulos y snippets de búsqueda no son el documento: no descartar aquí
+      // fuentes técnicas por no repetir palabras clave en el fragmento breve.
+      // La pertinencia estricta se evalúa después de extraer el contenido completo.
+      const candidates = searchResults
+        .filter((source) => source && typeof source.title === "string" && typeof source.url === "string" && getSafeHost(source.url))
+        .filter((source) => {
           const key = String(source.url).split("#")[0].replace(/\/$/, "").toLowerCase();
           if (seenUrls.has(key) || existingSourceUrls.has(key)) return false;
           seenUrls.add(key);
           return true;
         })
-        .sort((a, b) => b.assessment.score - a.assessment.score)
+        .sort((a, b) => (Number(b.score) || 0) - (Number(a.score) || 0))
         .slice(0, maxCandidates);
 
       if (candidates.length < 2) {
@@ -257,19 +257,19 @@ function createConstructionResearchDiscovery(provider, options = {}) {
       }
 
       const extracted = await provider.extract({
-        urls: candidates.map(({ source }) => source.url),
+        urls: candidates.map((source) => source.url),
         query: plan.query
       });
       const extractedByUrl = new Map((Array.isArray(extracted.results) ? extracted.results : [])
         .filter((item) => item && typeof item.url === "string" && typeof item.rawContent === "string")
         .map((item) => [item.url.split("#")[0].replace(/\/$/, "").toLowerCase(), item.rawContent]));
 
-      const verifiedCandidates = candidates.map(({ source, assessment }) => {
+      const verifiedCandidates = candidates.map((source) => {
         const key = source.url.split("#")[0].replace(/\/$/, "").toLowerCase();
         const rawContent = extractedByUrl.get(key) || "";
         const document = Object.assign({}, source, { rawContent });
         const fullAssessment = assessConstructionDocument(document, { requireFullDocument: true });
-        return { source: document, assessment: fullAssessment, preliminaryAssessment: assessment };
+        return { source: document, assessment: fullAssessment };
       }).filter(({ source, assessment }) => source.rawContent.length >= minDocumentLength && assessment.relevant);
 
       const uniqueHosts = new Set(verifiedCandidates.map(({ assessment }) => assessment.host));
