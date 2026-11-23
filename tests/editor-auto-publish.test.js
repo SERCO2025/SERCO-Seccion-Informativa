@@ -10,7 +10,8 @@ const {
 } = require("../src/services/publisher/construction-research-discovery");
 
 const rawBridge = ("Concrete bridge deck repair technical report. Bridge deck concrete repair includes surface preparation, structural inspection, reinforcement protection, repair mortar specifications, compressive strength testing, curing procedures, quality control and documented field test results. ").repeat(8);
-const rawBuilding = ("Structural steel building connection laboratory test report. The building frame uses steel structural connections, bolted joints, welding procedures, load testing, material specifications, measured deformation and engineering acceptance criteria. ").repeat(8);
+const rawBuilding = ("Concrete bridge deck repair laboratory test report. The laboratory report evaluates bridge deck concrete repair, repair mortar, surface preparation, compressive strength testing, curing and field quality control. ").repeat(8);
+const rawSteel = ("Structural steel building connection laboratory test report. The building frame uses steel structural connections, bolted joints, welding procedures, load testing, material specifications, measured deformation and engineering acceptance criteria. ").repeat(8);
 
 function makeProvider() {
   const extractedUrls = [];
@@ -23,9 +24,15 @@ function makeProvider() {
     },
     {
       url: "https://laboratory.example/reports/steel-joints",
+      title: "Bridge deck concrete repair laboratory test report",
+      content: "Bridge deck concrete repair, repair mortar specifications, surface preparation and compressive strength test results.",
+      score: 0.88
+    },
+    {
+      url: "https://steel-lab.example/reports/connections",
       title: "Structural steel building connection laboratory test report",
       content: "Building steel frame connections, bolted joints, welding procedures and measured load test results.",
-      score: 0.88
+      score: 0.85
     },
     {
       url: "https://social.example.invalid/post",
@@ -43,7 +50,8 @@ function makeProvider() {
       return {
         results: [
           { url: urls[0], rawContent: rawBridge },
-          { url: urls[1], rawContent: rawBuilding }
+          { url: urls[1], rawContent: rawBuilding },
+          { url: urls[2], rawContent: rawSteel }
         ]
       };
     }
@@ -82,7 +90,7 @@ test("extrae documentos originales solo después del filtro preliminar y entrega
   const result = await discovery.discover({ now: new Date("2026-11-23T00:00:00.000Z") });
   assert.equal(result.status, "ready");
   assert.equal(result.sources.length, 2);
-  assert.equal(provider.extractedUrls.length, 2);
+  assert.equal(provider.extractedUrls.length, 3);
   assert.ok(result.sources.every((source) => source.rawContent.length >= 500));
   assert.ok(result.sources.every((source) => source.relevance.constructionSignals >= 2));
   assert.ok(result.sources.every((source) => source.relevance.technicalSignals >= 2));
