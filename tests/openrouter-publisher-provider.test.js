@@ -77,6 +77,20 @@ test("busca evidencia una vez y sintetiza con OpenRouter usando el contrato edit
   assert.equal(result.claimEvidence.length, 3);
 });
 
+test("rechaza modelos de pago antes de realizar búsquedas", async () => {
+  let searches = 0;
+  const provider = createOpenRouterPublisher({
+    apiKey: "publisher-test-key",
+    model: "inclusionai/ling-3.2-flash",
+    searchProvider: { async search() { searches += 1; return { results: [] }; } },
+    fetchImpl: async () => { throw new Error("No debe llamar al proveedor"); }
+  });
+  await assert.rejects(provider.research({ query: "Concreto" }), {
+    code: "PUBLISHER_MODEL_NOT_FREE"
+  });
+  assert.equal(searches, 0);
+});
+
 test("no intenta investigar si falta la credencial independiente", async () => {
   let searches = 0;
   const provider = createOpenRouterPublisher({
