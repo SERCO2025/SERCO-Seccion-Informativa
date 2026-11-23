@@ -4,7 +4,8 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const {
   createTavilySearchProvider,
-  normalizeTavilyResults
+  normalizeTavilyResults,
+  normalizeTavilyExtractResults
 } = require("../src/services/research/tavily-search-provider");
 
 test("valida consulta y normaliza resultados web deduplicados", async () => {
@@ -83,6 +84,69 @@ test("clasifica credenciales rechazadas aunque el cuerpo no sea JSON", async () 
     provider.search({ query: "Consulta de prueba" }),
     { code: "TAVILY_CREDENTIAL_INVALID" }
   );
+});
+
+test("extrae contenido de varias URL y normaliza resultados por URL", async () => {
+  let request;
+  const provider = createTavilySearchProvider({
+    apiKey: "test-tavily-key",
+    fetchImpl: async (url, options) => {
+      request = { url, body: JSON.parse(options.body), headers: options.headers };
+      return {
+        ok: true, status: 200,
+        async json() {
+          return {
+            results: [
+              { url: "https://example.org/a#fragment", raw_content: "Contenido íntegro A" },
+              { url: "https://example.org/b", raw_content: "Contenido íntegro B" }
+            ],
+            failed_results: [{ url: "https://example.org/c", error: "unavailable" }],
+            usage: { credits: 1 }, request_id: "extract-123"
+          };
+        }
+      };
+    }
+  });
+  const result = await provider.extract({
+    urls: ["https://example.org/a", "https://example.org/b", "https://example.org/a"],
+    query: "Consulta de prueba"
+  });
+  assert.equal(request.url, "https://api.tavily.com/extract");
+  assert.equal(request.headers.Authorization, "Bearer test-tavily-key");
+  assert.deepEqual(request.body.urls, ["https://example.org/a", "https://example.org/b"]);
+  assert.equal(request.body.chunks_per_source, 3);
+  assert.equal(request.body.extract_depth, "basic");
+  assert.equal(request.body.format, "markdown");
+  assert.equal(result.results.length, 2);
+  assert.equal(result.results[0].rawContent, "Contenido íntegro A");
+  assert.equal(result.usage.credits, 1);
+  assert.equal(result.requestId, "extract-123");
+});
+
+test("clasifica límites HTTP de Tavily Extract sin requerir JSON", async () => {
+  const provider = createTavilySearchProvider({
+    apiKey: "test-key",
+    fetchImpl: async () => ({
+      ok: false, status: 429,
+      async json() { throw new SyntaxError("empty body"); }
+    })
+  });
+  await assert.rejects(
+    provider.extract({ urls: ["https://example.org/a"], query: "Consulta de prueba" }),
+    { code: "RESEARCH_RATE_LIMITED" }
+  );
+});
+
+test("normaliza solo contenido extraído con URL HTTP o HTTPS", () => {
+  const results = normalizeTavilyExtractResults({
+    results: [
+      { url: "https://example.org/a", raw_content: "Contenido válido" },
+      { url: "file:///etc/passwd", raw_content: "No válido" },
+      { url: "https://example.org/b", raw_content: " " }
+    ]
+  });
+  assert.equal(results.length, 1);
+  assert.equal(results[0].rawContent, "Contenido válido");
 });
 
 test("no realiza llamadas si falta la clave Tavily", async () => {
