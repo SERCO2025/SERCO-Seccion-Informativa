@@ -74,6 +74,9 @@ function createTavilySearchProvider(options = {}) {
   const apiKey = options.apiKey || process.env.TAVILY_API_KEY || "";
   const fetchImpl = options.fetchImpl || globalThis.fetch;
   const searchDepth = options.searchDepth || "basic";
+  // Extract consumes additional Tavily credits; require explicit server-side opt-in.
+  const extractEnabled = options.extractEnabled === true ||
+    (options.extractEnabled !== false && process.env.TAVILY_EXTRACT_ENABLED === "true");
   const maxResults = Number.isInteger(options.maxResults)
     ? Math.min(Math.max(options.maxResults, 1), MAX_RESULTS)
     : MAX_RESULTS;
@@ -152,6 +155,10 @@ function createTavilySearchProvider(options = {}) {
     },
 
     async extract(input) {
+      if (!extractEnabled) {
+        console.info("[research:tavily] extract_skipped", { reason: "feature_disabled" });
+        return { provider: "tavily", results: [], resultCount: 0, usage: null, requestId: null, enabled: false };
+      }
       const urls = Array.isArray(input && input.urls)
         ? [...new Set(input.urls.filter((url) => typeof url === "string" && /^https?:\/\//i.test(url)).slice(0, MAX_RESULTS))]
         : [];
@@ -199,7 +206,8 @@ function createTavilySearchProvider(options = {}) {
       return {
         provider: "tavily", results: extracted, resultCount: extracted.length,
         usage: payload.usage && typeof payload.usage === "object" ? payload.usage : null,
-        requestId: typeof payload.request_id === "string" ? payload.request_id : null
+        requestId: typeof payload.request_id === "string" ? payload.request_id : null,
+        enabled: true
       };
     }
   };
