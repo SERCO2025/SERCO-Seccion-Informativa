@@ -90,7 +90,7 @@ function validateEditorialArticle({ topic, body, internalReport, sources, claimE
   const topicTerms = meaningfulWords(title);
   const articleTerms = new Set(meaningfulWords(article));
   const topicMatches = topicTerms.filter((term) => articleTerms.has(term));
-  if (!topicTerms.length || topicMatches.length === 0) {
+  if (!topicTerms.length || topicMatches.length < Math.min(2, topicTerms.length)) {
     throw new EditorialQualityError(
       "El contenido no demuestra relación textual suficiente con el tema técnico asignado.",
       "EDITORIAL_TOPIC_MISMATCH",
