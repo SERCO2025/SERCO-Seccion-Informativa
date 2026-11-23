@@ -8,7 +8,7 @@ test("selectPendingTopic rota entre temas cuando un intento anterior no generó 
   const topics = [["Tema A"], ["Tema B"], ["Tema C"], ["Tema D"]];
   const start = new Date("2026-11-23T00:00:00.000Z");
   const first = selectPendingTopic(topics, new Set(), start);
-  const next = selectPendingTopic(topics, new Set(), new Date(start.getTime() + 20 * 60 * 1000));
+  const next = selectPendingTopic(topics, new Set(), new Date(start.getTime() + 30 * 60 * 1000));
   assert.notEqual(first, next);
 });
 
