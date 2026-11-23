@@ -19,10 +19,11 @@ const PROVIDER_ORDER = Object.freeze(["gemini", "groq", "cloudflare-workers-ai"]
 const DEFAULT_TIMEOUT_MS = 12000;
 
 class ResearchSynthesisError extends Error {
-  constructor(message, code = "RESEARCH_SYNTHESIS_ERROR") {
+  constructor(message, code = "RESEARCH_SYNTHESIS_ERROR", subcode = null) {
     super(message);
     this.name = "ResearchSynthesisError";
     this.code = code;
+    this.subcode = subcode;
   }
 }
 
@@ -68,39 +69,106 @@ function buildResearchPrompt(query, sources) {
   return { system, user };
 }
 
+function diagnoseClaimEvidenceAgainstSections(value, sections, sourceCount) {
+  if (!validateClaimEvidence(value, sourceCount)) return "INVALID_EVIDENCE_SCHEMA";
+  if (value.length === 0) return "EMPTY_EVIDENCE_INDEX";
+
+  const sectionNames = ["internalReport", "visitorAnswer", "expandedAnswer"];
+  for (const sectionName of sectionNames) {
+    if (!value.some((item) => item.section === sectionName)) return "MISSING_EVIDENCE_SECTION";
+  }
+
+  for (const item of value) {
+    const sectionText = normalizeEvidenceText(sections && sections[item.section]);
+    const claimText = normalizeEvidenceText(item.claim);
+    if (!sectionText || !claimText || !sectionText.includes(claimText)) return "EVIDENCE_CLAIM_NOT_FOUND";
+
+    const claimReferenceSet = new Set([...claimText.matchAll(/\\[(\\d+)\\]/g)].map((match) => Number(match[1])));
+    const sourceIdSet = new Set(item.sourceIds);
+    if (claimReferenceSet.size !== sourceIdSet.size || [...sourceIdSet].some((id) => !claimReferenceSet.has(id))) {
+      return "EVIDENCE_SOURCE_IDS_MISMATCH";
+    }
+    if (["supported", "partial"].includes(item.assessment) && claimReferenceSet.size === 0) {
+      return "EVIDENCE_MISSING_SOURCE";
+    }
+    if (item.assessment === "unsupported" && claimReferenceSet.size > 0) {
+      return "UNSUPPORTED_CLAIM_HAS_SOURCE";
+    }
+  }
+
+  for (const sectionName of ["visitorAnswer", "expandedAnswer"]) {
+    const statements = splitResearchStatements(sections && sections[sectionName]);
+    if (statements.some((statement) => !/\\[\\d+\\]/.test(statement))) {
+      return sectionName === "visitorAnswer" ? "UNCITED_VISITOR_STATEMENT" : "UNCITED_EXPANDED_STATEMENT";
+    }
+  }
+
+  for (const sectionName of sectionNames) {
+    const statements = splitCitedStatements(sections && sections[sectionName]);
+    for (const statement of statements) {
+      const statementReferences = new Set([...statement.matchAll(/\\[(\\d+)\\]/g)].map((match) => Number(match[1])));
+      const covered = value.some((item) => {
+        if (item.section !== sectionName) return false;
+        const claimText = normalizeEvidenceText(item.claim);
+        if (!statement.includes(claimText)) return false;
+        const claimReferences = new Set([...claimText.matchAll(/\\[(\\d+)\\]/g)].map((match) => Number(match[1])));
+        return claimReferences.size === statementReferences.size &&
+          [...statementReferences].every((id) => claimReferences.has(id));
+      });
+      if (!covered) return "UNCOVERED_CITED_STATEMENT";
+    }
+  }
+  return null;
+}
+
 function parseResearchOutput(raw, sourceCount) {
   if (typeof raw !== "string" || !raw.trim()) {
-    throw new ResearchSynthesisError("El proveedor no devolvió contenido.", "INVALID_RESEARCH_OUTPUT");
+    throw new ResearchSynthesisError("El proveedor no devolvió contenido.", "INVALID_RESEARCH_OUTPUT", "EMPTY_OUTPUT");
   }
   let parsed;
   try {
-    const cleaned = raw.trim().replace(/^\uFEFF/, "").replace(/^\s*```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "");
+    const cleaned = raw.trim().replace(/^\\uFEFF/, "").replace(/^\\s*\`\`\`(?:json)?\\s*/i, "").replace(/\\s*\`\`\`\\s*$/, "");
     parsed = JSON.parse(cleaned);
   } catch {
-    throw new ResearchSynthesisError("El proveedor no devolvió JSON válido.", "INVALID_RESEARCH_OUTPUT");
+    throw new ResearchSynthesisError("El proveedor no devolvió JSON válido.", "INVALID_RESEARCH_OUTPUT", "JSON_PARSE_FAILED");
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new ResearchSynthesisError("El proveedor no devolvió un objeto JSON.", "INVALID_RESEARCH_OUTPUT", "JSON_ROOT_NOT_OBJECT");
   }
 
   const internalReport = typeof parsed.internalReport === "string" ? parsed.internalReport.trim() : "";
   const visitorAnswer = typeof parsed.visitorAnswer === "string" ? parsed.visitorAnswer.trim() : "";
   const expandedAnswer = typeof parsed.expandedAnswer === "string" ? parsed.expandedAnswer.trim() : "";
-  const claimEvidence = parsed.claimEvidence === undefined ? [] : parsed.claimEvidence;
-  if (!internalReport || !visitorAnswer || !expandedAnswer || !validateClaimEvidenceAgainstSections(claimEvidence, { internalReport, visitorAnswer, expandedAnswer }, sourceCount)) {
-    throw new ResearchSynthesisError("El proveedor devolvió una investigación incompleta o un índice editorial inválido.", "INVALID_RESEARCH_OUTPUT");
+  const claimEvidence = parsed.claimEvidence;
+  if (!internalReport || !visitorAnswer || !expandedAnswer) {
+    throw new ResearchSynthesisError("Falta una de las secciones requeridas.", "INVALID_RESEARCH_OUTPUT", "MISSING_REQUIRED_SECTION");
+  }
+
+  const evidenceFailure = diagnoseClaimEvidenceAgainstSections(
+    claimEvidence,
+    { internalReport, visitorAnswer, expandedAnswer },
+    sourceCount
+  );
+  if (evidenceFailure) {
+    throw new ResearchSynthesisError(
+      "El índice editorial no cumple la correspondencia exigida con el texto y sus fuentes.",
+      "INVALID_RESEARCH_OUTPUT",
+      evidenceFailure
+    );
   }
 
   const invalidCitation = [internalReport, visitorAnswer, expandedAnswer].some((section) =>
-    [...section.matchAll(/\[(\d+)\]/g)].some((match) => {
+    [...section.matchAll(/\\[(\\d+)\\]/g)].some((match) => {
       const id = Number(match[1]);
       return !Number.isInteger(id) || id < 1 || id > sourceCount;
     })
   );
   if (invalidCitation) {
-    throw new ResearchSynthesisError("El proveedor citó una fuente que no pertenece a esta búsqueda.", "INVALID_RESEARCH_CITATION");
+    throw new ResearchSynthesisError("El proveedor citó una fuente que no pertenece a esta búsqueda.", "INVALID_RESEARCH_CITATION", "CITATION_OUT_OF_RANGE");
   }
 
   return { internalReport, visitorAnswer, expandedAnswer, claimEvidence };
 }
-
 function normalizeEvidenceText(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
 }
@@ -259,6 +327,12 @@ function createProviderAdapters(options = {}) {
   const timeoutMs = Number.isInteger(options.timeoutMs)
     ? Math.min(Math.max(options.timeoutMs, 1000), 30000)
     : DEFAULT_TIMEOUT_MS;
+  const providerTimeout = (value) => Number.isInteger(value)
+    ? Math.min(Math.max(value, 1000), 30000)
+    : timeoutMs;
+  const geminiTimeoutMs = providerTimeout(options.geminiTimeoutMs);
+  const groqTimeoutMs = providerTimeout(options.groqTimeoutMs);
+  const cloudflareTimeoutMs = providerTimeout(options.cloudflareTimeoutMs);
   const env = options.env || process.env;
 
   return [
@@ -281,7 +355,7 @@ function createProviderAdapters(options = {}) {
               responseMimeType: "application/json"
             }
           },
-          timeoutMs
+          geminiTimeoutMs
         );
         const candidate = Array.isArray(payload.candidates) ? payload.candidates[0] : null;
         const parts = candidate && candidate.content && Array.isArray(candidate.content.parts) ? candidate.content.parts : [];
@@ -302,12 +376,47 @@ function createProviderAdapters(options = {}) {
           model,
           messages: [{ role: "system", content: prompt.system }, { role: "user", content: prompt.user }],
           temperature: 0.2,
-          max_completion_tokens: 5000,
-          response_format: { type: "json_object" },
+          reasoning_effort: "low",
+          max_completion_tokens: 12000,
+          response_format: {
+            type: "json_schema",
+            json_schema: {
+              name: "serco_research",
+              strict: true,
+              schema: {
+                type: "object",
+                properties: {
+                  internalReport: { type: "string" },
+                  visitorAnswer: { type: "string" },
+                  expandedAnswer: { type: "string" },
+                  claimEvidence: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        section: { type: "string", enum: ["internalReport", "visitorAnswer", "expandedAnswer"] },
+                        claim: { type: "string" },
+                        assessment: { type: "string", enum: ["supported", "partial", "unsupported", "uncertain"] },
+                        sourceIds: { type: "array", items: { type: "integer" } }
+                      },
+                      required: ["section", "claim", "assessment", "sourceIds"],
+                      additionalProperties: false
+                    }
+                  }
+                },
+                required: ["internalReport", "visitorAnswer", "expandedAnswer", "claimEvidence"],
+                additionalProperties: false
+              }
+            }
+          },
           stream: false
-        }, timeoutMs);
+        }, groqTimeoutMs);
         const choice = Array.isArray(payload.choices) ? payload.choices[0] : null;
-        return { raw: choice && choice.message ? choice.message.content : "", usage: payload.usage || null };
+        return {
+          raw: choice && choice.message ? choice.message.content : "",
+          finishReason: choice && choice.finish_reason || null,
+          usage: payload.usage || null
+        };
       }
     },
     {
@@ -329,10 +438,14 @@ function createProviderAdapters(options = {}) {
             max_tokens: 5000,
             stream: false
           },
-          timeoutMs
+          cloudflareTimeoutMs
         );
         const choice = Array.isArray(payload.choices) ? payload.choices[0] : null;
-        return { raw: choice && choice.message ? choice.message.content : "", usage: payload.usage || null };
+        return {
+          raw: choice && choice.message ? choice.message.content : "",
+          finishReason: choice && choice.finish_reason || null,
+          usage: payload.usage || null
+        };
       }
     }
   ];
@@ -411,9 +524,13 @@ function createSequentialResearchProvider(options = {}) {
           attempts.push({ provider: adapter.provider, code: "PROVIDER_NOT_CONFIGURED" });
           continue;
         }
+        let generated = null;
         try {
           console.info("[research:failover] provider_started", { provider: adapter.provider, model: adapter.model || null });
-          const generated = await adapter.generate(prompt, query, sources);
+          generated = await adapter.generate(prompt, query, sources);
+          if (generated && String(generated.finishReason || "").toLowerCase() === "length") {
+            throw new ResearchSynthesisError("La salida alcanzó el límite de tokens del proveedor.", "PROVIDER_OUTPUT_TRUNCATED", "FINISH_REASON_LENGTH");
+          }
           const parsed = parseResearchOutput(generated && generated.raw, sources.length);
           console.info("[research:failover] provider_completed", { provider: adapter.provider, fallbackCount: attempts.length, sourceCount: sources.length });
           return {
@@ -443,11 +560,22 @@ function createSequentialResearchProvider(options = {}) {
           attempts.push({
             provider: adapter.provider,
             model: adapter.model || null,
-            code: error && typeof error.code === "string" ? error.code : "PROVIDER_ERROR"
+            code: error && typeof error.code === "string" ? error.code : "PROVIDER_ERROR",
+            subcode: error && typeof error.subcode === "string" ? error.subcode : null,
+            finishReason: generated && typeof generated.finishReason === "string" ? generated.finishReason : null,
+            outputLength: generated && typeof generated.raw === "string" ? generated.raw.length : null,
+            completionTokens: generated && generated.usage && Number.isFinite(generated.usage.completion_tokens)
+              ? generated.usage.completion_tokens
+              : generated && generated.usage && Number.isFinite(generated.usage.completionTokenCount)
+                ? generated.usage.completionTokenCount
+                : null
           });
           console.warn("[research:failover] provider_failed", {
             provider: adapter.provider,
-            code: error && typeof error.code === "string" ? error.code : "PROVIDER_ERROR"
+            code: error && typeof error.code === "string" ? error.code : "PROVIDER_ERROR",
+            subcode: error && typeof error.subcode === "string" ? error.subcode : null,
+            finishReason: generated && typeof generated.finishReason === "string" ? generated.finishReason : null,
+            outputLength: generated && typeof generated.raw === "string" ? generated.raw.length : null
           });
         }
       }
