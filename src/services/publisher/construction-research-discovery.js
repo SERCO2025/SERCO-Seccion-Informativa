@@ -51,7 +51,7 @@ const TECHNICAL_TERMS = [
   "dosificacion", "granulometria", "norma", "reglamento", "manual tecnico",
   "informe tecnico", "memoria de calculo", "control de calidad", "dimensionamiento",
   "criterios de diseno", "procedimiento constructivo", "propiedades mecanicas",
-  "technical data", "technical specification", "test", "testing", "laboratory test", "load testing", "test method", "test results", "material specifications", "welding procedures",
+  "technical data", "technical specification", "laboratory test", "load testing", "testing procedures", "test method", "test results", "material specifications", "welding procedures",
   "laboratory report", "engineering report", "design criteria", "structural design",
   "material properties", "quality control", "construction method", "case study",
   "technical manual", "standard specification", "field testing"
