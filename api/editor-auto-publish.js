@@ -99,7 +99,10 @@ const TOPICS = [
 
 const TRUSTED_CONSTRUCTION_HOSTS = Object.freeze([
   "asce.org", "astm.org", "aashto.org", "concrete.org", "iccsafe.org",
-  "iso.org", "trl.co.uk", "usgbc.org"
+  "iso.org", "trl.co.uk", "usgbc.org",
+  "unam.mx", "ipn.mx", "uam.mx", "uanl.mx", "udg.mx", "buap.mx",
+  "uaslp.mx", "tec.mx", "cinvestav.mx", "cicese.mx", "inaoe.mx",
+  "ema.org.mx", "a2la.org", "iasonline.org", "anab.ansi.org"
 ]);
 
 function isTrustedConstructionSource(source) {
