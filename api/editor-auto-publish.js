@@ -143,6 +143,12 @@ module.exports = async function automaticEditorialPublisher(req, res) {
       }
     }
     const discovery = await DISCOVERY.discover({ now: new Date(), existingSourceUrls });
+    console.info("[publisher:discovery] completed", {
+      status: discovery.status,
+      category: discovery.plan,
+      candidateCount: discovery.candidateCount || 0,
+      acceptedCount: discovery.acceptedCount || 0
+    });
     if (discovery.status !== "ready") {
       return send(res, 200, {
         success: true,
