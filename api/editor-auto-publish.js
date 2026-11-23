@@ -4,158 +4,22 @@ const { createTavilySearchProvider } = require("../src/services/research/tavily-
 const { createOpenRouterPublisher } = require("../src/services/publisher/openrouter-publisher-provider");
 const { createArticlePersistence } = require("../src/services/editor/article-persistence");
 const { getCitationOrder } = require("../src/services/research/citation-order");
+const { createConstructionResearchDiscovery } = require("../src/services/publisher/construction-research-discovery");
 
 const BASE = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
 const SECRET_KEY = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const CRON_TOKEN = process.env.SERCO_AUTO_PUBLISH_TOKEN || "";
 const PUBLISHER_API_KEY = process.env.OPENROUTER_PUBLISHER_API_KEY || "";
 const HAS_PUBLISHER_PROVIDER = Boolean(PUBLISHER_API_KEY);
-const SEARCH = createTavilySearchProvider({ maxResults: 8 });
-const CONSTRUCTION_SEARCH = createConstructionSearchProvider(SEARCH);
+const SEARCH = createTavilySearchProvider({ maxResults: 8, extractEnabled: true });
+const DISCOVERY = createConstructionResearchDiscovery(SEARCH, { maxCandidates: 4, minDocumentLength: 500 });
 const RESEARCH = createOpenRouterPublisher({
-  searchProvider: CONSTRUCTION_SEARCH,
+  searchProvider: SEARCH,
   apiKey: PUBLISHER_API_KEY,
   model: process.env.OPENROUTER_PUBLISHER_MODEL || undefined,
   timeoutMs: 45000
 });
 const PERSISTENCE = createArticlePersistence();
-
-const TOPICS = [
-  ["Cemento Portland", "Materiales de construcción", "Materiales, ensayos y tecnología de construcción"],
-  ["Tipos de cemento y sus aplicaciones", "Materiales de construcción", "Materiales, ensayos y tecnología de construcción"],
-  ["Concreto u hormigón hidráulico", "Materiales de construcción", "Materiales, ensayos y tecnología de construcción"],
-  ["Relación agua-cemento", "Materiales de construcción", "Materiales, ensayos y tecnología de construcción"],
-  ["Agregados para concreto", "Materiales de construcción", "Materiales, ensayos y tecnología de construcción"],
-  ["Granulometría de arena y grava", "Materiales de construcción", "Materiales, ensayos y tecnología de construcción"],
-  ["Aditivos para concreto", "Materiales de construcción", "Materiales, ensayos y tecnología de construcción"],
-  ["Mortero de albañilería", "Materiales de construcción", "Materiales, ensayos y tecnología de construcción"],
-  ["Cal hidratada en construcción", "Materiales de construcción", "Materiales, ensayos y tecnología de construcción"],
-  ["Yeso para construcción", "Materiales de construcción", "Materiales, ensayos y tecnología de construcción"],
-  ["Acero de refuerzo para concreto", "Materiales de construcción", "Materiales, ensayos y tecnología de construcción"],
-  ["Acero estructural", "Materiales de construcción", "Materiales, ensayos y tecnología de construcción"],
-  ["Mampostería de ladrillo y bloque", "Sistemas constructivos", "Sistemas constructivos y ejecución de obra"],
-  ["Impermeabilización de cimentaciones y cubiertas", "Materiales de construcción", "Materiales, ensayos y tecnología de construcción"],
-  ["Aislamiento térmico en edificaciones", "Materiales de construcción", "Materiales, ensayos y tecnología de construcción"],
-  ["Aislamiento acústico en edificaciones", "Materiales de construcción", "Materiales, ensayos y tecnología de construcción"],
-  ["Materiales geosintéticos en obra civil", "Materiales de construcción", "Materiales, ensayos y tecnología de construcción"],
-  ["Mezclas asfálticas para pavimentos", "Infraestructura vial", "Carreteras, pavimentos y transporte"],
-  ["Estudio geotécnico del terreno", "Geotecnia y cimentaciones", "Mecánica de suelos, geotecnia y cimentaciones"],
-  ["Mecánica de suelos", "Geotecnia y cimentaciones", "Mecánica de suelos, geotecnia y cimentaciones"],
-  ["Capacidad portante del suelo", "Geotecnia y cimentaciones", "Mecánica de suelos, geotecnia y cimentaciones"],
-  ["Compactación de suelos", "Geotecnia y cimentaciones", "Mecánica de suelos, geotecnia y cimentaciones"],
-  ["Ensayo Proctor de compactación", "Laboratorio y control de calidad", "Ensayos, normas y control de calidad"],
-  ["Valor relativo de soporte CBR", "Laboratorio y control de calidad", "Ensayos, normas y control de calidad"],
-  ["Nivel freático y excavaciones", "Geotecnia y cimentaciones", "Mecánica de suelos, geotecnia y cimentaciones"],
-  ["Cimentaciones superficiales", "Geotecnia y cimentaciones", "Mecánica de suelos, geotecnia y cimentaciones"],
-  ["Cimentaciones profundas y pilotes", "Geotecnia y cimentaciones", "Mecánica de suelos, geotecnia y cimentaciones"],
-  ["Levantamiento topográfico de terrenos", "Topografía y cartografía", "Topografía, medición y replanteo"],
-  ["Deslinde y delimitación topográfica de predios", "Topografía y cartografía", "Topografía, medición y replanteo"],
-  ["Curvas de nivel y configuración del terreno", "Topografía y cartografía", "Topografía, medición y replanteo"],
-  ["Replanteo topográfico de obras", "Topografía y cartografía", "Topografía, medición y replanteo"],
-  ["Estación total en levantamientos de obra", "Topografía y cartografía", "Topografía, medición y replanteo"],
-  ["Cargas y acciones en estructuras", "Ingeniería estructural", "Diseño, análisis y construcción estructural"],
-  ["Análisis estructural de edificaciones", "Ingeniería estructural", "Diseño, análisis y construcción estructural"],
-  ["Concreto reforzado en estructuras", "Ingeniería estructural", "Diseño, análisis y construcción estructural"],
-  ["Diseño de elementos de concreto armado", "Ingeniería estructural", "Diseño, análisis y construcción estructural"],
-  ["Conexiones en estructuras de acero", "Ingeniería estructural", "Diseño, análisis y construcción estructural"],
-  ["Soldadura en estructuras metálicas de construcción", "Ingeniería estructural", "Diseño, análisis y construcción estructural"],
-  ["Muros de contención", "Ingeniería estructural", "Diseño, análisis y construcción estructural"],
-  ["Losas de entrepiso y azotea", "Sistemas constructivos", "Sistemas constructivos y ejecución de obra"],
-  ["Escaleras de concreto en edificaciones", "Sistemas constructivos", "Sistemas constructivos y ejecución de obra"],
-  ["Pavimento flexible", "Infraestructura vial", "Carreteras, pavimentos y transporte"],
-  ["Pavimento rígido de concreto", "Infraestructura vial", "Carreteras, pavimentos y transporte"],
-  ["Subbase y base hidráulica de pavimentos", "Infraestructura vial", "Carreteras, pavimentos y transporte"],
-  ["Drenaje pluvial en carreteras", "Infraestructura vial", "Carreteras, pavimentos y transporte"],
-  ["Diseño y componentes de puentes", "Puentes y estructuras especiales", "Puentes, túneles y obras especiales"],
-  ["Juntas de expansión en puentes", "Puentes y estructuras especiales", "Puentes, túneles y obras especiales"],
-  ["Cimentación y pilas de puentes", "Puentes y estructuras especiales", "Puentes, túneles y obras especiales"],
-  ["Pasos a desnivel e intersecciones a distinto nivel", "Infraestructura vial", "Carreteras, pavimentos y transporte"],
-  ["Túneles y sostenimiento de excavaciones", "Puentes y estructuras especiales", "Puentes, túneles y obras especiales"],
-  ["Instalaciones hidrosanitarias en edificaciones", "Instalaciones de edificios", "Instalaciones y desempeño de edificaciones"],
-  ["Instalaciones eléctricas en edificaciones", "Instalaciones de edificios", "Instalaciones y desempeño de edificaciones"],
-  ["Ventilación y climatización de edificios", "Instalaciones de edificios", "Instalaciones y desempeño de edificaciones"],
-  ["Protección contra incendios en edificaciones", "Instalaciones de edificios", "Instalaciones y desempeño de edificaciones"],
-  ["Accesibilidad y diseño universal en edificios", "Arquitectura y edificación", "Arquitectura, habitabilidad y edificación"],
-  ["Aislamiento y eficiencia energética de edificios", "Arquitectura y edificación", "Arquitectura, habitabilidad y edificación"],
-  ["Códigos y reglamentos de construcción", "Normativa y seguridad de obra", "Normativa, seguridad y gestión de obra"],
-  ["Seguridad en excavaciones y zanjas", "Normativa y seguridad de obra", "Normativa, seguridad y gestión de obra"],
-  ["Seguridad en trabajos en altura en construcción", "Normativa y seguridad de obra", "Normativa, seguridad y gestión de obra"],
-  ["Control de calidad del concreto en obra", "Laboratorio y control de calidad", "Ensayos, normas y control de calidad"],
-  ["Ensayo de revenimiento del concreto", "Laboratorio y control de calidad", "Ensayos, normas y control de calidad"],
-  ["Resistencia a compresión del concreto", "Laboratorio y control de calidad", "Ensayos, normas y control de calidad"],
-  ["Pruebas de compactación en campo", "Laboratorio y control de calidad", "Ensayos, normas y control de calidad"],
-  ["Cuantificación de volúmenes de obra", "Costos y presupuestos", "Medición, costos y administración de obra"],
-  ["Análisis de precios unitarios de construcción", "Costos y presupuestos", "Medición, costos y administración de obra"],
-  ["Presupuesto de obra y catálogo de conceptos", "Costos y presupuestos", "Medición, costos y administración de obra"],
-  ["Estimación de costos directos e indirectos", "Costos y presupuestos", "Medición, costos y administración de obra"],
-  ["Programación y ruta crítica de obra", "Planeación y administración de obra", "Medición, costos y administración de obra"],
-  ["Movimiento de tierras y cálculo de volúmenes", "Ejecución de obra", "Sistemas constructivos y ejecución de obra"]
-];
-
-
-const LOW_CREDIBILITY_HOSTS = Object.freeze([
-  "facebook.com", "instagram.com", "tiktok.com", "pinterest.com",
-  "quora.com", "reddit.com", "x.com", "twitter.com", "threads.net"
-]);
-
-function isSeriousConstructionSourceCandidate(source) {
-  if (!source || typeof source.url !== "string" || typeof source.title !== "string") return false;
-  let hostname;
-  try {
-    const parsed = new URL(source.url);
-    if (parsed.protocol !== "https:" || parsed.username || parsed.password) return false;
-    hostname = parsed.hostname.toLowerCase().replace(/^www\./, "");
-  } catch {
-    return false;
-  }
-  if (LOW_CREDIBILITY_HOSTS.some((domain) => hostname === domain || hostname.endsWith("." + domain))) {
-    return false;
-  }
-  const title = source.title.trim();
-  const evidenceText = String(source.content || source.rawContent || source.snippet || source.excerpt || "").trim();
-  return title.length >= 3 && evidenceText.length >= 40;
-}
-
-function createConstructionSearchProvider(provider) {
-  return {
-    async search(input) {
-      const result = await provider.search(input);
-      const candidateResults = (Array.isArray(result.results) ? result.results : [])
-        .filter(isSeriousConstructionSourceCandidate);
-      if (candidateResults.length < 2) {
-        const error = new Error("La investigación de construcción no reunió al menos dos fuentes HTTPS con contenido técnico suficiente para evaluar.");
-        error.code = "INSUFFICIENT_CONSTRUCTION_SOURCE_CANDIDATES";
-        throw error;
-      }
-      return Object.assign({}, result, {
-        results: candidateResults,
-        resultCount: candidateResults.length
-      });
-    },
-    async extract(input) {
-      if (typeof provider.extract !== "function") {
-        return { provider: "tavily", results: [], resultCount: 0, enabled: false };
-      }
-      return provider.extract(input);
-    }
-  };
-}
-
-function selectPendingTopic(topics, existingTitles, now = new Date()) {
-  const available = Array.isArray(topics) ? topics : [];
-  const titles = existingTitles instanceof Set ? existingTitles : new Set();
-  if (!available.length) return null;
-  const timestamp = now instanceof Date ? now.getTime() : new Date(now).getTime();
-  const safeTimestamp = Number.isFinite(timestamp) ? timestamp : Date.now();
-  const slot = Math.floor(safeTimestamp / (30 * 60 * 1000));
-  const start = ((slot % available.length) + available.length) % available.length;
-  for (let offset = 0; offset < available.length; offset += 1) {
-    const topic = available[(start + offset) % available.length];
-    const title = ("Diccionario técnico: " + topic[0]).toLowerCase();
-    if (!titles.has(title)) return topic;
-  }
-  return null;
-}
 
 function send(res, status, payload) {
   res.setHeader("Cache-Control", "no-store");
@@ -195,50 +59,61 @@ async function supabaseRest(path) {
   if (!response.ok) throw new Error("CATALOG_HTTP_" + response.status + ": " + String(payload && (payload.message || payload.details || payload.hint || payload.code) || "Respuesta no disponible"));
   return payload;
 }
-async function generate(topic, index, batchId) {
+async function generate(discovery, index, batchId) {
+  const topic = discovery.topic;
   const query = [
-    "Investigación especializada de ingeniería civil, arquitectura y construcción de obras e infraestructura.",
-    topic[0] + " definición técnica, fundamentos, clasificación, aplicaciones en edificaciones u obra civil, especificaciones, métodos de ejecución, ensayos, control de calidad, seguridad y normativa aplicable.",
-    "Evalúa la seriedad de cada fuente por su contenido y respaldo, no por la extensión de su dominio. Puedes utilizar universidades, organismos públicos, normas y entidades técnicas, laboratorios, fabricantes, constructoras, despachos profesionales, ingenieros, arquitectos, especialistas y publicaciones privadas cuando aporten documentación verificable, autoría o responsabilidad identificable, datos, metodología, especificaciones, ensayos, referencias o experiencia técnica demostrable.",
-    "Contrasta las afirmaciones importantes con fuentes independientes cuando sea posible. Distingue hechos medidos, requisitos normativos, recomendaciones del fabricante y opiniones. Comprueba fecha, versión, país y jurisdicción de normas o especificaciones. No inventes autores, ensayos, cifras, normas ni referencias.",
-    "Descarta contenido sin fundamento técnico, afirmaciones promocionales presentadas como hechos, publicaciones anónimas sin evidencia, foros y contenido esotérico. Un dominio .com, un blog o una fuente privada no son motivo suficiente para descartarlos: evalúa su contenido y respaldo real.",
-    "Desarrolla una entrada técnica de diccionario en español y distingue normas o requisitos según país y jurisdicción."
+    "Redacta una entrada técnica de SERCO basada exclusivamente en los documentos originales entregados.",
+    "Tema documental identificado: " + topic,
+    "Línea de investigación: " + discovery.focus,
+    "Especialidad: " + discovery.specialty,
+    "Desarrolla únicamente lo que esté respaldado por los documentos: fundamentos, especificaciones, metodología, resultados, aplicaciones reales en obras, control de calidad, seguridad, normativa y limitaciones pertinentes.",
+    "No conviertas el título de una fuente en un tema genérico. No agregues información ajena al contenido documental ni inventes datos, autores, ensayos, normas o resultados.",
+    "Contrasta los documentos entre sí, distingue datos medidos de recomendaciones comerciales y señala discrepancias, jurisdicción y vigencia cuando estén documentadas.",
+    "Evalúa fuentes privadas, fabricantes, constructoras, despachos y laboratorios por el contenido técnico, autoría, metodología y evidencia; no por el tipo de dominio."
   ].join(" ");
-  const result = await RESEARCH.research({ query });
+  const result = await RESEARCH.research({ query, sources: discovery.sources });
   if (result.status !== "completed" || !result.expandedAnswer || !result.internalReport) {
-    const attempts = Array.isArray(result.providerAttempts) ? result.providerAttempts : [];
-    const failedProviders = attempts.map((item) => item.provider + ":" + item.code).join(",");
-    const unavailable = new Error("No hay proveedor de IA disponible para generar " + topic[0] + (failedProviders ? " (" + failedProviders + ")" : "") + ".");
+    const unavailable = new Error("El proveedor independiente no pudo completar la redacción del documento técnico.");
     unavailable.code = "AI_PROVIDERS_UNAVAILABLE";
     throw unavailable;
   }
-  const sources = (result.sources || []).filter((s) => s && s.title && isSeriousConstructionSourceCandidate(s)).slice(0, 8).map((s, index) => ({
-    title: s.title, source_type: "website", source_url: s.url,
-    published_date: /^\d{4}-\d{2}-\d{2}$/.test(String(s.publishedDate || "")) ? s.publishedDate : null,
-    metadata: { provider: "Tavily", score: s.score || null, citation_order: getCitationOrder(s, index) }
+  const sources = (result.sources || []).filter((s) => s && s.title && s.rawContent && s.rawContent.length >= 500).slice(0, 8).map((s, sourceIndex) => ({
+    title: s.title, source_type: "technical_document", source_url: s.url,
+    published_date: /^\\d{4}-\\d{2}-\\d{2}$/.test(String(s.publishedDate || "")) ? s.publishedDate : null,
+    metadata: {
+      provider: "Tavily",
+      score: s.score || null,
+      citation_order: getCitationOrder(s, sourceIndex),
+      full_document_reviewed: true,
+      relevance: s.relevance || null
+    }
   }));
-  if (sources.length < 2) throw new Error("La investigación de " + topic[0] + " no reunió al menos dos fuentes verificables.");
+  if (sources.length < 2) throw new Error("La redacción no conservó dos documentos técnicos originales previamente evaluados.");
   const body = String(result.expandedAnswer || "").trim();
   const internalReport = String(result.internalReport || "").trim();
-  if (body.length < 1200) throw new Error("La explicación pública de " + topic[0] + " no alcanzó la extensión mínima de calidad.");
-  if (internalReport.length < 1200) throw new Error("El expediente interno de " + topic[0] + " no alcanzó la extensión mínima de calidad.");
-  const title = "Diccionario técnico: " + topic[0];
+  if (body.length < 1200) throw new Error("La explicación pública no alcanzó la extensión mínima de calidad.");
+  if (internalReport.length < 1200) throw new Error("El expediente interno no alcanzó la extensión mínima de calidad.");
+  const title = "Diccionario técnico: " + topic;
   const summaryText = summary(body);
-  if (summaryText.length < 30) throw new Error("No se pudo generar un resumen suficiente para " + topic[0] + ".");
+  if (summaryText.length < 30) throw new Error("No se pudo generar un resumen suficiente para el documento técnico.");
+  const slugBase = topic.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 120);
   const document = {
-    title, slug: "diccionario-" + topic[0].normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,""),
+    title, slug: "diccionario-" + slugBase,
     summary: summaryText, content_type: "dictionary_entry", status: "published",
     author_name: "SERCO · Diccionario técnico automatizado", origin: "ai_research",
-    specialty: topic[2], categories: ["Diccionario técnico", topic[1], topic[2]],
-    tags: ["diccionario", "definiciones técnicas", "SERCO", topic[1].toLowerCase()],
+    specialty: discovery.specialty,
+    categories: ["Diccionario técnico", discovery.category, discovery.specialty],
+    tags: ["diccionario", "documentación técnica", "SERCO", discovery.category.toLowerCase()],
     content_html: reportToHtml(body), content_text: body, sources, assets: [], relations: [],
     featured: false, ai_retrieval_enabled: true,
-    search_metadata: { title, description: summaryText, concepts: [topic[0], topic[1], topic[2]] },
+    search_metadata: { title, description: summaryText, concepts: [topic, discovery.category, discovery.specialty] },
     editorial_metadata: {
       provider: result.provider, model: result.model, research_date: new Date().toISOString(),
       external_research: true, automated_dictionary: true, automation_batch: batchId,
       sequence_in_batch: index + 1, source_count: sources.length,
-      editorial_note: "Contenido público generado a partir de investigación externa y fuentes registradas. Verificar jurisdicción, vigencia y aplicación específica al revisar.",
+      discovery_method: "source_first_full_document_review",
+      discovery_category: discovery.category,
+      editorial_note: "Documento redactado a partir de documentos técnicos originales extraídos y filtrados por pertinencia directa con construcción física, ingeniería civil, arquitectura u obra.",
       internal_research_report: internalReport,
       claim_evidence_index: {
         method: result.claimEvidenceMethod,
@@ -258,12 +133,28 @@ module.exports = async function automaticEditorialPublisher(req, res) {
   const auth = String(req.headers && req.headers.authorization || "");
   if (auth !== "Bearer " + CRON_TOKEN) return send(res, 401, { error: "UNAUTHORIZED" });
   try {
-    const existing = await supabaseRest("/rest/v1/articles?select=title&origin=eq.ai_research&content_type=eq.dictionary_entry&limit=1000");
-    const titles = new Set((existing || []).map((a) => String(a.title || "").toLowerCase()));
-    const topic = selectPendingTopic(TOPICS, titles, new Date());
-    if (!topic) return send(res, 409, { error: "TOPIC_QUEUE_EXHAUSTED", remaining: 0 });
+    const existing = await supabaseRest("/rest/v1/articles?select=title,sources&origin=eq.ai_research&content_type=eq.dictionary_entry&limit=1000");
+    const existingSourceUrls = new Set();
+    for (const article of (existing || [])) {
+      for (const source of (Array.isArray(article.sources) ? article.sources : [])) {
+        if (source && typeof source.source_url === "string") {
+          existingSourceUrls.add(source.source_url.split("#")[0].replace(/\\/$/, "").toLowerCase());
+        }
+      }
+    }
+    const discovery = await DISCOVERY.discover({ now: new Date(), existingSourceUrls });
+    if (discovery.status !== "ready") {
+      return send(res, 200, {
+        success: true,
+        generated: 0,
+        reason: "NO_RELEVANT_CONSTRUCTION_DOCUMENTS",
+        search_category: discovery.plan,
+        candidates_reviewed: discovery.candidateCount || 0,
+        documents_accepted: discovery.acceptedCount || 0
+      });
+    }
     const batchId = new Date().toISOString().replace(/[:.]/g, "-");
-    const results = [await generate(topic, 0, batchId)];
+    const results = [await generate(discovery, 0, batchId)];
     return send(res, 200, { success: true, generated: results.length, batch_id: batchId, publications: results });
   } catch (error) {
     const unavailable = error && error.code === "AI_PROVIDERS_UNAVAILABLE";
@@ -274,7 +165,4 @@ module.exports = async function automaticEditorialPublisher(req, res) {
   }
 };
 module.exports.config = { maxDuration: 60 };
-module.exports.selectPendingTopic = selectPendingTopic;
-module.exports.isSeriousConstructionSourceCandidate = isSeriousConstructionSourceCandidate;
-module.exports.createConstructionSearchProvider = createConstructionSearchProvider;
-module.exports.TOPICS = TOPICS;
+module.exports.createConstructionResearchDiscovery = createConstructionResearchDiscovery;
