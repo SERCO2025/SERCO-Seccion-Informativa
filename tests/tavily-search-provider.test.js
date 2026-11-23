@@ -27,6 +27,7 @@ test("realiza búsqueda Tavily básica de un crédito y devuelve fuentes", async
   let request;
   const provider = createTavilySearchProvider({
     apiKey: "test-tavily-key",
+    extractEnabled: true,
     fetchImpl: async (url, options) => {
       request = { url, options, body: JSON.parse(options.body) };
       return {
@@ -86,6 +87,21 @@ test("clasifica credenciales rechazadas aunque el cuerpo no sea JSON", async () 
   );
 });
 
+test("no consume créditos de extracción si no existe autorización explícita", async () => {
+  let called = false;
+  const provider = createTavilySearchProvider({
+    apiKey: "test-key",
+    fetchImpl: async () => { called = true; }
+  });
+  const result = await provider.extract({
+    urls: ["https://example.org/a"],
+    query: "Consulta de prueba"
+  });
+  assert.equal(called, false);
+  assert.equal(result.enabled, false);
+  assert.equal(result.results.length, 0);
+});
+
 test("extrae contenido de varias URL y normaliza resultados por URL", async () => {
   let request;
   const provider = createTavilySearchProvider({
@@ -126,6 +142,7 @@ test("extrae contenido de varias URL y normaliza resultados por URL", async () =
 test("clasifica límites HTTP de Tavily Extract sin requerir JSON", async () => {
   const provider = createTavilySearchProvider({
     apiKey: "test-key",
+    extractEnabled: true,
     fetchImpl: async () => ({
       ok: false, status: 429,
       async json() { throw new SyntaxError("empty body"); }
