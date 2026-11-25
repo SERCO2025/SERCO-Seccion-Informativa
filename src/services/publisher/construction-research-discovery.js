@@ -114,7 +114,11 @@ const TECHNICAL_TERMS = [
   "technical data", "technical specification", "laboratory test", "load testing", "testing procedures", "test method", "test results", "material specifications", "welding procedures",
   "laboratory report", "engineering report", "design criteria", "structural design",
   "material properties", "quality control", "construction method", "case study",
-  "technical manual", "standard specification", "field testing"
+  "technical manual", "standard specification", "field testing",
+  "welding procedure", "welder qualification", "visual inspection",
+  "nondestructive testing", "non destructive testing", "acceptance criteria",
+  "inspection report", "procedimiento de soldadura", "calificacion de soldador",
+  "inspeccion visual", "ensayos no destructivos"
 ];
 
 function normalize(value) {
@@ -190,6 +194,41 @@ function countSharedTopicTerms(first, second) {
   const secondTerms = getTopicTerms(second);
   let shared = 0;
   for (const term of firstTerms) if (secondTerms.has(term)) shared += 1;
+  return shared;
+}
+
+const PLAN_TOPIC_STOP_WORDS = new Set([
+  "about", "after", "also", "among", "based", "case", "control", "data",
+  "design", "document", "engineering", "field", "general", "guide", "industry",
+  "laboratory", "manual", "method", "methods", "project", "quality", "report",
+  "research", "result", "results", "standard", "study", "technical", "testing",
+  "test", "tests", "using", "with", "procedure", "procedures", "specification",
+  "specifications", "construction", "constructive", "civil", "building",
+  "material", "materials", "obra", "tecnico", "tecnica", "tecnicos", "tecnicas",
+  "informe", "estudio", "metodo", "metodos", "control", "calidad", "proyecto",
+  "proyectos", "ingenieria", "construccion", "construcciones", "ensayo",
+  "ensayos", "prueba", "pruebas", "metodologia", "procedimiento", "criterios"
+]);
+
+function getPlanTopicTerms(plan) {
+  const source = [plan && plan.topic, plan && plan.focus, plan && plan.query]
+    .filter((value) => typeof value === "string")
+    .join(" ");
+  return new Set(normalize(source).split(" ").filter((word) =>
+    word.length >= 4 && !PLAN_TOPIC_STOP_WORDS.has(word) && !/^\\d+$/.test(word)
+  ));
+}
+
+function countSharedPlanContentTerms(first, second, plan) {
+  const planTerms = getPlanTopicTerms(plan);
+  const firstContent = normalize([first.title, first.rawContent || first.content || ""].join(" "));
+  const secondContent = normalize([second.title, second.rawContent || second.content || ""].join(" "));
+  const firstTerms = new Set(firstContent.split(" "));
+  const secondTerms = new Set(secondContent.split(" "));
+  let shared = 0;
+  for (const term of planTerms) {
+    if (firstTerms.has(term) && secondTerms.has(term)) shared += 1;
+  }
   return shared;
 }
 
@@ -288,8 +327,18 @@ function createConstructionResearchDiscovery(provider, options = {}) {
       }
 
       const ranked = verifiedCandidates.sort((a, b) => b.assessment.score - a.assessment.score);
-      const lead = ranked[0].source;
-      const related = ranked.filter(({ source }) => countSharedTopicTerms(lead, source) >= 2);
+      // Agrupar por coincidencias del tema investigado en el contenido completo.
+      // Un documento con alta puntuación pero de otro tema no debe desplazar
+      // a dos fuentes independientes que sí documentan el tema del plan.
+      const topicGroups = ranked.map((candidate) => {
+        const related = ranked.filter((other) =>
+          other.source.url === candidate.source.url ||
+          countSharedPlanContentTerms(candidate.source, other.source, plan) >= 2
+        );
+        const score = related.reduce((total, item) => total + item.assessment.score, 0);
+        return { related, score };
+      }).sort((a, b) => b.related.length - a.related.length || b.score - a.score);
+      const related = topicGroups.length ? topicGroups[0].related : [];
       const relatedHosts = new Set(related.map(({ assessment }) => assessment.host));
       if (related.length < 2 || relatedHosts.size < 2) {
         return {
