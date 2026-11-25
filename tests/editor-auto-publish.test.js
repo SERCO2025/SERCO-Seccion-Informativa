@@ -181,3 +181,11 @@ test("el tema menos utilizado tiene prioridad sobre los temas repetidos", () => 
   const next = selectSearchPlan(new Date("2026-11-23T00:00:00.000Z"), existingTopics);
   assert.equal(next.topic, leastUsed.topic);
 });
+
+test("el publicador automático conserva las investigaciones externas en revisión y fuera de la recuperación pública", () => {
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const publisherSource = fs.readFileSync(path.join(__dirname, "../api/editor-auto-publish.js"), "utf8");
+  assert.match(publisherSource, /content_type:\s*"dictionary_entry",\s*status:\s*"review"/);
+  assert.match(publisherSource, /featured:\s*false,\s*ai_retrieval_enabled:\s*false/);
+});
