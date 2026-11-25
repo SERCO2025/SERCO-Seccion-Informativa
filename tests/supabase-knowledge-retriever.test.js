@@ -166,7 +166,7 @@ test("adjunta solo recursos aprobados y pertinentes a la sección de evidencia",
   assert.equal(result.items[0].assets[0].mediaType, "image");
   assert.equal(result.items[0].assets[0].altText, "Detalle de armado");
   assert.equal(result.items[0].assets[0].url, "https://example.supabase.co/storage/v1/object/sign/serco-media/obras/detalle%201.jpg?token=temporary");
-  assert.equal(calls.length, 4);
+  assert.equal(calls.length, 5);
   assert.equal(calls[1].options.headers.Authorization, "Bearer server-secret");
   const signing = calls.find(call => call.url.includes("/storage/v1/object/sign/"));
   assert.deepEqual(JSON.parse(signing.options.body), { expiresIn: 1800 });
