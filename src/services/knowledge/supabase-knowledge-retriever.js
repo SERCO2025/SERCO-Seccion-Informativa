@@ -104,6 +104,47 @@ async function loadApprovedArticleAssets({ articleIds, supabaseUrl, secretKey, f
   return byArticle;
 }
 
+async function loadPublishedStoredAnswers({ articleIds, supabaseUrl, secretKey, fetchImpl, timeoutMs }) {
+  const ids = [...new Set(articleIds.filter(id => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)))];
+  const byArticle = new Map();
+  if (!ids.length) return byArticle;
+
+  try {
+    const params = new URLSearchParams();
+    params.set("select", "id,published_version_id,article_versions(id,content_json)");
+    params.set("id", "in.(" + ids.join(",") + ")");
+    params.set("status", "eq.published");
+    params.set("limit", "8");
+    const response = await fetchImpl(supabaseUrl + "/rest/v1/articles?" + params.toString(), {
+      method: "GET",
+      headers: { apikey: secretKey, Authorization: "Bearer " + secretKey, Accept: "application/json" },
+      signal: AbortSignal.timeout ? AbortSignal.timeout(timeoutMs) : undefined
+    });
+    if (!response.ok) return byArticle;
+    const rows = await response.json();
+    if (!Array.isArray(rows)) return byArticle;
+
+    for (const article of rows) {
+      if (!article || typeof article.id !== "string" || typeof article.published_version_id !== "string") continue;
+      const versions = Array.isArray(article.article_versions)
+        ? article.article_versions
+        : article.article_versions ? [article.article_versions] : [];
+      const publishedVersion = versions.find(version =>
+        version && version.id === article.published_version_id && version.content_json
+      );
+      const content = publishedVersion && publishedVersion.content_json;
+      if (!content || typeof content.visitorAnswer !== "string" || !content.visitorAnswer.trim()) continue;
+      byArticle.set(article.id, {
+        visitorAnswer: content.visitorAnswer.trim(),
+        expandedAnswer: typeof content.expandedAnswer === "string" ? content.expandedAnswer.trim() : ""
+      });
+    }
+  } catch {
+    // Las respuestas generadas desde fragmentos siguen disponibles si falla esta lectura auxiliar.
+  }
+  return byArticle;
+}
+
 function createSupabaseKnowledgeRetriever(options = {}) {
   const supabaseUrl = (options.url || process.env.SUPABASE_URL || "").replace(/\/+$/, "");
   const secretKey = options.secretKey || process.env.SUPABASE_SECRET_KEY || "";
@@ -244,6 +285,13 @@ function createSupabaseKnowledgeRetriever(options = {}) {
         };
       });
 
+      const storedAnswersByArticle = await loadPublishedStoredAnswers({
+        articleIds: items.map(item => item.articleId),
+        supabaseUrl,
+        secretKey,
+        fetchImpl,
+        timeoutMs
+      });
       const assetsByArticle = await loadApprovedArticleAssets({
         articleIds: items.map(item => item.articleId),
         supabaseUrl,
@@ -252,6 +300,7 @@ function createSupabaseKnowledgeRetriever(options = {}) {
         timeoutMs
       });
       for (const item of items) {
+        item.storedAnswers = storedAnswersByArticle.get(item.articleId) || null;
         const section = normalizeSection(item.section);
         item.assets = (assetsByArticle.get(item.articleId) || []).filter(asset =>
           normalizeSection(asset.sectionKey) === "body" ||

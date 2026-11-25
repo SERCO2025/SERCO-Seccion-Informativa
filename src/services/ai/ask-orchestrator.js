@@ -141,6 +141,11 @@ function publicEvidence(evidence) {
   }));
 }
 
+function wantsExpandedStoredAnswer(question) {
+  const normalized = String(question || "").normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLocaleLowerCase();
+  return /\\b(mas detalles?|amplia|ampliar|ampliacion|profundiza|profundizar|detalladamente|a fondo|con mas profundidad|desarrolla|desarrollar|extiende|extension)\\b/.test(normalized);
+}
+
 function createAskOrchestrator(adapters) {
   const configured = adapters || {};
 
@@ -247,6 +252,30 @@ function createAskOrchestrator(adapters) {
             : [],
           gapRecorded: Boolean(configured.gapRecorder && typeof configured.gapRecorder.record === "function")
         };
+      }
+
+      if (coverageResult.status === "sufficient") {
+        const useExpanded = wantsExpandedStoredAnswer(question);
+        const storedEvidence = evidence
+          .filter((item) => item.storedAnswers &&
+            (useExpanded
+              ? typeof item.storedAnswers.expandedAnswer === "string" && item.storedAnswers.expandedAnswer.trim()
+              : typeof item.storedAnswers.visitorAnswer === "string" && item.storedAnswers.visitorAnswer.trim()))
+          .sort((a, b) => (Number(b.rank) || 0) - (Number(a.rank) || 0));
+        const storedItem = storedEvidence[0];
+        if (storedItem) {
+          return {
+            status: "answered",
+            coverage: "sufficient",
+            answer: useExpanded
+              ? storedItem.storedAnswers.expandedAnswer.trim()
+              : storedItem.storedAnswers.visitorAnswer.trim(),
+            citations: buildCitations([storedItem.id], evidence),
+            missingInformation: [],
+            reusedStoredAnswer: true,
+            answerDetail: useExpanded ? "expanded" : "initial"
+          };
+        }
       }
 
       requireMethod(configured.answerGenerator, "generate", "answerGenerator");

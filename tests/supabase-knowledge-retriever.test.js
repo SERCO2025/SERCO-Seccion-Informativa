@@ -150,6 +150,7 @@ test("adjunta solo recursos aprobados y pertinentes a la sección de evidencia",
     fetchImpl: async (url, options = {}) => {
       calls.push({ url, options });
       if (url.endsWith("/rpc/search_published_chunks")) return jsonResponse([{ ...row, article_id: articleId, section: "Procedimiento" }]);
+      if (url.includes("/rest/v1/articles?")) return jsonResponse([{ id: articleId, published_version_id: "published-v1", article_versions: [{ id: "published-v1", content_json: {} }] }]);
       if (url.includes("/rest/v1/article_asset_links?")) return jsonResponse([
         { article_id: articleId, section_key: "procedimiento", sort_order: 1, caption: "Detalle del armado", display_mode: "inline", media_file: { id: "image-1", bucket_id: "serco-media", storage_path: "obras/detalle 1.jpg", original_name: "detalle.jpg", mime_type: "image/jpeg", media_type: "image", alt_text: "Detalle de armado", description: "Unión de elementos", source_url: "https://source.example/photo", author: "Laboratorio", license: "Permiso concedido", rights_status: "permission_granted" } },
         { article_id: articleId, section_key: "introduccion", sort_order: 2, caption: "No corresponde a esta sección", display_mode: "inline", media_file: { id: "image-2", bucket_id: "serco-media", storage_path: "obras/otra.jpg", original_name: "otra.jpg", mime_type: "image/jpeg", alt_text: "Otra sección", rights_status: "verified" } },
@@ -164,7 +165,7 @@ test("adjunta solo recursos aprobados y pertinentes a la sección de evidencia",
   assert.equal(result.items[0].assets[0].mediaType, "image");
   assert.equal(result.items[0].assets[0].altText, "Detalle de armado");
   assert.equal(result.items[0].assets[0].url, "https://example.supabase.co/storage/v1/object/public/serco-media/obras/detalle%201.jpg");
-  assert.equal(calls.length, 2);
+  assert.equal(calls.length, 3);
   assert.equal(calls[1].options.headers.Authorization, "Bearer server-secret");
 });
 test("genera URL firmada de corta duración para recursos privados autorizados", async () => {
@@ -175,6 +176,7 @@ test("genera URL firmada de corta duración para recursos privados autorizados",
     fetchImpl: async (url, options = {}) => {
       calls.push({ url, options });
       if (url.endsWith("/rpc/search_published_chunks")) return jsonResponse([{ ...row, article_id: articleId }]);
+      if (url.includes("/rest/v1/articles?")) return jsonResponse([{ id: articleId, published_version_id: "published-v1", article_versions: [{ id: "published-v1", content_json: {} }] }]);
       if (url.includes("/rest/v1/article_asset_links?")) return jsonResponse([
         { article_id: articleId, section_key: "body", sort_order: 1, media_file: { id: "pdf-1", bucket_id: "serco-publicaciones", storage_path: "biblioteca/manual 1.pdf", original_name: "manual.pdf", mime_type: "application/pdf", media_type: "document", alt_text: "Manual técnico", description: "Manual", source_url: "https://source.example/manual", author: "Fabricante", license: "Permiso", rights_status: "verified" } }
       ]);
@@ -221,4 +223,36 @@ test("cancela la búsqueda si Supabase no responde dentro del tiempo máximo", a
     retriever.search({ query: "consulta válida", publicationStatus: "published" }),
     (error) => error instanceof SupabaseRetrieverError && error.code === "SUPABASE_RETRIEVER_TIMEOUT"
   );
+});
+
+test("recupera las respuestas guardadas únicamente desde la versión publicada vigente", async () => {
+  const articleId = "44444444-4444-4444-8444-444444444444";
+  const calls = [];
+  const retriever = createSupabaseKnowledgeRetriever({
+    url: "https://example.supabase.co",
+    secretKey: "server-secret",
+    fetchImpl: async (url) => {
+      calls.push(url);
+      if (url.endsWith("/rpc/search_published_chunks")) {
+        return jsonResponse([{ ...row, article_id: articleId }]);
+      }
+      if (url.includes("/rest/v1/articles?")) {
+        return jsonResponse([{
+          id: articleId,
+          published_version_id: "version-current",
+          article_versions: [
+            { id: "version-old", content_json: { visitorAnswer: "Respuesta antigua.", expandedAnswer: "Ampliación antigua." } },
+            { id: "version-current", content_json: { visitorAnswer: "Respuesta vigente [1].", expandedAnswer: "Explicación ampliada vigente [1]." } }
+          ]
+        }]);
+      }
+      if (url.includes("/rest/v1/article_asset_links?")) return jsonResponse([]);
+      throw new Error("Unexpected request");
+    }
+  });
+
+  const result = await retriever.search({ query: "consulta técnica", publicationStatus: "published" });
+  assert.equal(result.items[0].storedAnswers.visitorAnswer, "Respuesta vigente [1].");
+  assert.equal(result.items[0].storedAnswers.expandedAnswer, "Explicación ampliada vigente [1].");
+  assert.equal(calls.length, 3);
 });

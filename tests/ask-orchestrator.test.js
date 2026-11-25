@@ -227,3 +227,52 @@ test("no permite continuar si falta un adaptador obligatorio", async () => {
     (error) => error instanceof AskAdapterError && error.code === "ADAPTER_NOT_CONFIGURED"
   );
 });
+
+test("reutiliza la respuesta inicial almacenada sin volver a llamar al generador", async () => {
+  let generatorCalled = false;
+  const stored = {
+    visitorAnswer: "Respuesta inicial conservada [1].",
+    expandedAnswer: "Explicación ampliada conservada [1]."
+  };
+  const orchestrator = createAskOrchestrator(adapters({
+    retriever: { async search() { return { items: [{ ...evidenceItem, storedAnswers: stored }] }; } },
+    answerGenerator: { async generate() { generatorCalled = true; throw new Error("No debe generar una respuesta nueva"); } }
+  }));
+
+  const result = await orchestrator.ask({ question: "¿Qué tipos de cimentación existen?" });
+  assert.equal(result.answer, stored.visitorAnswer);
+  assert.equal(result.reusedStoredAnswer, true);
+  assert.equal(result.answerDetail, "initial");
+  assert.equal(result.citations[0].citationId, evidenceItem.id);
+  assert.equal(generatorCalled, false);
+});
+
+test("reutiliza la explicación ampliada cuando el visitante solicita más detalles", async () => {
+  const stored = {
+    visitorAnswer: "Respuesta inicial conservada [1].",
+    expandedAnswer: "Explicación ampliada conservada [1]."
+  };
+  const orchestrator = createAskOrchestrator(adapters({
+    retriever: { async search() { return { items: [{ ...evidenceItem, storedAnswers: stored }] }; } },
+    answerGenerator: { async generate() { throw new Error("No debe generar una respuesta nueva"); } }
+  }));
+
+  const result = await orchestrator.ask({ question: "Dame más detalles sobre los tipos de cimentación." });
+  assert.equal(result.answer, stored.expandedAnswer);
+  assert.equal(result.reusedStoredAnswer, true);
+  assert.equal(result.answerDetail, "expanded");
+});
+
+test("no reutiliza una respuesta almacenada si la cobertura es parcial", async () => {
+  let generatorCalled = false;
+  const orchestrator = createAskOrchestrator(adapters({
+    retriever: { async search() { return { items: [{ ...evidenceItem, storedAnswers: { visitorAnswer: "Respuesta almacenada [1].", expandedAnswer: "Ampliación almacenada [1]." } }] }; } },
+    coverageEvaluator: { async evaluate() { return { status: "partial", missingInformation: ["Falta información."] }; } },
+    answerGenerator: { async generate() { generatorCalled = true; return { text: "Respuesta complementada.", citationIds: [evidenceItem.id] }; } }
+  }));
+
+  const result = await orchestrator.ask({ question: "¿Qué tipos de cimentación existen?" });
+  assert.equal(result.reusedStoredAnswer, undefined);
+  assert.equal(result.answer, "Respuesta complementada.");
+  assert.equal(generatorCalled, true);
+});
