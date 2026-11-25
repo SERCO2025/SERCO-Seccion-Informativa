@@ -38,7 +38,7 @@ function createCloudflareAnswerProvider(options = {}) {
             { role: "user", content: buildUserPrompt(normalized) }
           ],
           temperature: 0.2,
-          max_tokens: 1200,
+          max_tokens: 2200,
           response_format: { type: "json_object" },
           stream: false
         },
