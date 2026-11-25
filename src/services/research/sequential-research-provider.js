@@ -513,7 +513,8 @@ function createSequentialResearchProvider(options = {}) {
           excerpt: searchExcerpt,
           extractedContent: extractedContent.slice(0, 12000),
           evidenceText: (extractedContent || searchExcerpt).slice(0, 12000),
-          evidenceOrigin: extractedContent ? "tavily_extract" : "tavily_search_excerpt"
+          evidenceOrigin: extractedContent ? "tavily_extract" : "tavily_search_excerpt",
+          images: Array.isArray(source.images) ? source.images.slice(0, 12) : []
         };
       });
       const prompt = buildResearchPrompt(query, sources);

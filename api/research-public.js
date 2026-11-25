@@ -6,6 +6,7 @@ const { createResearchHttpHandler } = require("../src/services/research/research
 const { createArticlePersistence } = require("../src/services/editor/article-persistence");
 const { createPublicRateLimiter } = require("../src/services/security/public-api-rate-limiter");
 const { getCitationOrder } = require("../src/services/research/citation-order");
+const { discoverPublisherMediaCandidates } = require("../src/services/publisher/media-candidate-discovery");
 
 const tavilySearchProvider = createTavilySearchProvider();
 const provider = createSequentialResearchProvider({ searchProvider: tavilySearchProvider });
@@ -88,7 +89,8 @@ function mapResearchSources(sources) {
         score: typeof source.score === "number" ? source.score : null,
         excerpt: source.excerpt || "",
         extracted_content: source.extractedContent || "",
-        evidence_origin: source.evidenceOrigin || "tavily_search_excerpt"
+        evidence_origin: source.evidenceOrigin || "tavily_search_excerpt",
+        images: Array.isArray(source.images) ? source.images.slice(0, 12) : []
       }
     }));
 }
@@ -106,6 +108,11 @@ function createPersistingResearchProvider(researchProvider, articlePersistence, 
     async research(input) {
       const result = await researchProvider.research(input);
       const sources = mapResearchSources(result.sources);
+      const mediaCandidates = discoverPublisherMediaCandidates(result.sources, {
+        topic: result.query,
+        query: result.query,
+        focus: result.query
+      });
       const completed = result.status === "completed";
       const internalReport = completed
         ? String(result.internalReport || "")
@@ -173,7 +180,8 @@ function createPersistingResearchProvider(researchProvider, articlePersistence, 
               external_research: true,
               research_status: completed ? "completed" : "sources_only",
               synthesis_completed: completed,
-              source_count: sources.length
+              source_count: sources.length,
+              media_candidate_count: mediaCandidates.length
             },
             _research_private: {
               research_status: completed ? "completed" : "sources_only",
@@ -191,7 +199,8 @@ function createPersistingResearchProvider(researchProvider, articlePersistence, 
                 excerpt: source.excerpt || "",
                 extracted_content: source.extractedContent || "",
                 evidence_text: source.evidenceText || source.excerpt || "",
-                evidence_origin: source.evidenceOrigin || "tavily_search_excerpt"
+                evidence_origin: source.evidenceOrigin || "tavily_search_excerpt",
+                images: Array.isArray(source.images) ? source.images.slice(0, 12) : []
               })),
               provider_attempts: Array.isArray(result.providerAttempts) ? result.providerAttempts : [],
               research_metadata: {
@@ -204,6 +213,7 @@ function createPersistingResearchProvider(researchProvider, articlePersistence, 
                 search_queries: Array.isArray(result.searchQueries) ? result.searchQueries : [],
                 search_usage: result.searchUsage || null,
                 claim_evidence_method: result.claimEvidenceMethod || null,
+                media_candidates: mediaCandidates,
                 researched_at: researchDate
               }
             }

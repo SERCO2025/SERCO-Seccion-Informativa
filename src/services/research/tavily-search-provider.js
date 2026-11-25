@@ -32,20 +32,44 @@ function validateTavilyQuery(input) {
   return query;
 }
 
+function normalizeTavilyImageReferences(items, fallbackSourceUrl) {
+  const unique = new Map();
+  for (const image of Array.isArray(items) ? items : []) {
+    const value = typeof image === "string" ? { url: image } : image;
+    if (!value || typeof value.url !== "string" || !/^https:\/\//i.test(value.url)) continue;
+    const url = value.url.trim();
+    if (!unique.has(url)) unique.set(url, {
+      url,
+      description: String(value.description || value.caption || "").trim().slice(0, 500),
+      alt: String(value.alt || value.title || value.description || "").trim().slice(0, 300),
+      sourceUrl: typeof (value.source_url || value.sourceUrl || value.page_url) === "string"
+        ? (value.source_url || value.sourceUrl || value.page_url)
+        : fallbackSourceUrl
+    });
+  }
+  return [...unique.values()].slice(0, 12);
+}
+
 function normalizeTavilyResults(payload) {
   const results = payload && Array.isArray(payload.results) ? payload.results : [];
+  const topLevelImages = payload && Array.isArray(payload.images) ? payload.images : [];
   const unique = new Map();
   for (const item of results) {
     if (!item || typeof item.url !== "string" || !/^https?:\/\//i.test(item.url)) continue;
     const url = item.url.trim();
     if (!unique.has(url)) {
+      const linkedTopLevelImages = topLevelImages.filter(image => {
+        const sourceUrl = image && (image.source_url || image.sourceUrl || image.page_url);
+        return typeof sourceUrl === "string" && sourceUrl.split("#")[0] === url.split("#")[0];
+      });
       unique.set(url, {
         url,
         title: typeof item.title === "string" ? item.title.trim() : "",
         content: typeof item.content === "string" ? item.content.trim() : "",
         rawContent: typeof item.raw_content === "string" ? item.raw_content.trim() : "",
         score: typeof item.score === "number" && Number.isFinite(item.score) ? item.score : null,
-        publishedDate: typeof item.published_date === "string" ? item.published_date : null
+        publishedDate: typeof item.published_date === "string" ? item.published_date : null,
+        images: normalizeTavilyImageReferences([...(Array.isArray(item.images) ? item.images : []), ...linkedTopLevelImages], url)
       });
     }
   }
@@ -75,6 +99,7 @@ function createTavilySearchProvider(options = {}) {
   const apiKey = options.apiKey || process.env.TAVILY_API_KEY || "";
   const fetchImpl = options.fetchImpl || globalThis.fetch;
   const searchDepth = options.searchDepth || "basic";
+  const includeImages = options.includeImages !== false && process.env.TAVILY_INCLUDE_IMAGES_ENABLED !== "false";
   // Extract consumes additional Tavily credits; require explicit server-side opt-in.
   const extractEnabled = options.extractEnabled === true ||
     (options.extractEnabled !== false && process.env.TAVILY_EXTRACT_ENABLED === "true");
@@ -109,6 +134,8 @@ function createTavilySearchProvider(options = {}) {
             max_results: maxResults,
             include_answer: false,
             include_raw_content: false,
+            include_images: includeImages,
+            include_image_descriptions: includeImages,
             include_usage: true
           })
         });
@@ -140,7 +167,11 @@ function createTavilySearchProvider(options = {}) {
       }
 
       const results = normalizeTavilyResults(payload);
-      console.info("[research:tavily] results_normalized", { resultCount: results.length });
+      console.info("[research:tavily] results_normalized", {
+        resultCount: results.length,
+        imageCount: results.reduce((total, source) => total + (source.images ? source.images.length : 0), 0),
+        reportedCredits: payload.usage && Number.isFinite(payload.usage.credits) ? payload.usage.credits : null
+      });
       if (results.length === 0) {
         throw new TavilySearchError("Tavily no devolvió resultados web utilizables.", "NO_SEARCH_RESULTS");
       }
