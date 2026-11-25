@@ -306,9 +306,15 @@ function createAskOrchestrator(adapters) {
       return {
         status: coverageResult.status === "partial" ? "partial" : "answered",
         coverage: coverageResult.status,
-        answer: generated.text.trim(),
+        answer: wantsExpandedStoredAnswer(question) && typeof generated.expandedText === "string" && generated.expandedText.trim()
+          ? generated.expandedText.trim()
+          : generated.text.trim(),
+        expandedAnswer: typeof generated.expandedText === "string" && generated.expandedText.trim()
+          ? generated.expandedText.trim()
+          : generated.text.trim(),
         citations,
-        missingInformation
+        missingInformation,
+        answerDetail: wantsExpandedStoredAnswer(question) ? "expanded" : "initial"
       };
     }
   };
