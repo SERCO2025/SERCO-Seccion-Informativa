@@ -73,7 +73,8 @@ test("el JavaScript de la vista pública compila sin errores de sintaxis", () =>
   const path = require("node:path");
   const vm = require("node:vm");
   const html = fs.readFileSync(path.join(__dirname, "../publication.html"), "utf8");
-  const match = html.match(/<script>\\s*([\\s\\S]*?)\\s*<\\/script>/i);
-  assert.ok(match, "Debe existir el script de la vista pública");
-  assert.doesNotThrow(() => new vm.Script(match[1]));
+  const start = html.indexOf("<script>");
+  const end = html.indexOf("</script>", start + 8);
+  assert.ok(start >= 0 && end > start, "Debe existir el script de la vista pública");
+  assert.doesNotThrow(() => new vm.Script(html.slice(start + 8, end)));
 });
