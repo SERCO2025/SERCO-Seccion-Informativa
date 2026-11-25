@@ -5,7 +5,7 @@ const assert = require("node:assert/strict");
 
 process.env.SUPABASE_URL = "https://example.supabase.co";
 process.env.SUPABASE_PUBLISHABLE_KEY = "publishable-test";
-process.env.SUPABASE_SECRET_KEY = "secret-test";
+process.env.SUPABASE_SECRET_KEY = "sb_secret_test";
 process.env.SERCO_ADMIN_EMAIL = "admin@example.org";
 
 const editorApi = require("../api/editor");
@@ -59,7 +59,8 @@ test("el editor autenticado recupera el expediente privado de investigación", a
     if (url.endsWith("/rest/v1/rpc/get_article_research_records")) {
       assert.equal(options.method, "POST");
       assert.deepEqual(JSON.parse(options.body), { p_article_id: articleId });
-      assert.equal(options.headers.apikey, "secret-test");
+      assert.equal(options.headers.apikey, "sb_secret_test");
+      assert.equal(options.headers.Authorization, undefined);
       return jsonResponse([record]);
     }
     throw new Error("Unexpected request: " + url);
@@ -80,6 +81,41 @@ test("el editor autenticado recupera el expediente privado de investigación", a
     assert.equal(calls.some(call => call.url.endsWith("/rest/v1/rpc/get_article_research_records")), true);
   } finally {
     global.fetch = previousFetch;
+  }
+});
+
+
+test("el editor conserva compatibilidad con claves JWT de service_role anteriores", async () => {
+  const previousFetch = global.fetch;
+  const previousSecret = process.env.SUPABASE_SECRET_KEY;
+  const modulePath = require.resolve("../api/editor");
+  process.env.SUPABASE_SECRET_KEY = "legacy-service-role-jwt";
+  delete require.cache[modulePath];
+  const legacyEditorApi = require("../api/editor");
+  let databaseHeaders = null;
+  global.fetch = async (url, options = {}) => {
+    if (url.endsWith("/auth/v1/user")) return jsonResponse({ id: "admin-user", email: "admin@example.org" });
+    if (url.includes("/rest/v1/articles?select=id,public_id")) {
+      databaseHeaders = options.headers;
+      return jsonResponse([]);
+    }
+    throw new Error("Unexpected request: " + url);
+  };
+  try {
+    const res = responseRecorder();
+    await legacyEditorApi({
+      method: "GET",
+      headers: { authorization: "Bearer admin-session-token" },
+      query: {}
+    }, res);
+    assert.equal(res.statusCode, 200);
+    assert.equal(databaseHeaders.apikey, "legacy-service-role-jwt");
+    assert.equal(databaseHeaders.Authorization, "Bearer legacy-service-role-jwt");
+  } finally {
+    global.fetch = previousFetch;
+    process.env.SUPABASE_SECRET_KEY = previousSecret;
+    delete require.cache[modulePath];
+    require("../api/editor");
   }
 });
 
