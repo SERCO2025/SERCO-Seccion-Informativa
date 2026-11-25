@@ -32,15 +32,20 @@ async function adminFromRequest(req) {
   if (!response.ok || !user.id || String(user.email || "").toLowerCase() !== ADMIN_EMAIL) return null;
   return user;
 }
+function serviceRoleHeaders(extra = {}) {
+  return {
+    apikey: SECRET_KEY,
+    ...(SECRET_KEY.startsWith("sb_secret_") ? {} : { Authorization: "Bearer " + SECRET_KEY }),
+    ...extra
+  };
+}
 async function rest(path, options = {}) {
   const response = await fetch(BASE + path, {
     method: options.method || "GET",
-    headers: {
-      apikey: SECRET_KEY,
-      Authorization: "Bearer " + SECRET_KEY,
+    headers: serviceRoleHeaders({
       "Content-Type": "application/json",
       Prefer: options.prefer || "return=representation"
-    },
+    }),
     body: options.body === undefined ? undefined : JSON.stringify(options.body)
   });
   const payload = await response.json().catch(() => null);
@@ -55,7 +60,7 @@ async function signedUrl(item) {
   const path = encodedPath(item.storage_path);
   const response = await fetch(BASE + "/storage/v1/object/sign/" + encodeURIComponent(item.bucket_id) + "/" + path, {
     method: "POST",
-    headers: { apikey: SECRET_KEY, Authorization: "Bearer " + SECRET_KEY, "Content-Type": "application/json" },
+    headers: serviceRoleHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({ expiresIn: 3600 })
   });
   const result = await response.json().catch(() => ({}));
