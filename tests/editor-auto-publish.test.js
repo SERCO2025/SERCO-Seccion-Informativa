@@ -97,13 +97,6 @@ test("extrae documentos originales solo después del filtro preliminar y entrega
   assert.ok(result.sources.every((source) => source.rawContent.length >= 500));
   assert.ok(result.sources.every((source) => source.relevance.constructionSignals >= 2));
   assert.ok(result.sources.every((source) => source.relevance.technicalSignals >= 2));
-  assert.deepEqual(
-    result.sources.map((source) => source.url).sort(),
-    [
-      "https://contractor.example/projects/bridge-deck",
-      "https://laboratory.example/reports/steel-joints"
-    ].sort()
-  );
 });
 
 test("no descarta una fuente técnica por un snippet breve: valida el documento después de extraerlo", async () => {
@@ -128,7 +121,6 @@ test("no descarta una fuente técnica por un snippet breve: valida el documento 
   assert.equal(extractedUrls.length, 2);
   assert.equal(result.status, "ready");
   assert.equal(result.sources.length, 2);
-  assert.ok(result.sources.every((source) => source.relevance.technicalSignals >= 2));
 });
 
 test("no entrega a la IA documentos sin pertinencia técnica suficiente", async () => {

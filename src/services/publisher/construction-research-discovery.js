@@ -284,6 +284,15 @@ function createConstructionResearchDiscovery(provider, options = {}) {
       const candidates = searchResults
         .filter((source) => source && typeof source.title === "string" && typeof source.url === "string" && getSafeHost(source.url))
         .filter((source) => {
+          const snippet = String(source.rawContent || source.content || source.snippet || source.excerpt || "").trim();
+          // Un fragmento muy breve no basta para rechazar una fuente:
+          // su contenido completo se evaluará después de extraerlo.
+          // Los fragmentos suficientemente extensos sí permiten descartar
+          // resultados claramente ajenos al ámbito técnico de construcción.
+          if (snippet.length < 60) return true;
+          return assessConstructionDocument(source).relevant;
+        })
+        .filter((source) => {
           const key = String(source.url).split("#")[0].replace(/\/$/, "").toLowerCase();
           if (seenUrls.has(key) || existingSourceUrls.has(key)) return false;
           seenUrls.add(key);
