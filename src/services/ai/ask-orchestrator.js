@@ -142,8 +142,8 @@ function publicEvidence(evidence) {
 }
 
 function wantsExpandedStoredAnswer(question) {
-  const normalized = String(question || "").normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLocaleLowerCase();
-  return /\\b(mas detalles?|amplia|ampliar|ampliacion|profundiza|profundizar|detalladamente|a fondo|con mas profundidad|desarrolla|desarrollar|extiende|extension)\\b/.test(normalized);
+  const normalized = String(question || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase();
+  return /\b(mas detalles?|amplia|ampliar|ampliacion|profundiza|profundizar|detalladamente|a fondo|con mas profundidad|desarrolla|desarrollar|extiende|extension)\b/.test(normalized);
 }
 
 function createAskOrchestrator(adapters) {
