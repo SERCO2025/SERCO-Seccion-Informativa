@@ -92,13 +92,14 @@ function buildSystemPrompt() {
     "Cada afirmación factual de la respuesta debe estar respaldada por una o más evidencias y sus identificadores deben aparecer en citationIds.",
     "Usa exclusivamente identificadores que existan en la lista de evidencias recibida.",
     "Si la cobertura es partial, responde únicamente lo que sí está documentado y explica qué información falta.",
-    "Devuelve exclusivamente un objeto JSON válido con dos propiedades: text (string) y citationIds (array de strings). No agregues Markdown ni texto fuera del JSON."
+    "Genera siempre dos versiones independientes: text será la respuesta inicial sintetizada, normalmente de 50 a 130 palabras; expandedText será una explicación sustancialmente más desarrollada, organizada y útil para quien solicite más profundidad. No copies el informe completo ni confundas la explicación ampliada con el documento original. Ambas versiones deben responder la misma pregunta, usar solo la evidencia recibida y mantener las advertencias y límites documentados. citationIds debe incluir todas las evidencias que respaldan afirmaciones de cualquiera de las dos versiones.",
+    "Devuelve exclusivamente un objeto JSON válido con tres propiedades: text (string), expandedText (string) y citationIds (array de strings). No agregues Markdown ni texto fuera del JSON."
   ].join("\n");
 }
 
 function buildUserPrompt(input) {
   return JSON.stringify({
-    task: "Contesta la pregunta utilizando únicamente la evidencia proporcionada. Adapta la extensión a lo que solicita el visitante: respuesta breve por defecto y desarrollo amplio solo cuando lo pida expresamente.",
+    task: "Prepara dos respuestas separadas usando únicamente la evidencia proporcionada: una síntesis inicial breve para mostrar por defecto y una explicación ampliada para mostrar solo si el visitante la solicita. No devuelvas el informe completo como respuesta inicial.",
     question: input.question,
     coverage: input.coverage,
     missingInformation: input.missingInformation,
@@ -109,7 +110,8 @@ function buildUserPrompt(input) {
       content: item.content
     })),
     requiredOutput: {
-      text: "Respuesta en español, clara, directa y proporcional a la pregunta; breve por defecto, ampliada cuando el visitante lo solicite, sustentada y sin suposiciones ni notas editoriales internas.",
+      text: "Síntesis inicial en español, clara y directa, normalmente de 50 a 130 palabras. No debe reproducir el contenido completo de las publicaciones.",
+      expandedText: "Explicación independiente y más desarrollada, con contexto, detalles y límites respaldados por las evidencias. No debe ser una copia íntegra del documento fuente.",
       citationIds: ["Identificadores exactos de las evidencias utilizadas."]
     }
   });
@@ -131,6 +133,8 @@ function parseGeneratedAnswer(value) {
     !parsed ||
     typeof parsed.text !== "string" ||
     !parsed.text.trim() ||
+    typeof parsed.expandedText !== "string" ||
+    !parsed.expandedText.trim() ||
     !Array.isArray(parsed.citationIds) ||
     parsed.citationIds.length === 0 ||
     parsed.citationIds.some((id) => typeof id !== "string" || !id.trim())
@@ -144,6 +148,7 @@ function parseGeneratedAnswer(value) {
 
   return {
     text: parsed.text.trim(),
+    expandedText: parsed.expandedText.trim(),
     citationIds: parsed.citationIds
   };
 }
