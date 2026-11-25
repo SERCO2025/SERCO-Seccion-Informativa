@@ -57,6 +57,11 @@ module.exports=async function publicPublication(req,res){
   const approvedLinks=assetLinks.filter(link=>link.media_file&&["verified","permission_granted","public_domain"].includes(link.media_file.rights_status));
   const publicAssetLinks=await Promise.all(approvedLinks.map(async link=>({...link,media_file:await signedAsset(link.media_file)})));
   const publicContent=version.content_json&&typeof version.content_json==="object"?{...version.content_json}:version.content_json;
+  const conceptSourceUrls=new Set(sources.map(source=>source.source_url).filter(Boolean));
+  const rawConcepts=publicContent&&publicContent.editorial_metadata&&Array.isArray(publicContent.editorial_metadata.concepts)?publicContent.editorial_metadata.concepts:[];
+  const conceptKeys=new Set(rawConcepts.filter(item=>item&&typeof item.key==="string"&&/^[a-z0-9-]{1,80}$/.test(item.key)).map(item=>item.key));
+  const publicConcepts=rawConcepts.filter(item=>item&&typeof item.key==="string"&&/^[a-z0-9-]{1,80}$/.test(item.key)&&typeof item.term==="string"&&item.term.trim().length>0&&item.term.length<=100&&typeof item.definition==="string"&&item.definition.trim().length>=30&&item.definition.length<=1200&&conceptSourceUrls.has(item.source_url)).map(item=>({key:item.key,term:item.term,definition:item.definition,source_url:item.source_url,related_keys:Array.isArray(item.related_keys)?item.related_keys.filter(key=>conceptKeys.has(key)&&key!==item.key).slice(0,12):[]}));
+  if(publicContent&&publicContent.editorial_metadata&&typeof publicContent.editorial_metadata==="object"){publicContent.editorial_metadata={...publicContent.editorial_metadata};delete publicContent.editorial_metadata.concepts;}
   if(publicContent&&publicContent.editorial_metadata&&typeof publicContent.editorial_metadata==="object"){
    publicContent.editorial_metadata={...publicContent.editorial_metadata};
    delete publicContent.editorial_metadata.internal_research_report;
@@ -65,7 +70,7 @@ module.exports=async function publicPublication(req,res){
    publication:{id:article.id,public_id:article.public_id,slug:article.slug,title:article.title,summary:article.summary,
     content_type:article.content_type,author:article.author_name,origin:article.origin,specialty:article.specialty,
     version:version.version_number,updated_at:article.updated_at,content:publicContent},
-   sources,categories:categories.map(x=>({...x.category,is_primary:x.is_primary})),tags:tags.map(x=>x.tag),assets:publicAssets,asset_links:publicAssetLinks,
+   sources,categories:categories.map(x=>({...x.category,is_primary:x.is_primary})),tags:tags.map(x=>x.tag),assets:publicAssets,asset_links:publicAssetLinks,concepts:publicConcepts,
    relations:relations.filter(x=>x.related&&x.related.status==="published")
   });
  }catch{
