@@ -62,23 +62,19 @@ async function loadApprovedArticleAssets({ articleIds, supabaseUrl, secretKey, f
       if (!mediaType) continue;
       let url = "";
       const encodedPath = encodeStoragePath(media.storage_path);
-      if (media.bucket_id === "serco-media") {
-        url = supabaseUrl + "/storage/v1/object/public/" + encodeURIComponent(media.bucket_id) + "/" + encodedPath;
-      } else {
-        try {
-          const signed = await fetchImpl(supabaseUrl + "/storage/v1/object/sign/" + encodeURIComponent(media.bucket_id) + "/" + encodedPath, {
-            method: "POST",
-            headers: { apikey: secretKey, Authorization: "Bearer " + secretKey, "Content-Type": "application/json" },
-            body: JSON.stringify({ expiresIn: 1800 }),
-            signal: AbortSignal.timeout ? AbortSignal.timeout(timeoutMs) : undefined
-          });
-          const data = await signed.json().catch(() => ({}));
-          if (!signed.ok || !(data.signedURL || data.signedUrl)) continue;
-          const signedUrl = data.signedURL || data.signedUrl;
-          url = /^https?:\/\//i.test(signedUrl) ? signedUrl
-            : supabaseUrl + "/storage/v1" + (signedUrl.startsWith("/") ? signedUrl : "/" + signedUrl);
-        } catch { continue; }
-      }
+      try {
+        const signed = await fetchImpl(supabaseUrl + "/storage/v1/object/sign/" + encodeURIComponent(media.bucket_id) + "/" + encodedPath, {
+          method: "POST",
+          headers: { apikey: secretKey, Authorization: "Bearer " + secretKey, "Content-Type": "application/json" },
+          body: JSON.stringify({ expiresIn: 1800 }),
+          signal: AbortSignal.timeout ? AbortSignal.timeout(timeoutMs) : undefined
+        });
+        const data = await signed.json().catch(() => ({}));
+        if (!signed.ok || !(data.signedURL || data.signedUrl)) continue;
+        const signedUrl = data.signedURL || data.signedUrl;
+        url = /^https?:\/\//i.test(signedUrl) ? signedUrl
+          : supabaseUrl + "/storage/v1" + (signedUrl.startsWith("/") ? signedUrl : "/" + signedUrl);
+      } catch { continue; }
       if (!validHttpUrl(url)) continue;
       const asset = {
         id: media.id,

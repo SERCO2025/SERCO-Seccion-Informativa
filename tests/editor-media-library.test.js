@@ -25,3 +25,10 @@ test("el editor conserva y permite revisar los derechos del flujo antiguo articl
   assert.ok(source.includes('metadata:{...(a.metadata||{}),rights_status:a.rights_status||"unverified"}'));
   assert.ok(source.includes('rights_status:x.rights_status||"unverified"'));
 });
+
+test("la biblioteca no genera enlaces públicos para serco-media y firma los recursos", () => {
+  const source = fs.readFileSync(path.join(__dirname, "../api/editor-media-library.js"), "utf8");
+  assert.ok(source.includes("/storage/v1/object/sign/"));
+  assert.doesNotMatch(source, /object\/public\/.*serco-media/);
+  assert.doesNotMatch(source, /if \(item\.bucket_id === "serco-media"\)/);
+});

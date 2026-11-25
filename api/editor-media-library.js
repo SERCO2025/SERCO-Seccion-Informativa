@@ -53,9 +53,6 @@ async function rest(path, options = {}) {
 }
 async function signedUrl(item) {
   const path = encodedPath(item.storage_path);
-  if (item.bucket_id === "serco-media") {
-    return BASE + "/storage/v1/object/public/" + encodeURIComponent(item.bucket_id) + "/" + path;
-  }
   const response = await fetch(BASE + "/storage/v1/object/sign/" + encodeURIComponent(item.bucket_id) + "/" + path, {
     method: "POST",
     headers: { apikey: SECRET_KEY, Authorization: "Bearer " + SECRET_KEY, "Content-Type": "application/json" },

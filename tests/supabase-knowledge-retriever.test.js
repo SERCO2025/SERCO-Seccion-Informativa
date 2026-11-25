@@ -156,6 +156,7 @@ test("adjunta solo recursos aprobados y pertinentes a la sección de evidencia",
         { article_id: articleId, section_key: "introduccion", sort_order: 2, caption: "No corresponde a esta sección", display_mode: "inline", media_file: { id: "image-2", bucket_id: "serco-media", storage_path: "obras/otra.jpg", original_name: "otra.jpg", mime_type: "image/jpeg", alt_text: "Otra sección", rights_status: "verified" } },
         { article_id: articleId, section_key: "procedimiento", sort_order: 3, media_file: { id: "image-3", bucket_id: "serco-media", storage_path: "obras/no-autorizada.jpg", mime_type: "image/jpeg", rights_status: "unverified" } }
       ]);
+      if (url.includes("/storage/v1/object/sign/")) return jsonResponse({ signedURL: "/object/sign/serco-media/obras/detalle%201.jpg?token=temporary" });
       throw new Error("Unexpected request");
     }
   });
@@ -164,9 +165,11 @@ test("adjunta solo recursos aprobados y pertinentes a la sección de evidencia",
   assert.equal(result.items[0].assets[0].id, "image-1");
   assert.equal(result.items[0].assets[0].mediaType, "image");
   assert.equal(result.items[0].assets[0].altText, "Detalle de armado");
-  assert.equal(result.items[0].assets[0].url, "https://example.supabase.co/storage/v1/object/public/serco-media/obras/detalle%201.jpg");
-  assert.equal(calls.length, 3);
+  assert.equal(result.items[0].assets[0].url, "https://example.supabase.co/storage/v1/object/sign/serco-media/obras/detalle%201.jpg?token=temporary");
+  assert.equal(calls.length, 4);
   assert.equal(calls[1].options.headers.Authorization, "Bearer server-secret");
+  const signing = calls.find(call => call.url.includes("/storage/v1/object/sign/"));
+  assert.deepEqual(JSON.parse(signing.options.body), { expiresIn: 1800 });
 });
 test("genera URL firmada de corta duración para recursos privados autorizados", async () => {
   const articleId = "22222222-2222-4222-8222-222222222222";
