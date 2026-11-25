@@ -36,8 +36,9 @@ function normalizeTavilyImageReferences(items, fallbackSourceUrl) {
   const unique = new Map();
   for (const image of Array.isArray(items) ? items : []) {
     const value = typeof image === "string" ? { url: image } : image;
-    if (!value || typeof value.url !== "string" || !/^https:\/\//i.test(value.url)) continue;
-    const url = value.url.trim();
+    const rawUrl = value && (value.url || value.image_url || value.src);
+    if (typeof rawUrl !== "string" || !/^https:\/\//i.test(rawUrl)) continue;
+    const url = rawUrl.trim();
     if (!unique.has(url)) unique.set(url, {
       url,
       description: String(value.description || value.caption || "").trim().slice(0, 500),

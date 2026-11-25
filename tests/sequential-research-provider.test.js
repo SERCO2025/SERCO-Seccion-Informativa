@@ -37,7 +37,8 @@ function searchProvider(calls) {
           title: "Fuente técnica",
           content: "Contenido recuperado por Tavily.",
           score: 0.95,
-          publishedDate: "2026-11-01"
+          publishedDate: "2026-11-01",
+          images: [{ url: "https://cdn.example.org/concrete-test.jpg", description: "Prueba de resistencia del concreto", source_url: "https://example.org/source" }]
         }],
         usage: { credits: 1 },
         requestId: "tavily-test"
@@ -91,6 +92,8 @@ test("usa contenido extraído conservando los identificadores y el extracto orig
   assert.equal(sourcesSeen[0].evidenceOrigin, "tavily_extract");
   assert.match(promptSeen, /Texto extraído de la página con evidencia ampliada/);
   assert.equal(result.sources[0].id, 1);
+  assert.equal(result.sources[0].images.length, 1);
+  assert.equal(result.sources[0].images[0].url, "https://cdn.example.org/concrete-test.jpg");
 });
 
 test("mantiene el extracto de búsqueda cuando Tavily Extract falla", async () => {

@@ -13,7 +13,7 @@ test("valida consulta y normaliza resultados web deduplicados", async () => {
   await assert.rejects(provider.search({ query: "x" }), { code: "INVALID_RESEARCH_QUERY" });
   const results = normalizeTavilyResults({
     results: [
-      { url: "https://example.org/a", title: "A", content: "Contenido", score: 0.9 },
+      { url: "https://example.org/a", title: "A", content: "Contenido", score: 0.9, images: [{ url: "https://cdn.example.org/a-diagram.jpg", description: "Diagrama técnico", source_url: "https://example.org/a" }] },
       { url: "https://example.org/a", title: "Duplicado" },
       { url: "javascript:alert(1)", title: "No válida" }
     ]
@@ -21,6 +21,8 @@ test("valida consulta y normaliza resultados web deduplicados", async () => {
   assert.equal(results.length, 1);
   assert.equal(results[0].title, "A");
   assert.equal(results[0].score, 0.9);
+  assert.equal(results[0].images.length, 1);
+  assert.equal(results[0].images[0].description, "Diagrama técnico");
 });
 
 test("realiza búsqueda Tavily básica de un crédito y devuelve fuentes", async () => {
@@ -35,7 +37,7 @@ test("realiza búsqueda Tavily básica de un crédito y devuelve fuentes", async
         async json() {
           return {
             results: [
-              { title: "Norma oficial", url: "https://example.org/norma", content: "Fragmento de la norma", score: 0.91, published_date: "2026-01-01" }
+              { title: "Norma oficial", url: "https://example.org/norma", content: "Fragmento de la norma", score: 0.91, published_date: "2026-01-01", images: [{ url: "https://cdn.example.org/norma-diagram.jpg", description: "Diagrama de la norma" }] }
             ],
             usage: { credits: 1 },
             request_id: "request-123"
@@ -51,8 +53,12 @@ test("realiza búsqueda Tavily básica de un crédito y devuelve fuentes", async
   assert.equal(request.body.max_results, 8);
   assert.equal(request.body.include_answer, false);
   assert.equal(request.body.include_raw_content, false);
+  assert.equal(request.body.include_images, true);
+  assert.equal(request.body.include_image_descriptions, true);
   assert.equal(result.provider, "tavily");
   assert.equal(result.results.length, 1);
+  assert.equal(result.results[0].images.length, 1);
+  assert.equal(result.results[0].images[0].alt, "Diagrama de la norma");
   assert.equal(result.usage.credits, 1);
   assert.equal(result.requestId, "request-123");
 });

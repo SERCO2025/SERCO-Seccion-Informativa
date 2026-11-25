@@ -89,8 +89,7 @@ function mapResearchSources(sources) {
         score: typeof source.score === "number" ? source.score : null,
         excerpt: source.excerpt || "",
         extracted_content: source.extractedContent || "",
-        evidence_origin: source.evidenceOrigin || "tavily_search_excerpt",
-        images: Array.isArray(source.images) ? source.images.slice(0, 12) : []
+        evidence_origin: source.evidenceOrigin || "tavily_search_excerpt"
       }
     }));
 }

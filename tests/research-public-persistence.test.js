@@ -19,6 +19,7 @@ function source(overrides = {}) {
     extractedContent: "Contenido extraído que amplía la descripción técnica.",
     evidenceText: "Contenido extraído que amplía la descripción técnica.",
     evidenceOrigin: "tavily_extract",
+    images: [{ url: "https://cdn.example.org/trabe-estructural.jpg", description: "Diagrama de una trabe estructural de concreto" }],
     ...overrides
   };
 }
@@ -72,6 +73,9 @@ test("guarda las tres piezas, las evidencias y las fuentes de una síntesis comp
   assert.match(document._research_private.internal_report_html, /INFORME INTERNO CONFIDENCIAL/);
   assert.equal(document._research_private.claim_evidence.length, 3);
   assert.equal(document._research_private.sources_snapshot[0].evidence_origin, "tavily_extract");
+  assert.equal(document._research_private.research_metadata.media_candidates.length, 1);
+  assert.equal(document._research_private.research_metadata.media_candidates[0].media_type, "image");
+  assert.equal(document._research_private.research_metadata.media_candidates[0].rights_status, "unverified");
   assert.equal(document.sources[0].metadata.extracted_content, "Contenido extraído que amplía la descripción técnica.");
   assert.equal(document.editorial_metadata.synthesis_completed, true);
   assert.equal(Object.hasOwn(document.editorial_metadata, "claim_evidence_index"), false);
