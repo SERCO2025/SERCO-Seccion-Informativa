@@ -17,3 +17,11 @@ test("el endpoint de biblioteca y el preparador de cargas se pueden importar", (
   assert.equal(typeof require("../api/editor-media-library"), "function");
   assert.equal(typeof require("../api/editor-upload"), "function");
 });
+
+test("el editor conserva y permite revisar los derechos del flujo antiguo article_assets", () => {
+  const source = fs.readFileSync(path.join(__dirname, "../api/editor-studio.js"), "utf8");
+  assert.ok(source.includes("Estado de derechos (revisión editorial)"));
+  assert.ok(source.includes('rights_status:a.rights_status||"unverified"'));
+  assert.ok(source.includes('metadata:{...(a.metadata||{}),rights_status:a.rights_status||"unverified"}'));
+  assert.ok(source.includes('rights_status:x.rights_status||"unverified"'));
+});
