@@ -9,6 +9,10 @@ async function rest(path){
  return data;
 }
 async function signedAsset(asset){
+ if(asset.bucket_id==="serco-media"){
+  const path=asset.storage_path.split("/").map(encodeURIComponent).join("/");
+  return {...asset,url:BASE+"/storage/v1/object/public/"+encodeURIComponent(asset.bucket_id)+"/"+path};
+ }
  if(asset.bucket_id!=="serco-publicaciones")return {...asset,url:null};
  const response=await fetch(BASE+"/storage/v1/object/sign/"+encodeURIComponent(asset.bucket_id)+"/"+asset.storage_path.split("/").map(encodeURIComponent).join("/"),{
   method:"POST",headers:{apikey:SECRET,Authorization:"Bearer "+SECRET,"Content-Type":"application/json"},
@@ -38,17 +42,20 @@ module.exports=async function publicPublication(req,res){
   if(!articles.length)return res.status(404).json({error:{code:"PUBLICATION_NOT_FOUND",message:"No se encontró una publicación vigente con esos datos."}});
   if(query&&!id&&!publicId)return res.status(200).json({results:articles.map(a=>({id:a.id,public_id:a.public_id,slug:a.slug,title:a.title,summary:a.summary,specialty:a.specialty}))});
   const article=articles[0];
-  const [versions,sources,assets,categories,tags,relations]=await Promise.all([
+  const [versions,sources,assets,categories,tags,relations,assetLinks]=await Promise.all([
    rest("/rest/v1/article_versions?select=version_number,content_json,created_at&id=eq."+encodeURIComponent(article.published_version_id)+"&article_id=eq."+encodeURIComponent(article.id)+"&limit=1"),
    rest("/rest/v1/article_sources?select=title,source_type,source_url,author,published_date&article_id=eq."+encodeURIComponent(article.id)),
    rest("/rest/v1/article_assets?select=id,bucket_id,storage_path,original_name,mime_type,alt_text,description,source_url,author,license,keywords,category,captured_at&article_id=eq."+encodeURIComponent(article.id)),
    rest("/rest/v1/article_categories?select=is_primary,category:categories(name,slug)&article_id=eq."+encodeURIComponent(article.id)),
    rest("/rest/v1/article_tags?select=tag:tags(name,slug)&article_id=eq."+encodeURIComponent(article.id)),
-   rest("/rest/v1/article_relations?select=relation_type,related:articles!article_relations_related_article_id_fkey(public_id,title,slug,status)&article_id=eq."+encodeURIComponent(article.id))
+   rest("/rest/v1/article_relations?select=relation_type,related:articles!article_relations_related_article_id_fkey(public_id,title,slug,status)&article_id=eq."+encodeURIComponent(article.id)),
+   rest("/rest/v1/article_asset_links?select=id,section_key,sort_order,alt_text_override,caption,display_mode,media_file:media_files(id,bucket_id,storage_path,original_name,mime_type,media_type,alt_text,description,source_url,author,license,keywords,category,rights_status)&article_id=eq."+encodeURIComponent(article.id)+"&order=section_key.asc,sort_order.asc")
   ]);
   const version=versions[0];
   if(!version)return res.status(404).json({error:{code:"PUBLISHED_VERSION_NOT_FOUND",message:"La versión publicada no está disponible."}});
   const publicAssets=await Promise.all(assets.map(signedAsset));
+  const approvedLinks=assetLinks.filter(link=>link.media_file&&["verified","permission_granted","public_domain"].includes(link.media_file.rights_status));
+  const publicAssetLinks=await Promise.all(approvedLinks.map(async link=>({...link,media_file:await signedAsset(link.media_file)})));
   const publicContent=version.content_json&&typeof version.content_json==="object"?{...version.content_json}:version.content_json;
   if(publicContent&&publicContent.editorial_metadata&&typeof publicContent.editorial_metadata==="object"){
    publicContent.editorial_metadata={...publicContent.editorial_metadata};
@@ -58,7 +65,7 @@ module.exports=async function publicPublication(req,res){
    publication:{id:article.id,public_id:article.public_id,slug:article.slug,title:article.title,summary:article.summary,
     content_type:article.content_type,author:article.author_name,origin:article.origin,specialty:article.specialty,
     version:version.version_number,updated_at:article.updated_at,content:publicContent},
-   sources,categories:categories.map(x=>({...x.category,is_primary:x.is_primary})),tags:tags.map(x=>x.tag),assets:publicAssets,
+   sources,categories:categories.map(x=>({...x.category,is_primary:x.is_primary})),tags:tags.map(x=>x.tag),assets:publicAssets,asset_links:publicAssetLinks,
    relations:relations.filter(x=>x.related&&x.related.status==="published")
   });
  }catch{
