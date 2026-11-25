@@ -19,7 +19,7 @@ class AIProvidersExhaustedError extends AIProviderError {
 }
 
 function validateProviderResult(result, evidence) {
-  if (!result || typeof result.text !== "string" || !result.text.trim()) {
+  if (!result || typeof result.text !== "string" || !result.text.trim() || typeof result.expandedText !== "string" || !result.expandedText.trim()) {
     throw new AIProviderError(
       "El proveedor no devolvió una respuesta utilizable.",
       "AI_PROVIDER_INVALID_OUTPUT"
@@ -101,6 +101,7 @@ function createSequentialAnswerGenerator(options = {}) {
 
           return {
             text: result.text.trim(),
+            expandedText: result.expandedText.trim(),
             citationIds: result.citationIds,
             provider: provider.provider,
             model: result.model || provider.model || null,
