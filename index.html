@@ -181,7 +181,7 @@ yes.addEventListener("click",async()=>{
    sources.appendChild(li);
   });
   show(research);
-  busy(false,result.status==="sources_only"?"Búsqueda terminada. Se muestran las fuentes externas sin síntesis de IA; no se guardaron como documento editorial.":result.persistence==="saved_for_review"?"Investigación terminada y registrada para revisión editorial como "+(result.publication?.publicId||"publicación SERCO")+".":"Investigación terminada y disponible arriba, pero no se pudo registrar en la biblioteca editorial.");
+  busy(false,result.status==="sources_only"?(result.persistence==="saved_partial_for_review"?"Búsqueda terminada. Se muestran las fuentes externas sin síntesis de IA; el expediente parcial quedó guardado de forma privada para revisión editorial. No es contenido aprobado ni está habilitado para la IA.":"Búsqueda terminada. Se muestran las fuentes externas sin síntesis de IA; no fue posible guardar el expediente para revisión editorial.") :result.persistence==="saved_for_review"?"Investigación terminada y registrada para revisión editorial como "+(result.publication?.publicId||"publicación SERCO")+".":"Investigación terminada y disponible arriba, pero no se pudo registrar en la biblioteca editorial.");
   research.scrollIntoView({behavior:"smooth",block:"start"});
  }catch(error){
   if(error&&error.code==="RESEARCH_PROVIDER_RATE_LIMITED"){
