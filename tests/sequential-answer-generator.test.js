@@ -26,7 +26,7 @@ function provider(name, generate, model) {
 }
 
 function validResult(text = "La ficha indica 25 unidades.") {
-  return { text, citationIds: ["chunk-001"], model: "mock-model", usage: { totalTokens: 10 } };
+  return { text, expandedText: "Explicación ampliada: " + text, citationIds: ["chunk-001"], model: "mock-model", usage: { totalTokens: 10 } };
 }
 
 test("mantiene el orden Gemini, Groq y Cloudflare", () => {
