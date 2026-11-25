@@ -139,15 +139,22 @@ module.exports = async function editorApi(req, res) {
         const articles = await supabaseRest("/rest/v1/articles?select=*&id=eq." + encodeURIComponent(id) + "&limit=1");
         if (!articles.length) return send(res, 404, { error: { code: "NOT_FOUND", message: "No se encontró la publicación." } });
         const article = articles[0];
-        const [versions,sources,assets,categories,tags,relations] = await Promise.all([
+        const [versions,sources,assets,categories,tags,relations,researchRecords] = await Promise.all([
           supabaseRest("/rest/v1/article_versions?select=*&article_id=eq." + article.id + "&order=version_number.desc"),
           supabaseRest("/rest/v1/article_sources?select=*&article_id=eq." + article.id),
           supabaseRest("/rest/v1/article_assets?select=*&article_id=eq." + article.id),
           supabaseRest("/rest/v1/article_categories?select=category:categories(*)&article_id=eq." + article.id),
           supabaseRest("/rest/v1/article_tags?select=tag:tags(*)&article_id=eq." + article.id),
-          supabaseRest("/rest/v1/article_relations?select=relation_type,related:articles!article_relations_related_article_id_fkey(public_id,title)&article_id=eq." + article.id)
+          supabaseRest("/rest/v1/article_relations?select=relation_type,related:articles!article_relations_related_article_id_fkey(public_id,title)&article_id=eq." + article.id),
+          article.origin === "ai_research"
+            ? supabaseRest("/rest/v1/rpc/get_article_research_records", { method: "POST", body: { p_article_id: article.id } })
+            : Promise.resolve([])
         ]);
-        return send(res,200,{article,versions,sources,assets,categories:categories.map(x=>x.category),tags:tags.map(x=>x.tag),relations});
+        return send(res,200,{
+          article,versions,sources,assets,categories:categories.map(x=>x.category),
+          tags:tags.map(x=>x.tag),relations,
+          research_records:Array.isArray(researchRecords)?researchRecords:[]
+        });
       }
       const articles = await supabaseRest("/rest/v1/articles?select=id,public_id,slug,title,summary,status,content_type,author_name,origin,specialty,featured,ai_retrieval_enabled,created_at,updated_at,published_version_id&order=updated_at.desc&limit=100");
       return send(res,200,{articles});
