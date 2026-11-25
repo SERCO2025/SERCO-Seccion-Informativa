@@ -63,7 +63,7 @@ test("la plantilla pública incorpora jerarquía editorial, recursos y referenci
   const path = require("node:path");
   const html = fs.readFileSync(path.join(__dirname, "../publication.html"), "utf8");
   for (const marker of ["class=\"paper\"", "class=\"article\"", "class=\"grid\"",
-    "Fuentes y referencias", "Publicaciones relacionadas", "video.controls=true", "loading=\"lazy\""]) {
+    "Fuentes y referencias", "Fuente del recurso", "Publicaciones relacionadas", "video.controls=true", "loading=\"lazy\""]) {
     assert.ok(html.includes(marker), "Falta soporte: " + marker);
   }
 });
