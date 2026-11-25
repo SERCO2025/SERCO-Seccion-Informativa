@@ -110,6 +110,8 @@ form.addEventListener("submit",async event=>{
   const result=await post("/api/ask",{question,locale:"es-MX"});
   officialMeta.textContent="BIBLIOTECA OFICIAL SERCO · COBERTURA: "+String(result.coverage||"no determinada").toUpperCase();
   officialText.textContent=result.answer||"No se recibió una respuesta.";
+  officialExpandedText.textContent=typeof result.expandedAnswer==="string"?result.expandedAnswer:"";
+  if(officialExpandedText.textContent.trim()&&officialExpandedText.textContent.trim()!==officialText.textContent.trim())show(officialExpandedToggle);
   if(Array.isArray(result.citations)&&result.citations.length){
    result.citations.forEach(citation=>{
     const li=document.createElement("li");
