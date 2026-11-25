@@ -122,17 +122,42 @@ async function generate(discovery, index, batchId) {
       provider: result.provider, model: result.model, research_date: new Date().toISOString(),
       external_research: true, automated_dictionary: true, automation_batch: batchId,
       sequence_in_batch: index + 1, source_count: sources.length,
-      media_candidates: mediaCandidates,
       media_candidate_count: mediaCandidates.length,
-      editorial_quality_gate: editorialQuality,
       discovery_method: "source_first_full_document_review",
       discovery_category: discovery.category,
-      editorial_note: "Documento redactado a partir de documentos técnicos originales extraídos y filtrados por pertinencia directa con construcción física, ingeniería civil, arquitectura u obra.",
-      internal_research_report: internalReport,
-      claim_evidence_index: {
-        method: result.claimEvidenceMethod,
-        independently_verified: false,
-        items: result.claimEvidence
+      editorial_note: "Documento redactado a partir de documentos técnicos originales extraídos y filtrados por pertinencia directa con construcción física, ingeniería civil, arquitectura u obra."
+    },
+    visitorAnswer: String(result.visitorAnswer || ""),
+    expandedAnswer: body,
+    _research_private: {
+      research_status: "completed",
+      internal_report: internalReport,
+      internal_report_html: reportToHtml(internalReport),
+      visitor_answer: String(result.visitorAnswer || ""),
+      expanded_answer: body,
+      claim_evidence: Array.isArray(result.claimEvidence) ? result.claimEvidence : [],
+      sources_snapshot: (Array.isArray(result.sources) ? result.sources : []).map((source, sourceIndex) => ({
+        id: source.id || sourceIndex + 1,
+        title: source.title || "",
+        url: source.url || "",
+        published_date: source.publishedDate || null,
+        score: source.score ?? null,
+        excerpt: source.content || source.excerpt || "",
+        extracted_content: source.rawContent || "",
+        evidence_text: source.rawContent || source.content || "",
+        evidence_origin: source.rawContent ? "tavily_extract" : "tavily_search_excerpt"
+      })),
+      provider_attempts: Array.isArray(result.providerAttempts) ? result.providerAttempts : [],
+      research_metadata: {
+        query,
+        provider: result.provider || "tavily",
+        answer_provider: result.answerProvider || null,
+        model: result.model || null,
+        search_request_id: result.searchRequestId || null,
+        claim_evidence_method: result.claimEvidenceMethod || null,
+        editorial_quality_gate: editorialQuality,
+        media_candidates: mediaCandidates,
+        researched_at: new Date().toISOString()
       }
     }
   };
