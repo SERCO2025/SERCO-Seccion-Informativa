@@ -5,6 +5,27 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
+process.env.SUPABASE_URL = "https://example.supabase.co";
+process.env.SUPABASE_PUBLISHABLE_KEY = "publishable-media-test";
+process.env.SUPABASE_SECRET_KEY = "sb_secret_media_test";
+process.env.SERCO_ADMIN_EMAIL = "admin@example.org";
+
+const mediaLibraryApi = require("../api/editor-media-library");
+
+function responseRecorder() {
+  return {
+    statusCode: null,
+    headers: {},
+    payload: null,
+    setHeader(name, value) { this.headers[name] = value; },
+    status(code) { this.statusCode = code; return this; },
+    json(payload) { this.payload = payload; return this; }
+  };
+}
+
+function jsonResponse(payload, status = 200) {
+  return { ok: status >= 200 && status < 300, status, async json() { return payload; } };
+}
 
 test("el JavaScript del estudio editorial compila con el selector de biblioteca", () => {
   const source = fs.readFileSync(path.join(__dirname, "../api/editor-studio.js"), "utf8");
@@ -31,4 +52,84 @@ test("la biblioteca no genera enlaces públicos para serco-media y firma los rec
   assert.ok(source.includes("/storage/v1/object/sign/"));
   assert.doesNotMatch(source, /object\/public\/.*serco-media/);
   assert.doesNotMatch(source, /if \(item\.bucket_id === "serco-media"\)/);
+});
+
+test("la biblioteca usa sb_secret sin Bearer en REST y Storage", async () => {
+  const previousFetch = global.fetch;
+  const restCalls = [];
+  const storageCalls = [];
+  global.fetch = async (url, options = {}) => {
+    if (url.endsWith("/auth/v1/user")) {
+      assert.equal(options.headers.apikey, "publishable-media-test");
+      assert.equal(options.headers.Authorization, "Bearer admin-session-token");
+      return jsonResponse({ id: "admin-user", email: "admin@example.org" });
+    }
+    if (url.includes("/rest/v1/media_files?")) {
+      restCalls.push(options);
+      return jsonResponse([{
+        id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        bucket_id: "serco-publicaciones",
+        storage_path: "biblioteca/prueba.png",
+        original_name: "prueba.png",
+        rights_status: "unverified"
+      }]);
+    }
+    if (url.includes("/storage/v1/object/sign/")) {
+      storageCalls.push(options);
+      return jsonResponse({ signedURL: "https://example.supabase.co/storage/v1/object/sign/serco-publicaciones/biblioteca/prueba.png?token=test" });
+    }
+    throw new Error("Unexpected request: " + url);
+  };
+  try {
+    const res = responseRecorder();
+    await mediaLibraryApi({
+      method: "GET",
+      headers: { authorization: "Bearer admin-session-token" },
+      query: {}
+    }, res);
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.payload.items.length, 1);
+    assert.equal(restCalls.length, 1);
+    assert.equal(storageCalls.length, 1);
+    for (const call of [...restCalls, ...storageCalls]) {
+      assert.equal(call.headers.apikey, "sb_secret_media_test");
+      assert.equal(call.headers.Authorization, undefined);
+    }
+  } finally {
+    global.fetch = previousFetch;
+  }
+});
+
+test("la biblioteca conserva compatibilidad con claves JWT de service_role anteriores", async () => {
+  const previousFetch = global.fetch;
+  const previousSecret = process.env.SUPABASE_SECRET_KEY;
+  const modulePath = require.resolve("../api/editor-media-library");
+  process.env.SUPABASE_SECRET_KEY = "legacy-service-role-jwt";
+  delete require.cache[modulePath];
+  const legacyMediaLibraryApi = require("../api/editor-media-library");
+  let databaseHeaders = null;
+  global.fetch = async (url, options = {}) => {
+    if (url.endsWith("/auth/v1/user")) return jsonResponse({ id: "admin-user", email: "admin@example.org" });
+    if (url.includes("/rest/v1/media_files?")) {
+      databaseHeaders = options.headers;
+      return jsonResponse([]);
+    }
+    throw new Error("Unexpected request: " + url);
+  };
+  try {
+    const res = responseRecorder();
+    await legacyMediaLibraryApi({
+      method: "GET",
+      headers: { authorization: "Bearer admin-session-token" },
+      query: {}
+    }, res);
+    assert.equal(res.statusCode, 200);
+    assert.equal(databaseHeaders.apikey, "legacy-service-role-jwt");
+    assert.equal(databaseHeaders.Authorization, "Bearer legacy-service-role-jwt");
+  } finally {
+    global.fetch = previousFetch;
+    process.env.SUPABASE_SECRET_KEY = previousSecret;
+    delete require.cache[modulePath];
+    require("../api/editor-media-library");
+  }
 });
