@@ -42,6 +42,7 @@ test("Gemini usa su endpoint, clave en header y salida JSON estructurada", async
       return response({
         candidates: [{ content: { parts: [{ text: JSON.stringify({
           text: "El documento indica 25 unidades.",
+          expandedText: "Explicación ampliada basada en la misma evidencia.",
           citationIds: ["chunk-001"]
         }) }] } }],
         usageMetadata: { totalTokenCount: 42 }
@@ -66,6 +67,7 @@ test("Groq usa el modelo GPT-OSS 120B y modo JSON", async () => {
       return response({
         choices: [{ message: { content: JSON.stringify({
           text: "El documento indica 25 unidades.",
+          expandedText: "Explicación ampliada basada en la misma evidencia.",
           citationIds: ["chunk-001"]
         }) } }],
         usage: { total_tokens: 42 }
@@ -91,6 +93,7 @@ test("Cloudflare usa Workers AI con el modelo GLM 4.7 Flash", async () => {
       return response({
         choices: [{ message: { content: JSON.stringify({
           text: "El documento indica 25 unidades.",
+          expandedText: "Explicación ampliada basada en la misma evidencia.",
           citationIds: ["chunk-001"]
         }) } }],
         usage: { total_tokens: 42 }
@@ -144,6 +147,7 @@ test("rechaza citas duplicadas y JSON inválido", async () => {
     fetchImpl: async () => response({
       choices: [{ message: { content: JSON.stringify({
         text: "Respuesta",
+        expandedText: "Explicación ampliada basada en la misma evidencia.",
         citationIds: ["chunk-001", "chunk-001"]
       }) } }]
     })
@@ -180,6 +184,7 @@ test("incluye la información faltante en el prompt para respuestas parciales", 
       return response({
         candidates: [{ content: { parts: [{ text: JSON.stringify({
           text: "Solo se puede confirmar el dato documentado.",
+          expandedText: "Explicación ampliada basada en la misma evidencia.",
           citationIds: ["chunk-001"]
         }) }] } }]
       });
