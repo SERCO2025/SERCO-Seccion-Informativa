@@ -121,7 +121,8 @@ function buildCitations(citationIds, evidence) {
       version: item.version,
       section: typeof item.section === "string" ? item.section : null,
       excerpt: typeof item.excerpt === "string" ? item.excerpt : item.content.slice(0, 320),
-      sources: Array.isArray(item.sources) ? item.sources : []
+      sources: Array.isArray(item.sources) ? item.sources : [],
+      assets: Array.isArray(item.assets) ? item.assets : []
     };
   });
 }

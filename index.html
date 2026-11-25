@@ -18,7 +18,7 @@ button:disabled{opacity:.55;cursor:wait}.panel{max-width:820px;margin:18px auto 
 .meta{color:#aebbc7;font-size:13px;margin-bottom:10px}.consent{border-color:rgba(255,255,255,.42)}
 .consent p{line-height:1.55;margin:0 0 14px}.actions{display:flex;gap:10px;flex-wrap:wrap}
 .secondary{background:transparent;color:#f4f7fa}.sources{padding-left:22px;line-height:1.65}
-.sources a{color:#9bd0ff;overflow-wrap:anywhere}.status{color:#c4ced8;font-size:13px;margin-top:12px;min-height:18px}
+.sources a{color:#9bd0ff;overflow-wrap:anywhere}.answer-media{margin-top:18px}.answer-media h2{font-size:17px;margin:0 0 12px}.answer-media-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:12px}.answer-media-card{min-width:0;border:1px solid rgba(255,255,255,.16);border-radius:5px;background:rgba(255,255,255,.035);padding:10px}.answer-media-card img,.answer-media-card video{display:block;width:100%;max-height:300px;object-fit:contain;background:#03090e;border-radius:3px}.answer-media-card a{color:#9bd0ff;overflow-wrap:anywhere}.answer-media-caption{font-size:13px;line-height:1.5;margin:8px 0 4px}.answer-media-credit{display:block;color:#aebbc7;font-size:11px;line-height:1.5}.answer-media-section{color:#c4ced8;font-size:11px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}.status{color:#c4ced8;font-size:13px;margin-top:12px;min-height:18px}
 .hidden{display:none!important}
 @media(max-width:620px){body{padding:42px 14px}.search{flex-direction:column}.search button{height:48px}.actions button{flex:1}}
 </style>
@@ -36,6 +36,7 @@ button:disabled{opacity:.55;cursor:wait}.panel{max-width:820px;margin:18px auto 
 <section class="answer hidden" id="officialAnswer">
 <div class="meta" id="officialMeta"></div><h2>Información de la biblioteca SERCO</h2><p id="officialText"></p>
 <ul class="sources hidden" id="officialSources"></ul>
+<section class="answer-media hidden" id="officialMedia"><h2>Material de apoyo relacionado</h2><div class="answer-media-grid" id="officialMediaGrid"></div></section>
 </section>
 <section class="consent hidden" id="consentPanel">
 <p id="consentText"></p><div class="actions">
@@ -58,6 +59,7 @@ button:disabled{opacity:.55;cursor:wait}.panel{max-width:820px;margin:18px auto 
 const el=id=>document.getElementById(id);
 const form=el("searchForm"),input=el("query"),askButton=el("askButton"),official=el("officialAnswer");
 const officialMeta=el("officialMeta"),officialText=el("officialText"),officialSources=el("officialSources");
+const officialMedia=el("officialMedia"),officialMediaGrid=el("officialMediaGrid");
 const consent=el("consentPanel"),consentText=el("consentText"),yes=el("researchYes"),no=el("researchNo");
 const research=el("researchPanel"),report=el("researchReport"),expandedAnswer=el("expandedAnswer"),expandedAnswerPanel=el("expandedAnswerPanel"),expandedAnswerToggle=el("expandedAnswerToggle"),sources=el("researchSources"),status=el("status");
 let pendingQuery="",researchAllowed=false,researchProviderLimited=false;
@@ -65,7 +67,34 @@ try{researchProviderLimited=sessionStorage.getItem("sercoResearchProviderLimited
 function show(node){node.classList.remove("hidden")}
 function hide(node){node.classList.add("hidden")}
 function busy(value,message){askButton.disabled=value;yes.disabled=value;no.disabled=value;status.textContent=message||""}
-function reset(){hide(official);hide(consent);hide(research);hide(expandedAnswerPanel);expandedAnswerToggle.textContent="Ver explicación ampliada";yes.textContent="Sí, buscar en Internet";yes.disabled=false;no.textContent="No, gracias";officialSources.replaceChildren();sources.replaceChildren();pendingQuery="";researchAllowed=false}
+
+function renderOfficialMedia(citations){
+ officialMediaGrid.replaceChildren();
+ const seen=new Set();
+ (Array.isArray(citations)?citations:[]).forEach(citation=>{
+  (Array.isArray(citation.assets)?citation.assets:[]).forEach(asset=>{
+   if(!asset||typeof asset.id!=="string"||seen.has(asset.id)||!/^https?:\/\//i.test(String(asset.url||"")))return;
+   seen.add(asset.id);
+   const card=document.createElement("article");card.className="answer-media-card";
+   const section=document.createElement("div");section.className="answer-media-section";section.textContent=[citation.title,asset.sectionKey!=="body"?asset.sectionKey:""].filter(Boolean).join(" · ");card.appendChild(section);
+   if(asset.mediaType==="image"&&/^image\/(jpeg|png|webp|gif|avif)$/i.test(asset.mimeType||"")){
+    const img=document.createElement("img");img.src=asset.url;img.alt=asset.altText||"Material gráfico técnico";img.loading="lazy";img.decoding="async";card.appendChild(img);
+   }else if(asset.mediaType==="video"&&/^video\/(mp4|webm|ogg)$/i.test(asset.mimeType||"")){
+    const video=document.createElement("video");video.controls=true;video.preload="metadata";video.setAttribute("aria-label",asset.altText||asset.caption||"Video técnico");const source=document.createElement("source");source.src=asset.url;source.type=asset.mimeType;video.appendChild(source);card.appendChild(video);
+   }else if(asset.mediaType==="document"){
+    const link=document.createElement("a");link.href=asset.url;link.target="_blank";link.rel="noopener noreferrer";link.textContent="Abrir documento: "+(asset.caption||asset.altText||"Documento técnico");card.appendChild(link);
+   }else return;
+   if(asset.caption){const caption=document.createElement("p");caption.className="answer-media-caption";caption.textContent=asset.caption;card.appendChild(caption)}
+   const credit=[asset.author,asset.license].filter(Boolean).join(" · ");
+   if(credit){const small=document.createElement("small");small.className="answer-media-credit";small.textContent=credit;card.appendChild(small)}
+   if(asset.sourceUrl&&/^https?:\/\//i.test(asset.sourceUrl)){const source=document.createElement("a");source.href=asset.sourceUrl;source.target="_blank";source.rel="noopener noreferrer";source.className="answer-media-credit";source.textContent="Fuente del recurso";card.appendChild(source)}
+   officialMediaGrid.appendChild(card);
+  });
+ });
+ if(officialMediaGrid.children.length)show(officialMedia);else hide(officialMedia);
+}
+
+function reset(){hide(official);hide(consent);hide(research);hide(expandedAnswerPanel);expandedAnswerToggle.textContent="Ver explicación ampliada";yes.textContent="Sí, buscar en Internet";yes.disabled=false;no.textContent="No, gracias";officialSources.replaceChildren();officialMediaGrid.replaceChildren();hide(officialMedia);sources.replaceChildren();pendingQuery="";researchAllowed=false}
 async function post(url,body){
  const response=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),cache:"no-store"});
  let data;try{data=await response.json()}catch{throw new Error("El servidor devolvió una respuesta no válida.")}
@@ -101,6 +130,7 @@ form.addEventListener("submit",async event=>{
    });
    show(officialSources);
   }
+  renderOfficialMedia(result.citations);
   show(official);
   const responseStatus=String(result.status||"").toLowerCase();
   const responseCoverage=String(result.coverage||"").toLowerCase();

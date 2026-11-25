@@ -73,6 +73,19 @@ test("responde con evidencia y referencias verificadas", async () => {
   assert.equal(result.citations[0].version, 2);
 });
 
+
+test("incluye los recursos multimedia aprobados en las citas sin enviarlos al generador", async () => {
+  const asset = { id: "asset-1", mediaType: "image", mimeType: "image/jpeg", url: "https://media.example/asset.jpg", altText: "Detalle" };
+  let generatorEvidence;
+  const orchestrator = createAskOrchestrator(adapters({
+    retriever: { async search() { return { items: [{ ...evidenceItem, assets: [asset] }] }; } },
+    answerGenerator: { async generate(input) { generatorEvidence = input.evidence; return { text: "Respuesta respaldada.", citationIds: ["chunk-001"] }; } }
+  }));
+  const result = await orchestrator.ask({ question: "¿Qué tipos de cimentación existen?" });
+  assert.deepEqual(result.citations[0].assets, [asset]);
+  assert.equal(generatorEvidence[0].assets, undefined);
+});
+
 test("mantiene el estado parcial y comunica la información faltante", async () => {
   const orchestrator = createAskOrchestrator(adapters({
     coverageEvaluator: {
