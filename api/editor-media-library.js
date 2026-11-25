@@ -143,9 +143,16 @@ module.exports = async function editorMediaLibrary(req, res) {
       const rightsStatus = String(body.rights_status || "unverified");
       const sourceUrl = String(body.source_url || "").trim();
       const license = String(body.license || "").trim();
-      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id) ||
-          !RIGHTS.has(rightsStatus) || (APPROVED_RIGHTS.has(rightsStatus) && (!validHttpUrl(sourceUrl) || !license))) {
-        return send(res, 422, { error: { code: "INVALID_RIGHTS_REVIEW", message: "Para autorizar un recurso se requiere una fuente HTTP/HTTPS y una licencia o permiso identificable." } });
+      const altText = String(body.alt_text || "").trim();
+      const description = String(body.description || "").trim();
+      const keywords = Array.isArray(body.keywords) ? body.keywords.map(String).map(x => x.trim()).filter(Boolean) : [];
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id) || !RIGHTS.has(rightsStatus) ||
+          (APPROVED_RIGHTS.has(rightsStatus) && (!validHttpUrl(sourceUrl) || !license || !altText || !description || !keywords.length))) {
+        return send(res, 422, { error: { code: "INVALID_RIGHTS_REVIEW", message: "Para autorizar un recurso se requieren procedencia HTTP/HTTPS, licencia o permiso, texto alternativo, descripción y palabras clave." } });
+      }
+      if (!APPROVED_RIGHTS.has(rightsStatus)) {
+        const links = await rest("/rest/v1/article_asset_links?select=id&media_file_id=eq." + encodeURIComponent(id) + "&limit=1");
+        if (links.length) return send(res, 409, { error: { code: "MEDIA_STILL_LINKED", message: "Primero retira este recurso de las publicaciones que lo utilizan." } });
       }
       const rows = await rest("/rest/v1/media_files?id=eq." + encodeURIComponent(id), {
         method: "PATCH",
@@ -154,9 +161,9 @@ module.exports = async function editorMediaLibrary(req, res) {
           source_url: sourceUrl || null,
           license: license || null,
           author: String(body.author || "").trim() || null,
-          alt_text: String(body.alt_text || "").trim() || null,
-          description: String(body.description || "").trim() || null,
-          keywords: Array.isArray(body.keywords) ? body.keywords.map(String).map(x => x.trim()).filter(Boolean) : [],
+          alt_text: altText || null,
+          description: description || null,
+          keywords,
           category: String(body.category || "").trim() || null,
           captured_at: body.captured_at || null
         }
