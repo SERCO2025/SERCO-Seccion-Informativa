@@ -45,7 +45,7 @@ module.exports=async function publicPublication(req,res){
   const [versions,sources,assets,categories,tags,relations,assetLinks]=await Promise.all([
    rest("/rest/v1/article_versions?select=version_number,content_json,created_at&id=eq."+encodeURIComponent(article.published_version_id)+"&article_id=eq."+encodeURIComponent(article.id)+"&limit=1"),
    rest("/rest/v1/article_sources?select=title,source_type,source_url,author,published_date&article_id=eq."+encodeURIComponent(article.id)),
-   rest("/rest/v1/article_assets?select=id,bucket_id,storage_path,original_name,mime_type,alt_text,description,source_url,author,license,keywords,category,captured_at&article_id=eq."+encodeURIComponent(article.id)),
+   rest("/rest/v1/article_assets?select=id,bucket_id,storage_path,original_name,mime_type,alt_text,description,source_url,author,license,keywords,category,captured_at,rights_status&article_id=eq."+encodeURIComponent(article.id)),
    rest("/rest/v1/article_categories?select=is_primary,category:categories(name,slug)&article_id=eq."+encodeURIComponent(article.id)),
    rest("/rest/v1/article_tags?select=tag:tags(name,slug)&article_id=eq."+encodeURIComponent(article.id)),
    rest("/rest/v1/article_relations?select=relation_type,related:articles!article_relations_related_article_id_fkey(public_id,title,slug,status)&article_id=eq."+encodeURIComponent(article.id)),
@@ -53,7 +53,8 @@ module.exports=async function publicPublication(req,res){
   ]);
   const version=versions[0];
   if(!version)return res.status(404).json({error:{code:"PUBLISHED_VERSION_NOT_FOUND",message:"La versión publicada no está disponible."}});
-  const publicAssets=await Promise.all(assets.map(signedAsset));
+  const approvedAssets=assets.filter(asset=>asset&&["verified","permission_granted","public_domain"].includes(asset.rights_status));
+  const publicAssets=await Promise.all(approvedAssets.map(signedAsset));
   const approvedLinks=assetLinks.filter(link=>link.media_file&&["verified","permission_granted","public_domain"].includes(link.media_file.rights_status));
   const publicAssetLinks=await Promise.all(approvedLinks.map(async link=>({...link,media_file:await signedAsset(link.media_file)})));
   const publicContent=version.content_json&&typeof version.content_json==="object"?{...version.content_json}:version.content_json;
