@@ -66,6 +66,8 @@ module.exports=async function publicPublication(req,res){
   if(publicContent&&publicContent.editorial_metadata&&typeof publicContent.editorial_metadata==="object"){
    publicContent.editorial_metadata={...publicContent.editorial_metadata};
    delete publicContent.editorial_metadata.internal_research_report;
+   delete publicContent.editorial_metadata.media_candidates;
+   delete publicContent.editorial_metadata.media_candidate_count;
   }
   return res.status(200).json({
    publication:{id:article.id,public_id:article.public_id,slug:article.slug,title:article.title,summary:article.summary,

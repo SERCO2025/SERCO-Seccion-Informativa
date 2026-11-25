@@ -23,7 +23,7 @@ test("la API pública expone solo recursos reutilizables con derechos aprobados"
     }]);
     if (value.includes("/rest/v1/article_sources?")) return response([{ title: "Manual técnico", source_url: "https://fuente.example/manual", author: "Laboratorio" }]);
     if (value.includes("/rest/v1/article_versions?")) return response([{
-      version_number: 1, content_json: { content_html: "<p>Texto.</p>", editorial_metadata: { concepts: [
+      version_number: 1, content_json: { content_html: "<p>Texto.</p>", editorial_metadata: { media_candidate_count: 1, media_candidates: [{ media_url: "https://cdn.example/unverified.jpg", rights_status: "unverified", publication_allowed: false }], concepts: [
         { key: "modulo-elastico", term: "Módulo elástico", definition: "Propiedad que relaciona el esfuerzo aplicado con la deformación elástica del material.", source_url: "https://fuente.example/manual", related_keys: ["concreto"] },
         { key: "concepto-sin-fuente", term: "Concepto sin fuente", definition: "Esta definición no tiene una fuente documentada dentro del artículo.", source_url: "https://otra.example/doc", related_keys: [] },
         { key: "concreto", term: "Concreto", definition: "Material compuesto que se obtiene al mezclar cemento, agua y agregados en proporciones determinadas.", source_url: "https://fuente.example/manual", related_keys: ["modulo-elastico"] }
@@ -57,6 +57,8 @@ test("la API pública expone solo recursos reutilizables con derechos aprobados"
     assert.equal(res.payload.concepts[0].key, "modulo-elastico");
     assert.equal(res.payload.concepts[0].related_keys[0], "concreto");
     assert.equal(res.payload.publication.content.editorial_metadata.concepts, undefined);
+    assert.equal(res.payload.publication.content.editorial_metadata.media_candidates, undefined);
+    assert.equal(res.payload.publication.content.editorial_metadata.media_candidate_count, undefined);
     assert.equal(res.payload.asset_links.length, 1);
     assert.equal(res.payload.asset_links[0].media_file.rights_status, "verified");
     assert.ok(res.payload.asset_links[0].media_file.url.includes("/storage/v1/object/sign/"));
