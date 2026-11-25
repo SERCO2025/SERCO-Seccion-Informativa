@@ -86,6 +86,26 @@ test("incluye los recursos multimedia aprobados en las citas sin enviarlos al ge
   assert.equal(generatorEvidence[0].assets, undefined);
 });
 
+
+test("entrega una síntesis inicial y una explicación ampliada por separado", async () => {
+  const orchestrator = createAskOrchestrator(adapters({
+    answerGenerator: {
+      async generate() {
+        return {
+          text: "Síntesis breve de la publicación.",
+          expandedText: "Explicación técnica ampliada con contexto y detalles.",
+          citationIds: ["chunk-001"]
+        };
+      }
+    }
+  }));
+
+  const result = await orchestrator.ask({ question: "¿Qué tipos de cimentación existen?" });
+  assert.equal(result.answer, "Síntesis breve de la publicación.");
+  assert.equal(result.expandedAnswer, "Explicación técnica ampliada con contexto y detalles.");
+  assert.equal(result.answerDetail, "initial");
+});
+
 test("mantiene el estado parcial y comunica la información faltante", async () => {
   const orchestrator = createAskOrchestrator(adapters({
     coverageEvaluator: {
@@ -241,6 +261,7 @@ test("reutiliza la respuesta inicial almacenada sin volver a llamar al generador
 
   const result = await orchestrator.ask({ question: "¿Qué tipos de cimentación existen?" });
   assert.equal(result.answer, stored.visitorAnswer);
+  assert.equal(result.expandedAnswer, stored.expandedAnswer);
   assert.equal(result.reusedStoredAnswer, true);
   assert.equal(result.answerDetail, "initial");
   assert.equal(result.citations[0].citationId, evidenceItem.id);
