@@ -7,6 +7,7 @@ const { getCitationOrder } = require("../src/services/research/citation-order");
 const { createConstructionResearchDiscovery } = require("../src/services/publisher/construction-research-discovery");
 const { validateEditorialArticle } = require("../src/services/publisher/editorial-quality-gate");
 const { normalizePublishedDate, createArticleSlug } = require("../src/services/publisher/document-metadata");
+const { discoverPublisherMediaCandidates } = require("../src/services/publisher/media-candidate-discovery");
 
 const BASE = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
 const SECRET_KEY = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
@@ -106,6 +107,7 @@ async function generate(discovery, index, batchId) {
   const summaryText = summary(body);
   if (summaryText.length < 30) throw new Error("No se pudo generar un resumen suficiente para el documento técnico.");
   const slugBase = createArticleSlug(topic);
+  const mediaCandidates = discoverPublisherMediaCandidates(discovery.sources, { topic, focus: discovery.focus, query: discovery.query });
   const document = {
     title, slug: "diccionario-" + slugBase,
     summary: summaryText, content_type: "dictionary_entry", status: "published",
@@ -120,6 +122,8 @@ async function generate(discovery, index, batchId) {
       provider: result.provider, model: result.model, research_date: new Date().toISOString(),
       external_research: true, automated_dictionary: true, automation_batch: batchId,
       sequence_in_batch: index + 1, source_count: sources.length,
+      media_candidates: mediaCandidates,
+      media_candidate_count: mediaCandidates.length,
       editorial_quality_gate: editorialQuality,
       discovery_method: "source_first_full_document_review",
       discovery_category: discovery.category,
