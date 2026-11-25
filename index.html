@@ -150,7 +150,12 @@ form.addEventListener("submit",async event=>{
   busy(false,"La consulta no se completó. El motivo aparece en el resultado.");
  }
 });
-yes.addEventListener("click",async()=>{
+officialExpandedToggle.addEventListener("click",()=>{
+  const opening=officialExpandedPanel.classList.contains("hidden");
+  if(opening){show(officialExpandedPanel);officialExpandedToggle.textContent="Ocultar explicación ampliada";officialExpandedPanel.scrollIntoView({behavior:"smooth",block:"nearest"});}
+  else{hide(officialExpandedPanel);officialExpandedToggle.textContent="Ver explicación ampliada";}
+ });
+ yes.addEventListener("click",async()=>{
  if(!pendingQuery||researchAllowed)return;
  researchAllowed=true;hide(consent);busy(true,"Buscando fuentes en Internet con Tavily y preparando el análisis con los motores de IA disponibles...");
  try{
