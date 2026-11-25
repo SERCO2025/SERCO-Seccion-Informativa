@@ -110,13 +110,13 @@ async function generate(discovery, index, batchId) {
   const mediaCandidates = discoverPublisherMediaCandidates(discovery.sources, { topic, focus: discovery.focus, query: discovery.query });
   const document = {
     title, slug: "diccionario-" + slugBase,
-    summary: summaryText, content_type: "dictionary_entry", status: "published",
+    summary: summaryText, content_type: "dictionary_entry", status: "review",
     author_name: "SERCO · Diccionario técnico automatizado", origin: "ai_research",
     specialty: discovery.specialty,
     categories: ["Diccionario técnico", discovery.category, discovery.specialty],
     tags: ["diccionario", "documentación técnica", "SERCO", discovery.category.toLowerCase()],
     content_html: reportToHtml(body), content_text: body, sources, assets: [], relations: [],
-    featured: false, ai_retrieval_enabled: true,
+    featured: false, ai_retrieval_enabled: false,
     search_metadata: { title, description: summaryText, concepts: [topic, discovery.category, discovery.specialty] },
     editorial_metadata: {
       provider: result.provider, model: result.model, research_date: new Date().toISOString(),
