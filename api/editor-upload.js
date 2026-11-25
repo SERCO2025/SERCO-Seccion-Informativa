@@ -1,5 +1,7 @@
 "use strict";
 
+const { randomUUID } = require("node:crypto");
+
 const BASE = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
 const PUBLIC_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || "";
 const SECRET_KEY = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
@@ -23,9 +25,10 @@ module.exports=async function editorUpload(req,res){
   const mime=String(body.mime_type||"").toLowerCase();
   const size=Number(body.size_bytes||0);
   const articleId=String(body.article_id||"").trim();
-  if(!name||!articleId||!Number.isFinite(size)||size<=0||size>MAX_FILE_BYTES||!ALLOWED.has(mime))
+  const scope=body.scope==="library"?"library":"article";
+  if(!name||(scope==="article"&&!articleId)||!Number.isFinite(size)||size<=0||size>MAX_FILE_BYTES||!ALLOWED.has(mime))
     return send(res,422,{error:{code:"INVALID_FILE",message:"Archivo no permitido. Admite imágenes JPG/PNG/WEBP/GIF, PDF, DOC/DOCX y MP4/WEBM hasta 25 MB."}});
-  const path="publicaciones/"+articleId+"/recursos/"+Date.now()+"-"+name;
+  const path=scope==="library"?"biblioteca/"+randomUUID()+"/"+Date.now()+"-"+name:"publicaciones/"+articleId+"/recursos/"+Date.now()+"-"+name;
   const signed=await fetch(BASE+"/storage/v1/object/upload/sign/serco-publicaciones/"+path,{
    method:"POST",headers:{apikey:SECRET_KEY,Authorization:"Bearer "+SECRET_KEY,"Content-Type":"application/json"},
    body:JSON.stringify({})
