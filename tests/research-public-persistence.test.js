@@ -69,6 +69,7 @@ test("guarda las tres piezas, las evidencias y las fuentes de una síntesis comp
   assert.match(document.content_html, /Explicación ampliada/);
   assert.equal(document.content_html.includes("INFORME INTERNO CONFIDENCIAL"), false);
   assert.equal(document._research_private.internal_report, completedResult().internalReport);
+  assert.match(document._research_private.internal_report_html, /INFORME INTERNO CONFIDENCIAL/);
   assert.equal(document._research_private.claim_evidence.length, 3);
   assert.equal(document._research_private.sources_snapshot[0].evidence_origin, "tavily_extract");
   assert.equal(document.sources[0].metadata.extracted_content, "Contenido extraído que amplía la descripción técnica.");

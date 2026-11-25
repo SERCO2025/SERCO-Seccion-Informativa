@@ -1,5 +1,68 @@
 -- Keep legacy internal reports private and prevent disabled knowledge entries from retrieval.
 alter table private.article_research_records
+  add column if not exists internal_report_html text not null default '';
+
+create or replace function private.capture_article_research_record()
+returns trigger
+language plpgsql
+security definer
+set search_path = pg_catalog, private
+as $function$
+declare
+  v_record jsonb;
+begin
+  v_record := new.content_json -> '_research_private';
+  if v_record is null or jsonb_typeof(v_record) <> 'object' then
+    return new;
+  end if;
+
+  insert into private.article_research_records (
+    article_id,
+    article_version_id,
+    research_status,
+    internal_report,
+    internal_report_html,
+    visitor_answer,
+    expanded_answer,
+    claim_evidence,
+    sources_snapshot,
+    provider_attempts,
+    research_metadata,
+    updated_at
+  ) values (
+    new.article_id,
+    new.id,
+    coalesce(nullif(v_record ->> 'research_status', ''), 'sources_only'),
+    coalesce(v_record ->> 'internal_report', ''),
+    coalesce(v_record ->> 'internal_report_html', ''),
+    coalesce(v_record ->> 'visitor_answer', ''),
+    coalesce(v_record ->> 'expanded_answer', ''),
+    coalesce(v_record -> 'claim_evidence', '[]'::jsonb),
+    coalesce(v_record -> 'sources_snapshot', '[]'::jsonb),
+    coalesce(v_record -> 'provider_attempts', '[]'::jsonb),
+    coalesce(v_record -> 'research_metadata', '{}'::jsonb),
+    now()
+  )
+  on conflict (article_version_id) do update set
+    research_status = excluded.research_status,
+    internal_report = excluded.internal_report,
+    internal_report_html = excluded.internal_report_html,
+    visitor_answer = excluded.visitor_answer,
+    expanded_answer = excluded.expanded_answer,
+    claim_evidence = excluded.claim_evidence,
+    sources_snapshot = excluded.sources_snapshot,
+    provider_attempts = excluded.provider_attempts,
+    research_metadata = excluded.research_metadata,
+    updated_at = now();
+
+  new.content_json := new.content_json - '_research_private';
+  return new;
+end;
+$function$;
+
+revoke all on function private.capture_article_research_record() from public, anon, authenticated;
+
+alter table private.article_research_records
   drop constraint if exists article_research_records_research_status_check;
 
 alter table private.article_research_records
@@ -12,6 +75,7 @@ insert into private.article_research_records (
   article_version_id,
   research_status,
   internal_report,
+  internal_report_html,
   visitor_answer,
   expanded_answer,
   claim_evidence,
@@ -24,6 +88,7 @@ select
   v.id,
   'legacy_report_only',
   coalesce(v.content_json ->> 'content_text', ''),
+  coalesce(v.content_json ->> 'content_html', ''),
   '',
   '',
   coalesce(a.editorial_metadata -> 'claim_evidence_index' -> 'items', '[]'::jsonb),
@@ -125,7 +190,7 @@ as $function$
  with normalized_query as (
   select websearch_to_tsquery('spanish'::regconfig,
    extensions.unaccent('extensions.unaccent'::regdictionary,coalesce(trim(p_query),''))) as strict_query,
-   extensions.unaccent('extensions.unaccent'::regdictionary,coalesce(trim(p_query),'')) as plain_query
+   extensions.unaccent('extensions.unaccent'::unaccent'::regdictionary,coalesce(trim(p_query),'')) as plain_query
  ),
  fallback_terms as (
   select distinct plainto_tsquery('spanish'::regconfig, lower(token)) as token_query

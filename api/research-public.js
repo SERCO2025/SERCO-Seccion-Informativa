@@ -178,6 +178,7 @@ function createPersistingResearchProvider(researchProvider, articlePersistence, 
             _research_private: {
               research_status: completed ? "completed" : "sources_only",
               internal_report: internalReport,
+              internal_report_html: reportToHtml(internalReport),
               visitor_answer: String(result.visitorAnswer || ""),
               expanded_answer: String(result.expandedAnswer || ""),
               claim_evidence: Array.isArray(result.claimEvidence) ? result.claimEvidence : [],
