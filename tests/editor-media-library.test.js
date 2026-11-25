@@ -8,7 +8,7 @@ const vm = require("node:vm");
 
 test("el JavaScript del estudio editorial compila con el selector de biblioteca", () => {
   const source = fs.readFileSync(path.join(__dirname, "../api/editor-studio.js"), "utf8");
-  const match = source.match(/<script>\\s*([\\s\\S]*?)\\s*<\\/script>/i);
+  const match = source.match(/<script>\s*([\s\S]*?)\s*<\/script>/i);
   assert.ok(match, "Debe existir el bloque JavaScript del estudio editorial");
   assert.doesNotThrow(() => new vm.Script(match[1]), "El JavaScript del estudio debe ser sintácticamente válido");
 });
