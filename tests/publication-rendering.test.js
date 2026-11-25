@@ -25,7 +25,8 @@ test("la API pública expone solo recursos reutilizables con derechos aprobados"
     if (value.includes("/rest/v1/article_versions?")) return response([{
       version_number: 1, content_json: { content_html: "<p>Texto.</p>", editorial_metadata: { concepts: [
         { key: "modulo-elastico", term: "Módulo elástico", definition: "Propiedad que relaciona el esfuerzo aplicado con la deformación elástica del material.", source_url: "https://fuente.example/manual", related_keys: ["concreto"] },
-        { key: "concepto-sin-fuente", term: "Concepto sin fuente", definition: "Esta definición no tiene una fuente documentada dentro del artículo.", source_url: "https://otra.example/doc", related_keys: [] }
+        { key: "concepto-sin-fuente", term: "Concepto sin fuente", definition: "Esta definición no tiene una fuente documentada dentro del artículo.", source_url: "https://otra.example/doc", related_keys: [] },
+        { key: "concreto", term: "Concreto", definition: "Material compuesto que se obtiene al mezclar cemento, agua y agregados en proporciones determinadas.", source_url: "https://fuente.example/manual", related_keys: ["modulo-elastico"] }
       ] } }
     }]);
     if (value.includes("/rest/v1/article_asset_links?")) return response([
@@ -52,7 +53,7 @@ test("la API pública expone solo recursos reutilizables con derechos aprobados"
     };
     await handler(req, res);
     assert.equal(res.statusCode, 200);
-    assert.equal(res.payload.concepts.length, 1);
+    assert.equal(res.payload.concepts.length, 2);
     assert.equal(res.payload.concepts[0].key, "modulo-elastico");
     assert.equal(res.payload.concepts[0].related_keys[0], "concreto");
     assert.equal(res.payload.publication.content.editorial_metadata.concepts, undefined);

@@ -59,8 +59,9 @@ module.exports=async function publicPublication(req,res){
   const publicContent=version.content_json&&typeof version.content_json==="object"?{...version.content_json}:version.content_json;
   const conceptSourceUrls=new Set(sources.map(source=>source.source_url).filter(Boolean));
   const rawConcepts=publicContent&&publicContent.editorial_metadata&&Array.isArray(publicContent.editorial_metadata.concepts)?publicContent.editorial_metadata.concepts:[];
-  const conceptKeys=new Set(rawConcepts.filter(item=>item&&typeof item.key==="string"&&/^[a-z0-9-]{1,80}$/.test(item.key)).map(item=>item.key));
-  const publicConcepts=rawConcepts.filter(item=>item&&typeof item.key==="string"&&/^[a-z0-9-]{1,80}$/.test(item.key)&&typeof item.term==="string"&&item.term.trim().length>0&&item.term.length<=100&&typeof item.definition==="string"&&item.definition.trim().length>=30&&item.definition.length<=1200&&conceptSourceUrls.has(item.source_url)).map(item=>({key:item.key,term:item.term,definition:item.definition,source_url:item.source_url,related_keys:Array.isArray(item.related_keys)?item.related_keys.filter(key=>conceptKeys.has(key)&&key!==item.key).slice(0,12):[]}));
+  const eligibleConcepts=rawConcepts.filter(item=>item&&typeof item.key==="string"&&/^[a-z0-9-]{1,80}$/.test(item.key)&&typeof item.term==="string"&&item.term.trim().length>0&&item.term.length<=100&&typeof item.definition==="string"&&item.definition.trim().length>=30&&item.definition.length<=1200&&conceptSourceUrls.has(item.source_url));
+  const conceptKeys=new Set(eligibleConcepts.map(item=>item.key));
+  const publicConcepts=eligibleConcepts.map(item=>({key:item.key,term:item.term,definition:item.definition,source_url:item.source_url,related_keys:Array.isArray(item.related_keys)?item.related_keys.filter(key=>conceptKeys.has(key)&&key!==item.key).slice(0,12):[]}));
   if(publicContent&&publicContent.editorial_metadata&&typeof publicContent.editorial_metadata==="object"){publicContent.editorial_metadata={...publicContent.editorial_metadata};delete publicContent.editorial_metadata.concepts;}
   if(publicContent&&publicContent.editorial_metadata&&typeof publicContent.editorial_metadata==="object"){
    publicContent.editorial_metadata={...publicContent.editorial_metadata};
