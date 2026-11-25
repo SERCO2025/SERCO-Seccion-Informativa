@@ -40,9 +40,10 @@ function createGeminiAnswerProvider(options = {}) {
               type: "OBJECT",
               properties: {
                 text: { type: "STRING" },
+                expandedText: { type: "STRING" },
                 citationIds: { type: "ARRAY", items: { type: "STRING" } }
               },
-              required: ["text", "citationIds"]
+              required: ["text", "expandedText", "citationIds"]
             }
           }
         },
