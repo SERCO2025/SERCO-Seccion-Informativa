@@ -29,6 +29,10 @@ test("la API pública expone solo recursos reutilizables con derechos aprobados"
         { key: "concreto", term: "Concreto", definition: "Material compuesto que se obtiene al mezclar cemento, agua y agregados en proporciones determinadas.", source_url: "https://fuente.example/manual", related_keys: ["modulo-elastico"] }
       ] } }
     }]);
+    if (value.includes("/rest/v1/article_assets?")) return response([
+      { id: "legacy-approved", bucket_id: "serco-publicaciones", storage_path: "legacy/approved.png", original_name: "approved.png", mime_type: "image/png", alt_text: "Imagen aprobada", description: "Descripción", source_url: "https://fuente.example/img", license: "Permiso", keywords: ["concreto"], rights_status: "permission_granted" },
+      { id: "legacy-unverified", bucket_id: "serco-publicaciones", storage_path: "legacy/unverified.png", original_name: "unverified.png", mime_type: "image/png", alt_text: "Imagen pendiente", description: "Descripción", source_url: "https://fuente.example/pending", license: "Desconocida", keywords: ["concreto"], rights_status: "unverified" }
+    ]);
     if (value.includes("/rest/v1/article_asset_links?")) return response([
       { id: "approved", section_key: "body", sort_order: 0, display_mode: "wide",
         media_file: { id: "media1", bucket_id: "serco-publicaciones", storage_path: "biblioteca/diagrama.png",
@@ -59,6 +63,9 @@ test("la API pública expone solo recursos reutilizables con derechos aprobados"
     assert.equal(res.payload.publication.content.editorial_metadata.concepts, undefined);
     assert.equal(res.payload.publication.content.editorial_metadata.media_candidates, undefined);
     assert.equal(res.payload.publication.content.editorial_metadata.media_candidate_count, undefined);
+    assert.equal(res.payload.assets.length, 1);
+    assert.equal(res.payload.assets[0].rights_status, "permission_granted");
+    assert.equal(calls.some(url => url.includes("legacy/unverified.png")), false);
     assert.equal(res.payload.asset_links.length, 1);
     assert.equal(res.payload.asset_links[0].media_file.rights_status, "verified");
     assert.ok(res.payload.asset_links[0].media_file.url.includes("/storage/v1/object/sign/"));
