@@ -270,6 +270,7 @@ function createAskOrchestrator(adapters) {
             answer: useExpanded
               ? storedItem.storedAnswers.expandedAnswer.trim()
               : storedItem.storedAnswers.visitorAnswer.trim(),
+            expandedAnswer: storedItem.storedAnswers.expandedAnswer.trim(),
             citations: buildCitations([storedItem.id], evidence),
             missingInformation: [],
             reusedStoredAnswer: true,
