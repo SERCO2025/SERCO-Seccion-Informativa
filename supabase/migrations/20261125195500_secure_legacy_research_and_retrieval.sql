@@ -190,7 +190,7 @@ as $function$
  with normalized_query as (
   select websearch_to_tsquery('spanish'::regconfig,
    extensions.unaccent('extensions.unaccent'::regdictionary,coalesce(trim(p_query),''))) as strict_query,
-   extensions.unaccent('extensions.unaccent'::unaccent'::regdictionary,coalesce(trim(p_query),'')) as plain_query
+   extensions.unaccent('extensions.unaccent'::regdictionary,coalesce(trim(p_query),'')) as plain_query
  ),
  fallback_terms as (
   select distinct plainto_tsquery('spanish'::regconfig, lower(token)) as token_query
