@@ -11,6 +11,7 @@ process.env.SUPABASE_SECRET_KEY = "sb_secret_media_test";
 process.env.SERCO_ADMIN_EMAIL = "admin@example.org";
 
 const mediaLibraryApi = require("../api/editor-media-library");
+const { createArticlePersistence } = require("../src/services/editor/article-persistence");
 
 function responseRecorder() {
   return {
@@ -132,4 +133,44 @@ test("la biblioteca conserva compatibilidad con claves JWT de service_role anter
     delete require.cache[modulePath];
     require("../api/editor-media-library");
   }
+});
+
+test("no permite publicar adjuntos directos con derechos no aprobados", async () => {
+  let persistenceCalls = 0;
+  const persistence = createArticlePersistence({
+    url: "https://example.supabase.co",
+    secretKey: "sb_secret_media_test",
+    fetchImpl: async () => {
+      persistenceCalls += 1;
+      return jsonResponse({ article_id: "article-test" });
+    }
+  });
+  const document = {
+    title: "Procedimiento de prueba de publicación",
+    summary: "Resumen de prueba suficientemente extenso para validar la persistencia editorial.",
+    content_html: "<p>Contenido técnico de prueba con suficiente extensión para cumplir la validación.</p>",
+    content_text: "Contenido técnico de prueba con suficiente extensión para cumplir la validación.",
+    author_name: "SERCO",
+    specialty: "Construcción",
+    categories: ["Construcción"],
+    sources: [{ title: "Fuente de prueba", source_url: "https://example.org/fuente" }],
+    status: "published",
+    assets: [{
+      storage_path: "articulos/prueba.png",
+      original_name: "prueba.png",
+      alt_text: "Imagen de prueba",
+      description: "Imagen de prueba para validar el bloqueo editorial.",
+      source_url: "https://example.org/imagen",
+      license: "Licencia de prueba",
+      keywords: ["prueba"],
+      rights_status: "unverified",
+      metadata: { rights_status: "unverified" }
+    }]
+  };
+
+  await assert.rejects(
+    () => persistence.save({ document }),
+    /No se puede publicar.*derechos no aprobados/
+  );
+  assert.equal(persistenceCalls, 0, "La validación debe detener la operación antes de llamar a Supabase.");
 });
